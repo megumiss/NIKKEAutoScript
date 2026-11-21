@@ -1,10 +1,25 @@
 from module.base.decorator import run_once
 from module.base.timer import Timer
-from module.exception import GameNotRunningError, GamePageUnknownError, GameStart
+from module.exception import GameNotRunningError, GamePageUnknownError
 from module.handler.assets import *
 from module.handler.info_handle import InfoHandler
 from module.logger import logger
-from module.ui.assets import ARK_CHECK_ABOVEGROUND, GOTO_MAIN, UI_LOADING_1, UI_LOADING_2, UI_LOADING_3, UI_LOADING_4
+from module.ui.assets import (
+    ARK_CHECK_ABOVEGROUND,
+    GOTO_MAIN,
+    UI_LOADING_1,
+    UI_LOADING_2,
+    UI_LOADING_3,
+    UI_LOADING_4,
+    UI_LOADING_ELYSION_DARK,
+    UI_LOADING_ELYSION_LIGHT,
+    UI_LOADING_MISSILIS_DARK,
+    UI_LOADING_MISSILIS_DARK_ALT,
+    UI_LOADING_MISSILIS_LIGHT,
+    UI_LOADING_PILGRIM_DARK,
+    UI_LOADING_PILGRIM_LIGHT,
+    UI_LOADING_TETRA_LIGHT,
+)
 from module.ui.page import (
     Page,
     page_arena,
@@ -46,6 +61,21 @@ from module.ui.page import (
     page_tribe_tower,
     page_unknown,
 )
+
+UI_LOADING_BUTTONS = [
+    UI_LOADING_1,
+    UI_LOADING_2,
+    UI_LOADING_3,
+    UI_LOADING_4,
+    UI_LOADING_ELYSION_DARK,
+    UI_LOADING_ELYSION_LIGHT,
+    UI_LOADING_MISSILIS_DARK,
+    UI_LOADING_MISSILIS_DARK_ALT,
+    UI_LOADING_MISSILIS_LIGHT,
+    UI_LOADING_PILGRIM_DARK,
+    UI_LOADING_PILGRIM_LIGHT,
+    UI_LOADING_TETRA_LIGHT,
+]
 
 
 class UI(InfoHandler):
@@ -99,6 +129,9 @@ class UI(InfoHandler):
             return self.appear_any([page.check_button, ARK_CHECK_ABOVEGROUND], offset=offset, interval=interval)
         return self.appear(page.check_button, offset=offset, interval=interval)
 
+    def ui_is_loading(self):
+        return self.appear_any(UI_LOADING_BUTTONS, offset=(30, 30))
+
     def ui_get_current_page(self, skip_first_screenshot=True):
         logger.info('UI get current page')
 
@@ -133,6 +166,10 @@ class UI(InfoHandler):
                     logger.attr('UI', page.name)
                     self.ui_current = page
                     return page
+
+            if self.ui_is_loading():
+                timeout.reset()
+                continue
 
             # Unknown page but able to handle
             logger.info('Unknown ui page')
@@ -227,8 +264,9 @@ class UI(InfoHandler):
             else:
                 confirm_timer.reset()
 
-            # if self.handle_event():
-            #     continue
+            if self.ui_is_loading():
+                confirm_timer.reset()
+                continue
 
             # Other pages
             clicked = False
@@ -237,7 +275,7 @@ class UI(InfoHandler):
                 if not page.parent or not page.check_button:
                     continue
 
-                if self.ui_page_appear(page, offset=offset, interval=4):
+                if self.ui_page_appear(page, offset=offset, interval=2):
                     logger.info(f'Page switch: {page} -> {page.parent}')
                     button = page.links[page.parent]
                     self.device.click(button)
@@ -260,75 +298,6 @@ class UI(InfoHandler):
             self.ui_goto(destination, confirm_wait=confirm_wait, skip_first_screenshot=True)
             return True
 
-    def ui_additional(self):
-        """
-        Handle all annoying popups during UI switching.
-
-        Args:
-            get_ship:
-        """
-        # TODO SKIP, 战斗, 公告, etc.
-
-        # 指挥官等级升级
-        if self.handle_level_up():
-            return True
-
-        # ----- REWARD -----
-        if self.handle_reward():
-            return True
-
-        # 礼包
-        if self.handle_paid_gift():
-            return True
-
-        if self.handle_announcement():
-            return True
-
-        # Daily Login, Memories Spring, Monthly Card, etc.
-        if self.handle_login_reward():
-            return True
-
-        if self.handle_server():
-            raise GameStart
-
-        if self.handle_download():
-            raise GameStart
-
-        # 系统错误
-        if self.handle_system_error():
-            return True
-
-        if self.handle_system_maintenance():
-            return True
-
-        if self.appear(LOGIN_PAGE_CHECK, offset=(30, 30)):
-            raise GameStart
-
-        if self.appear(LOGO_PAGE_CHECK, offset=(30, 30)):
-            raise GameStart
-
-        # if self.handle_event():
-        #     return True
-
-        if self.handle_login():
-            return True
-
-        """
-           CONFIRM_A 按钮为平面或立体，'确认'没有阴影
-           CONFIRM_B 按钮为立体，'确认'有阴影
-           CONFIRM_B 和 CONFIRM_C 相似
-        """
-
-        # 未知弹窗的确认
-        if self.appear_then_click(CONFIRM_A, offset=(30, 30), interval=3, static=False):
-            return True
-
-        if self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=3, static=False):
-            return True
-
-        if self.appear_then_click(CONFIRM_C, offset=(30, 30), interval=3, static=False):
-            return True
-
     def ui_goto_main(self):
         return self.ui_ensure(destination=page_main)
 
@@ -341,12 +310,7 @@ class UI(InfoHandler):
         while 1:
             self.device.screenshot()
 
-            if (
-                self.appear(UI_LOADING_1, offset=(30, 30))
-                or self.appear(UI_LOADING_2, offset=(30, 30))
-                or self.appear(UI_LOADING_3, offset=(30, 30))
-                or self.appear(UI_LOADING_4, offset=(30, 30))
-            ):
+            if self.ui_is_loading():
                 # 停止未出现检查时间计时
                 overall_timer.clear()
 

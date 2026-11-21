@@ -206,7 +206,9 @@ class ModuleBase:
                             else:
                                 logger.debug(f"[Flip] {button.name} matched shape in mode {mode}, but color failed. "
                                              f"Pos: {found_area}. "
-                                             f"Diff: {diff} > {color_threshold} (Target: {button.color}, Actual: {actual_color}). "
+                                             f"Diff: {diff} > {color_threshold} "
+                                             f"(Target: {tuple(round(c, 3) for c in button.color)}, "
+                                             f"Actual: {tuple(round(c, 3) for c in actual_color)}). "
                                              f"Masking and retrying...")
 
                                 # 掩盖并重试
@@ -314,7 +316,7 @@ class ModuleBase:
         res = self._ocr_cache["last_result"]
 
         location = self.device.get_location(text, res, threshold=threshold)
-        logger.debug(f"Text: '{text}', threshold: {threshold}, hit: {bool(location)}")
+        logger.debug(f"Text: '{text}', threshold: {threshold:.3f}, hit: {bool(location)}")
         if location:
             if interval:
                 self.interval_timer[text].reset()

@@ -34,3 +34,6 @@
 - name: NIKKE-DB
   url: https://nikke-db.pages.dev/
   direct: true
+- name: NIKKE Hub
+  url: https://nikkehub.com/zh-tw
+  direct: true

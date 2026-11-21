@@ -1,8 +1,10 @@
 """Screenshot previews and same-origin scrcpy video/control sessions."""
 
 import asyncio
+import math
 import subprocess
 
+from starlette.concurrency import run_in_threadpool
 from starlette.responses import JSONResponse, Response
 from starlette.websockets import WebSocketDisconnect
 
@@ -17,14 +19,50 @@ from module.webui.security_entry import same_origin
 _sessions = set()
 
 
+def control_target(name, config):
+    from module.device.adb.virtual_display_session import sessions
+    manager = sessions()
+    enabled = config.PhysicalDevice_Enable and config.PhysicalDevice_VirtualDisplay
+    try:
+        result = manager.resolve_instance(name, enabled, config.PhysicalDevice_VirtualDisplayId)
+    except (OSError, RuntimeError) as exc:
+        return {'enabled': True, 'available': False, 'reason': str(exc)}
+    if result is None:
+        return {'enabled': False, 'available': True}
+    return {
+        'enabled': True, 'available': True, 'identity': result['identity'],
+        'displayId': result['display_id'], 'sessionId': result['generation'],
+        'socket': result['socket'], 'deviceUid': result['device_uid'], 'bootId': result['boot_id'],
+        'serial': result['serial'], 'package': result['package'],
+    }
+
+
+async def virtual_display(request):
+    name = request.path_params['name']
+    try:
+        config = load_instance_config(name)
+    except InstanceNotFound:
+        return JSONResponse({'available': False, 'reason': 'Unknown instance'}, status_code=404)
+    return JSONResponse(await run_in_threadpool(control_target, name, config))
+
+
 async def screenshot(request):
     name = request.path_params['name']
     manager = ProcessManager._processes.get(name)
-    preview = manager.latest_preview if manager else None
+    try:
+        interval = float(request.query_params.get('interval', 1))
+    except ValueError:
+        interval = 1.0
+    if not math.isfinite(interval):
+        interval = 1.0
+    preview = manager.current_preview(interval) if manager else None
     if preview is None:
         return JSONResponse({'error': 'no preview'}, status_code=404)
-    captured_at, data = preview
-    return Response(content=data, media_type='image/jpeg', headers={'X-Captured-At': str(captured_at)})
+    captured_at, data, source = preview
+    return Response(content=data, media_type='image/jpeg', headers={
+        'X-Captured-At': str(captured_at),
+        'X-Preview-Source': source,
+    })
 
 
 def _context(name):
@@ -32,6 +70,11 @@ def _context(name):
     if config.Client_Platform != 'adb':
         raise ScrcpyError('win_platform')
     check_server()
+    target = control_target(name, config)
+    if target['enabled']:
+        if not target['available']:
+            raise ScrcpyError('virtual_display_unavailable', target['reason'])
+        return config, target['serial'], target['displayId'], target['sessionId']
     serial = str(config.Emulator_Serial or 'auto').strip()
     manager = ProcessManager._processes.get(name)
     source = manager.preview_source if manager and manager.alive else None
@@ -39,22 +82,17 @@ def _context(name):
         source = None
     if source:
         serial = source['serial']
-    virtual = config.PhysicalDevice_Enable and config.PhysicalDevice_VirtualDisplay
-    if virtual and (not source or not source.get('display_id')):
-        # Never silently control the main display when the game runs elsewhere.
-        raise ScrcpyError('virtual_display_unavailable')
-    display_id = source['display_id'] if virtual else 0
-    return config, serial, display_id
+    return config, serial, 0, None
 
 
 async def scrcpy(request):
     try:
-        _context(request.path_params['name'])
+        _, _, _, session_id = await run_in_threadpool(_context, request.path_params['name'])
     except InstanceNotFound:
         return JSONResponse({'available': False, 'reason': 'instance_missing'})
     except ScrcpyError as exc:
         return JSONResponse({'available': False, 'reason': exc.code})
-    return JSONResponse({'available': True})
+    return JSONResponse({'available': True, 'sessionId': session_id})
 
 
 async def scrcpy_socket(websocket):
@@ -67,7 +105,7 @@ async def scrcpy_socket(websocket):
     tasks = []
     owned = False
     try:
-        config, serial, display_id = _context(name)
+        config, serial, display_id, _ = await run_in_threadpool(_context, name)
         if name in _sessions:
             raise ScrcpyError('busy')
         _sessions.add(name)
@@ -86,7 +124,10 @@ async def scrcpy_socket(websocket):
             task.result()
         if receiver in done:
             bitrate = receiver.result()
-            result = await asyncio.to_thread(ConfigService().patch, name, 'Emulator.Scrcpy.Bitrate', bitrate)
+            # Same as every other Web config writer: patch() reads, modifies and
+            # writes the whole file, so it runs on the event loop to stay
+            # serialized with them instead of racing in a worker thread.
+            result = ConfigService().patch(name, 'Emulator.Scrcpy.Bitrate', bitrate)
             if not result.ok:
                 raise ScrcpyError('settings_failed', result.message)
             # The client waits for our close frame, sent after session cleanup,

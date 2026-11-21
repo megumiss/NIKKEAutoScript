@@ -35,6 +35,7 @@ import queue
 import threading
 import time
 from typing import Optional
+from urllib.parse import urlsplit
 
 from module.blablalink.renew import (
     BLA_HOME,
@@ -50,6 +51,8 @@ from module.blablalink.renew import (
 from module.logger import logger
 
 CHECK_LOGIN_URL = 'https://api.blablalink.com/api/user/CheckLogin'
+# 腾讯滑块验证码 iframe 的域名特征（如 global.captcha.gtimg.com / turing.captcha.qcloud.com）
+CAPTCHA_URL_KEYWORD = 'captcha'
 # 登录成功后 localStorage 中的凭证缓存（base64 JSON，含 openid/token/token_expire_time）
 LOGIN_CACHE_KEY = 'logined_account_cache_key'
 # 验证码截图刷新间隔（秒）
@@ -185,6 +188,7 @@ class BlaLoginSession:
         self._drag_queue = queue.Queue()
         self._cancel = threading.Event()
         self._login_ok = threading.Event()
+        self._login_error = ''
         self.result = None  # {'cookie', 'xcommonparams', 'expire'}
 
     # ---------- HTTP 层交互接口（线程安全） ----------
@@ -203,6 +207,8 @@ class BlaLoginSession:
         with self._lock:
             self._state = state
             self._error = error
+            if state != 'captcha':
+                self._shot = b''
 
     def get_screenshot(self) -> bytes:
         with self._lock:
@@ -221,7 +227,8 @@ class BlaLoginSession:
         """找到视口内可见的验证码 iframe 区域，无则返回 None"""
         for frame in page.frames:
             url = frame.url
-            if url in ('about:blank', '') or url.startswith(BLA_HOME):
+            # 首页还嵌有 YouTube 等第三方 iframe，只认腾讯验证码域名，否则会误把它们当作验证码
+            if CAPTCHA_URL_KEYWORD not in urlsplit(url).netloc:
                 continue
             try:
                 box = frame.frame_element().bounding_box()
@@ -282,6 +289,8 @@ class BlaLoginSession:
         browser = None
         try:
             sync_playwright = ensure_playwright()
+            from playwright.sync_api import Error as PlaywrightError
+
             with sync_playwright() as p:
                 browser = _launch_browser(p)
                 context_args = {}
@@ -335,12 +344,26 @@ class BlaLoginSession:
                     if 'account/login' not in url:
                         return
                     try:
-                        body = resp.text()
-                    except Exception:
+                        body = resp.json()
+                    except (PlaywrightError, ValueError):
+                        self._login_error = f'Cannot read account/login JSON response (HTTP {resp.status})'
                         return
-                    logger.info(f'account/login response: {body[:200]}')
-                    if '"ret":0' in body.replace(' ', ''):
+                    if not isinstance(body, dict) or type(body.get('ret')) is not int:
+                        self._login_error = 'Invalid account/login response: missing or invalid ret'
+                        return
+                    ret = body['ret']
+                    message = str(body.get('msg') or '')[:200]
+                    logger.info(f'account/login response: ret={ret}, msg={message}')
+                    if ret == 0:
                         self._login_ok.set()
+                        return
+                    # 2170 要求继续滑块验证，不是本次登录的终态失败。
+                    if ret == 2170:
+                        return
+                    # 回调只记录结果，由主循环抛错，避免被截图等 Playwright 调用的异常处理吞掉。
+                    self._login_error = f'Login rejected (ret={ret}): {message or "Unknown login error"}'
+                    if ret == 2002:
+                        self._login_error += ' Check LiPass credentials and instance region in NKAS settings.'
 
                 page.on('request', on_request)
                 page.on('response', on_response)
@@ -378,6 +401,7 @@ class BlaLoginSession:
                 box = None
                 while time.time() < deadline:
                     self._raise_if_cancelled()
+                    self._raise_if_login_failed()
                     if self._login_ok.is_set():
                         break
                     box = self._find_captcha_box(page)
@@ -389,6 +413,8 @@ class BlaLoginSession:
                     except Exception:
                         pass
                     time.sleep(1)
+
+                self._raise_if_login_failed()
 
                 # 滑块阶段：截图推送 + 轨迹回放
                 if not self._login_ok.is_set():
@@ -409,10 +435,11 @@ class BlaLoginSession:
                     deadline = time.time() + self.timeout
                     while time.time() < deadline:
                         self._raise_if_cancelled()
+                        self._raise_if_login_failed()
                         if self._login_ok.is_set():
                             break
                         try:
-                            ev = self._drag_queue.get(timeout=0.05)
+                            ev = self._drag_queue.get_nowait()
                         except queue.Empty:
                             ev = None
                         if ev:
@@ -424,10 +451,11 @@ class BlaLoginSession:
                         if now >= next_shot:
                             self._update_shot(page)
                             next_shot = now + interval
-                    else:
-                        raise LoginTimeout
+                        # iframe 消失后截图不再调用 driver，仍需驱动事件泵来接收登录结果。
+                        page.wait_for_timeout(0 if ev else 50)
+                    self._raise_if_login_failed()
                     if not self._login_ok.is_set():
-                        raise LoginTimeout
+                        raise LoginTimeout(f'Login did not complete within {self.timeout}s after captcha appeared')
 
                 # 登录成功：从 localStorage 取凭证
                 logger.info('Login succeeded, reading credentials from localStorage')
@@ -569,6 +597,10 @@ class BlaLoginSession:
                     browser.close()
                 except Exception:
                     pass
+
+    def _raise_if_login_failed(self):
+        if self._login_error:
+            raise LoginError(self._login_error)
 
     def _raise_if_cancelled(self):
         if self._cancel.is_set():

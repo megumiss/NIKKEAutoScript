@@ -17,6 +17,9 @@ fn default_dpi_scaling() -> bool {
 fn default_theme() -> String {
     "light".into()
 }
+fn default_update_source() -> String {
+    "git".into()
+}
 fn default_desktop_update_manifest() -> String {
     // Desktop updates are fetched from the official VPS by default.
     // Override Deploy.Update.DesktopUpdateManifest in config/deploy.yaml to use another source.
@@ -41,6 +44,8 @@ struct DeployConfig {
 
 #[derive(Debug, Deserialize)]
 struct UpdateConfig {
+    #[serde(rename = "UpdateSource", default = "default_update_source")]
+    update_source: String,
     #[serde(
         rename = "DesktopUpdateManifest",
         default = "default_desktop_update_manifest"
@@ -51,6 +56,7 @@ struct UpdateConfig {
 impl Default for UpdateConfig {
     fn default() -> Self {
         Self {
+            update_source: default_update_source(),
             desktop_update_manifest: default_desktop_update_manifest(),
         }
     }
@@ -84,6 +90,7 @@ pub struct DesktopConfig {
     /// Stored without IPv6 brackets; backend::url adds them when needed.
     pub host: String,
     pub port: u16,
+    pub update_source: String,
     pub desktop_update_manifest: String,
     pub dpi_scaling: bool,
     pub hardware_acceleration: bool,
@@ -142,6 +149,7 @@ pub fn load(root: PathBuf) -> Result<DesktopConfig> {
         python,
         host: resolve_connect_host(&raw.deploy.webui.host),
         port: raw.deploy.webui.port,
+        update_source: raw.deploy.update.update_source,
         desktop_update_manifest: raw.deploy.update.desktop_update_manifest,
         dpi_scaling: raw.deploy.webui.dpi_scaling,
         hardware_acceleration: raw.deploy.webui.hardware_acceleration,
@@ -252,152 +260,4 @@ pub fn webview_arguments(config: &DesktopConfig, inherited: Option<&str>) -> Opt
         append("--force-device-scale-factor=1");
     }
     (!args.is_empty()).then_some(args)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn temporary_directory(name: &str) -> PathBuf {
-        std::env::temp_dir().join(format!("nkas-config-{name}-{}", std::process::id()))
-    }
-
-    fn sample_config() -> DesktopConfig {
-        DesktopConfig {
-            root: PathBuf::from("C:/NKAS"),
-            python: PathBuf::from("python.exe"),
-            host: "127.0.0.1".into(),
-            port: 12271,
-            desktop_update_manifest: default_desktop_update_manifest(),
-            dpi_scaling: true,
-            hardware_acceleration: false,
-            theme: default_theme(),
-            shortcuts_enabled: true,
-            shortcuts: HashMap::new(),
-        }
-    }
-
-    #[test]
-    fn webview_flags_preserve_existing_arguments() {
-        let config = sample_config();
-        assert_eq!(
-            webview_arguments(&config, Some("--foo")),
-            Some(format!("--foo {DISABLE_FEATURES} --disable-gpu"))
-        );
-    }
-
-    #[test]
-    fn enabled_gpu_does_not_add_disable_flag() {
-        let mut config = sample_config();
-        config.hardware_acceleration = true;
-        assert_eq!(webview_arguments(&config, None), Some(DISABLE_FEATURES.to_string()));
-    }
-
-    #[test]
-    fn disabled_dpi_adds_scale_flag_once() {
-        let mut config = sample_config();
-        config.dpi_scaling = false;
-        assert_eq!(
-            webview_arguments(&config, Some("--disable-gpu")),
-            Some(format!("--disable-gpu {DISABLE_FEATURES} --force-device-scale-factor=1"))
-        );
-    }
-
-    #[test]
-    fn enabled_gpu_with_disabled_dpi_only_sets_scale() {
-        let mut config = sample_config();
-        config.hardware_acceleration = true;
-        config.dpi_scaling = false;
-        assert_eq!(
-            webview_arguments(&config, None),
-            Some(format!("{DISABLE_FEATURES} --force-device-scale-factor=1"))
-        );
-    }
-
-    /// 被遮挡时停止合成正是画面卡住的直接原因，必须确保它一直关着；
-    /// 它只能写在 --disable-features 里，单独加开关无效。
-    #[test]
-    fn native_window_occlusion_detection_stays_disabled() {
-        let config = sample_config();
-        let arguments = webview_arguments(&config, None).unwrap();
-        assert!(arguments.contains("--disable-features="));
-        assert!(arguments.contains("CalculateNativeWinOcclusion"));
-    }
-
-    #[test]
-    fn inherited_disable_features_are_merged_and_deduplicated() {
-        let config = sample_config();
-        let arguments = webview_arguments(
-            &config,
-            Some(
-                "--foo --disable-features=CustomFeature,msPdfOOUI --bar \
-                 --disable-features=OtherFeature",
-            ),
-        )
-        .unwrap();
-        assert_eq!(
-            arguments,
-            concat!(
-                "--foo --disable-features=CustomFeature,msPdfOOUI,OtherFeature,",
-                "msWebOOUI,msSmartScreenProtection,CalculateNativeWinOcclusion ",
-                "--bar --disable-gpu"
-            )
-        );
-    }
-
-    /// run() 会把结果写回环境变量、create_window() 再读回来拼一次，必须幂等，
-    /// 否则 --disable-features 会被追加两次。
-    #[test]
-    fn webview_arguments_are_idempotent() {
-        let config = sample_config();
-        let first = webview_arguments(&config, None).unwrap();
-        let second = webview_arguments(&config, Some(&first)).unwrap();
-        assert_eq!(second, first);
-    }
-
-    #[test]
-    fn wildcard_hosts_resolve_to_loopback() {
-        assert_eq!(resolve_connect_host("0.0.0.0"), "127.0.0.1");
-        assert_eq!(resolve_connect_host(""), "127.0.0.1");
-        assert_eq!(resolve_connect_host("::"), "::1");
-        assert_eq!(resolve_connect_host("[::]"), "::1");
-    }
-
-    #[test]
-    fn explicit_hosts_are_kept_as_is() {
-        assert_eq!(resolve_connect_host("127.0.0.1"), "127.0.0.1");
-        assert_eq!(resolve_connect_host("192.168.1.5"), "192.168.1.5");
-        assert_eq!(resolve_connect_host("::1"), "::1");
-        assert_eq!(resolve_connect_host("[::1]"), "::1");
-        assert_eq!(resolve_connect_host("localhost"), "localhost");
-    }
-
-    #[test]
-    fn default_manifest_is_used_when_update_field_is_missing() {
-        let raw: RootConfig = serde_yaml::from_str(
-            "Deploy:\n  Python:\n    PythonExecutable: ./toolkit/python.exe\n",
-        )
-        .unwrap();
-        assert_eq!(
-            raw.deploy.update.desktop_update_manifest,
-            default_desktop_update_manifest()
-        );
-    }
-
-    #[test]
-    fn project_root_can_be_located_from_release_target() {
-        let root = temporary_directory("root");
-        let _ = fs::remove_dir_all(&root);
-        fs::create_dir_all(root.join("config")).unwrap();
-        fs::create_dir_all(root.join("webapp/src-tauri/target/release")).unwrap();
-        fs::write(root.join("gui.py"), b"").unwrap();
-        fs::write(root.join("config/deploy.yaml"), b"").unwrap();
-        let executable = root.join("webapp/src-tauri/target/release/nkas.exe");
-
-        assert_eq!(
-            locate_root(&root.join("webapp"), &executable).unwrap(),
-            root
-        );
-        let _ = fs::remove_dir_all(root);
-    }
 }

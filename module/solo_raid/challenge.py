@@ -107,6 +107,7 @@ class SoloRaidChallenge(UI):
                 if self.appear(ENTER_FIGHT, offset=10) and self.appear_then_click(
                     ENTER_FIGHT, threshold=10, interval=1
                 ):
+                    self.device.stuck_record_clear()
                     team_change_timer.reset()
                     continue
 
@@ -121,6 +122,7 @@ class SoloRaidChallenge(UI):
                         if current_team < 4:
                             logger.info(f'Team {current_team + 1} is not valid, switch to Team {current_team + 2}')
                             self.device.click(self.teams[current_team + 1])
+                            self.device.stuck_record_clear()
                             self.device.sleep(0.5)
                             team_change_timer.reset()
                             continue
@@ -145,6 +147,7 @@ class SoloRaidChallenge(UI):
                 while 1:
                     self.device.screenshot()
                     if not self.appear(END_FIGHTING, offset=30):
+                        self.device.stuck_record_clear()
                         break
                     if self.appear_then_click(END_FIGHTING, offset=30, interval=1):
                         continue

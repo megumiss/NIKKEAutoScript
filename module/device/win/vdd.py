@@ -37,11 +37,19 @@ def _run_manager(action, timeout=60):
                 'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass',
                 '-File', VDD_SCRIPT, '-Action', action, '-Json', '-Silent',
             ],
-            capture_output=True, text=True, timeout=timeout,
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='replace',
+            # PowerShell's UTF-8 output must not change the parent's console code page.
+            creationflags=subprocess.CREATE_NO_WINDOW,
+            # os.environ normalizes Windows keys, unlike the raw inherited environment block.
+            env=os.environ.copy(),
+            timeout=timeout,
         )
     except subprocess.TimeoutExpired:
         raise VddError(f'VDD {action} timed out after {timeout}s')
-    output = result.stdout + result.stderr
+    output = '\n'.join((result.stdout or '', result.stderr or ''))
     records = []
     for line in output.splitlines():
         line = line.strip()

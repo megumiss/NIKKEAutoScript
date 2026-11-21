@@ -8,6 +8,7 @@ from starlette.staticfiles import StaticFiles
 
 from module.logger import logger
 from module.webui.security_entry import entry_info, regenerate_entry
+from . import routes_migration
 from . import (routes_bla, routes_calendar, routes_campaign, routes_config, routes_console, routes_cookie_sync,
                routes_deploy, routes_device,
                routes_instances, routes_logs, routes_maintenance, routes_notify, routes_preview, routes_proxy,
@@ -26,6 +27,7 @@ def create_spa_mount():
 
 
 def mount_api(app):
+    app.add_middleware(routes_migration.MigrationMiddleware)
     routes = [
         Route('/api/security/entry', entry_info, methods=['GET']),
         Route('/api/security/entry/regenerate', regenerate_entry, methods=['POST']),
@@ -35,6 +37,7 @@ def mount_api(app):
         Route('/api/instances', routes_instances.instances, methods=['GET']),
         Route('/api/instances', routes_instances.create, methods=['POST']),
         Route('/api/avatars', routes_instances.avatar_list, methods=['GET']),
+        Route('/api/instances/migrate', routes_migration.migrate, methods=['POST']),
         Route('/api/instances/import', routes_instances.import_config, methods=['POST']),
         Route('/api/instances/order', routes_instances.reorder, methods=['POST']),
         Route('/api/instances/{name:str}/rename', routes_instances.rename, methods=['POST']),
@@ -119,6 +122,7 @@ def mount_api(app):
         Route('/api/{name:str}/campaign', routes_campaign.campaign, methods=['GET']),
         Route('/api/{name:str}/campaign/map/{chapter:int}', routes_campaign.map_image, methods=['GET']),
         Route('/api/{name:str}/scrcpy', routes_preview.scrcpy, methods=['GET']),
+        Route('/api/{name:str}/virtual-display', routes_preview.virtual_display, methods=['GET']),
         Route('/api/{name:str}/task/{task:str}/run', routes_tasks.run_task, methods=['POST']),
         Route('/api/{name:str}/tool/{task:str}/start', routes_tasks.start_tool, methods=['POST']),
         Route('/api/{name:str}', routes_instances.delete, methods=['DELETE']),

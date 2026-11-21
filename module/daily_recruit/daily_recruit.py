@@ -164,6 +164,8 @@ class DailyRecruit(UI):
                 and self.appear(SPECIAL_RECRUIT_CHECK, offset=(10, 10), static=False)
                 and confirm_timer.reached()
             ):
+                # 每抽成功返回后重置记录，避免正常招募累计触发防卡死保护。
+                self.device.click_record_clear()
                 self.event_free_recruit()
 
         logger.info('Event free recruit has done')
@@ -273,21 +275,27 @@ class DailyRecruit(UI):
             else:
                 break
 
-        recruit_end = False
-        while 1:
-            if skip_first_screenshot:
-                skip_first_screenshot = False
-            else:
-                self.device.screenshot()
+        while recruit_count < recruit_times:
+            self.device.screenshot()
 
-            # 友情点不足
+            # 领取结果并稳定返回招募页后，才能判断是否有足够的友情点继续抽取。
             if self.appear(SOCIAL_POINT_NOT_ENOUGH, static=False):
-                logger.info('There are not enough social point')
+                logger.warning('There are not enough social point')
                 raise NotEnoughSocialPoint
 
-            # 抽卡
-            if not recruit_end and self.appear_then_click(SOCIAL_RECRUIT, offset=(30, 30), interval=3):
-                continue
+            if self.appear_then_click(SOCIAL_RECRUIT, offset=(30, 30), interval=3):
+                self.handle_social_recruit_result()
+                self.device.click_record_clear()
+                recruit_count += 1
+                logger.info(f'Social point recruit count: {recruit_count}/{recruit_times}')
+
+        logger.info('Social point recruit has done')
+        return True
+
+    def handle_social_recruit_result(self):
+        while 1:
+            self.device.screenshot()
+
             # 跳过
             if self.appear_then_click(RECRUIT_SKIP, offset=(30, 30), interval=1, static=False):
                 continue
@@ -314,20 +322,9 @@ class DailyRecruit(UI):
                     # 顶部货币图标会随数量移动，使用位置固定的单抽按钮确认返回。
                     if self.appear(SOCIAL_RECRUIT, offset=(30, 30)):
                         if return_timer.reached():
-                            break
+                            return
                     else:
                         return_timer.reset()
-
-                recruit_count += 1
-                logger.info(f'Social point recruit count: {recruit_count}/{recruit_times}')
-                recruit_end = recruit_count >= recruit_times
-                continue
-            # 结束
-            if recruit_end and self.appear(SOCIAL_RECRUIT_CHECK, offset=(10, 10), static=False):
-                break
-
-        logger.info('Social point recruit has done')
-        return True
 
     def run(self):
         self.ui_ensure(page_recruit)

@@ -38,6 +38,9 @@ class Daily(UI):
                 continue
 
             if click_timer.reached() and self.handle_reward(1):
+                # 每领取一个任务就是一组 RECEIVE + REWARD，领取 6 个以上会误触发双按钮连点检查
+                if 'RECEIVE' in self.device.click_record:
+                    self.device.click_record_clear()
                 confirm_timer.reset()
                 click_timer.reset()
                 continue

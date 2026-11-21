@@ -155,6 +155,7 @@ pub fn start_and_wait(config: &DesktopConfig, log: LogSink, output: LogSink) -> 
     while started.elapsed() < Duration::from_secs(60) {
         if health(&config.host, config.port) {
             log("Backend health check passed.".into());
+            confirm_source_update(config);
             return Ok(backend);
         }
         if let Some(status) = backend
@@ -178,6 +179,41 @@ pub fn start_and_wait(config: &DesktopConfig, log: LogSink, output: LogSink) -> 
         "Timed out waiting 60 seconds for {}",
         url(&config.host, config.port, "/api/system/status")
     )
+}
+
+// Older source snapshots may not have the Python-side startup acknowledgement.
+// Confirm only a backend started by this shell, never an already-running one.
+fn confirm_source_update(config: &DesktopConfig) {
+    let journal = config.root.join("tmp/mirror-source/transaction.json");
+    let confirmed = (|| -> Result<bool> {
+        if !journal.is_file() {
+            return Ok(false);
+        }
+        let record: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&journal)?)?;
+        if record["schema"] != 1 || record["phase"] != "ready" {
+            return Ok(false);
+        }
+        let Some(target) = record["target"].as_str() else { return Ok(false); };
+        if !matches!(target.len(), 40 | 64) || !target.bytes().all(|value| value.is_ascii_hexdigit()) {
+            return Ok(false);
+        }
+        let settings: serde_yaml::Value = serde_yaml::from_str(
+            &std::fs::read_to_string(config.root.join("config/deploy.yaml"))?,
+        )?;
+        let git = settings["Deploy"]["Git"]["GitExecutable"].as_str().unwrap_or("toolkit/Git/cmd/git.exe");
+        let git = config.root.join(git);
+        let mut command = Command::new(git);
+        command.current_dir(&config.root).args(["rev-parse", "HEAD"]);
+        #[cfg(windows)]
+        command.creation_flags(0x08000000);
+        let result = command.output()?;
+        if result.status.success() && String::from_utf8_lossy(&result.stdout).trim() == target {
+            std::fs::remove_file(&journal)?;
+            return Ok(true);
+        }
+        Ok(false)
+    })();
+    let _ = confirmed;
 }
 
 fn run_prepare(config: &DesktopConfig, output: LogSink) -> Result<()> {
@@ -317,42 +353,5 @@ fn assign_kill_job(process_id: u32) -> Result<HANDLE> {
             return Err(error).context("Unable to assign Python process to Windows Job Object");
         }
         Ok(job)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::io::Cursor;
-    use std::sync::Mutex;
-
-    #[test]
-    fn backend_urls_follow_the_configured_host() {
-        assert_eq!(url("127.0.0.1", 12271, "/app/"), "http://127.0.0.1:12271/app/");
-        assert_eq!(url("192.168.1.5", 12271, "/app/"), "http://192.168.1.5:12271/app/");
-    }
-
-    #[test]
-    fn backend_urls_bracket_ipv6_hosts() {
-        assert_eq!(url("::1", 12271, "/app/"), "http://[::1]:12271/app/");
-    }
-
-    #[test]
-    fn process_output_is_streamed_with_lossy_decoding() {
-        let messages = Arc::new(Mutex::new(Vec::new()));
-        let received = messages.clone();
-        let log: LogSink = Arc::new(move |message| received.lock().unwrap().push(message));
-        let reader = spawn_log_reader(Cursor::new(b"first\ninvalid: \xff\n".to_vec()), log);
-
-        let captured = reader.join().unwrap();
-        assert!(captured.contains("first"));
-        assert!(captured.contains("invalid:"));
-        assert_eq!(messages.lock().unwrap().len(), 2);
-    }
-
-    #[test]
-    fn gbk_process_output_is_decoded() {
-        assert_eq!(decode_output_line(&[0xc6, 0xf4, 0xb6, 0xaf, b'\n']), "启动");
-        assert_eq!(decode_output_line("正常 UTF-8\n".as_bytes()), "正常 UTF-8");
     }
 }

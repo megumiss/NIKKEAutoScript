@@ -63,6 +63,11 @@ param(
     [switch]$Silent
 )
 
+# JSON uses UTF-8 regardless of the caller's console code page.
+if ($Json) {
+    [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+}
+
 #----------------------------------------------------------------------
 # SECTION 1: CENTRALIZED LOGGING FUNCTION
 #----------------------------------------------------------------------

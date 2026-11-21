@@ -145,7 +145,10 @@ class Button(Resource):
                 bottom_right = (upper_left[0] + w, upper_left[1] + h)
                 self._button_offset = (upper_left[0], upper_left[1], bottom_right[0], bottom_right[1])
 
-        logger.debug(f'Button: {self.name}, similarity: {similarity}, threshold: {threshold}, hit: {similarity > threshold}')
+        logger.debug(
+            f'Button: {self.name}, similarity: {similarity:.3f}, '
+            f'threshold: {threshold:.3f}, hit: {similarity > threshold}'
+        )
         return similarity > threshold
 
         # if self.is_gif:
@@ -203,7 +206,7 @@ class Button(Resource):
 
         logger.debug(
             f'Button: {self.name}, best_similarity: {best_similarity:.3f}, '
-            f'best_scale: {best_scale:.3f}, threshold: {threshold}, hit: {best_similarity > threshold}'
+            f'best_scale: {best_scale:.3f}, threshold: {threshold:.3f}, hit: {best_similarity > threshold}'
         )
         return best_similarity > threshold
 
@@ -273,7 +276,11 @@ class Button(Resource):
             color2=self.color
         )
 
-        logger.debug(f'Button: {self.name}, color1: {color1}, color2: {self.color}, similarity: {similar}, threshold: {threshold}, hit: {similar <= threshold}')
+        logger.debug(
+            f'Button: {self.name}, color1: {tuple(round(c, 3) for c in color1)}, '
+            f'color2: {tuple(round(c, 3) for c in self.color)}, '
+            f'similarity: {similar}, threshold: {threshold}, hit: {similar <= threshold}'
+        )
         return similar <= threshold
 
     def match_appear_on(self, image, threshold=30) -> bool:
@@ -294,7 +301,11 @@ class Button(Resource):
             color2=self.color
         )
 
-        logger.debug(f'Button: {self.name}, color1: {color1}, color2: {self.color}, similarity: {similar}, threshold: {threshold}, hit: {similar <= threshold}')
+        logger.debug(
+            f'Button: {self.name}, color1: {tuple(round(c, 3) for c in color1)}, '
+            f'color2: {tuple(round(c, 3) for c in self.color)}, '
+            f'similarity: {similar}, threshold: {threshold}, hit: {similar <= threshold}'
+        )
         return similar <= threshold
 
     def load_color(self, image):

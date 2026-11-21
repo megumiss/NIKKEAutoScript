@@ -1,0 +1,57 @@
+name: mirrorchyan_release
+
+# secrets: MirrorChyanUploadToken
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        default: ''
+        required: false
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  mirrorchyan:
+    if: ${{ github.repository_owner == 'megumiss' }}
+    runs-on: ubuntu-latest
+    env:
+      UPLOAD_TOKEN: ${{ secrets.MirrorChyanUploadToken }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: win
+            arch: x64
+            filename: 'nkas-win-x64.exe'
+            p7zip: false
+          - os: win
+            arch: ''
+            filename: 'NKAS_*_full-cn.7z'
+            p7zip: true
+
+    steps:
+      - name: Skip without upload token
+        if: env.UPLOAD_TOKEN == ''
+        run: echo "MirrorChyanUploadToken is not set, skip uploading"
+
+      - uses: MirrorChyan/uploading-action@v1
+        if: env.UPLOAD_TOKEN != ''
+        with:
+          filetype: latest-release
+          filename: ${{ matrix.filename }}
+          p7zip: ${{ matrix.p7zip }}
+          mirrorchyan_rid: NIKKEAutoScript
+          tag: ${{ inputs.tag || github.event.release.tag_name }}
+
+          os: ${{ matrix.os }}
+          arch: ${{ matrix.arch }}
+
+          owner: megumiss
+          repo: NIKKEAutoScript
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          upload_token: ${{ env.UPLOAD_TOKEN }}

@@ -76,9 +76,15 @@ def _is_masked(value) -> bool:
     return all(ch == "*" for ch in s)
 
 
-def save_account(config_name: str, account: str = None, password: str = None):
+# .acc 文件中各敏感字段的键名
+USERNAME_FIELD = 'username'
+PASSWORD_FIELD = 'password'
+UNLOCK_PASSWORD_FIELD = 'unlock_password'
+
+
+def save_secrets(config_name: str, fields: dict):
     """
-    保存账号和密码，可以只传其中一个；支持追加合并保存
+    加密保存若干字段，与文件中已有字段合并；值为 None 或掩码时保留原值
     """
     try:
         key = _derive_key_from_username()
@@ -94,11 +100,9 @@ def save_account(config_name: str, account: str = None, password: str = None):
         else:
             account_data = {}
 
-        # 更新新字段（仅当传入不为 None）
-        if account is not None and not _is_masked(account):
-            account_data['username'] = _encrypt_field(key, account)
-        if password is not None and not _is_masked(password):
-            account_data['password'] = _encrypt_field(key, password)
+        for field, value in fields.items():
+            if value is not None and not _is_masked(value):
+                account_data[field] = _encrypt_field(key, value)
 
         # 保存合并后的数据
         with open(acc_file, 'w', encoding='utf-8') as f:
@@ -109,27 +113,46 @@ def save_account(config_name: str, account: str = None, password: str = None):
         logger.error(f'保存账号失败: {e}')
 
 
-def load_account(config_name: str) -> (str, str):
+def load_secrets(config_name: str, *fields: str) -> tuple:
     """
-    读取并解密账号和密码，可以只读取其中一个
+    读取并解密若干字段，按传入顺序返回；不存在的字段为 None
     """
     acc_file = _get_account_file(config_name)
     if not os.path.exists(acc_file):
         logger.warning(f'账号文件不存在: {acc_file}')
-        return None, None
+        return tuple(None for _ in fields)
 
     try:
         key = _derive_key_from_username()
         with open(acc_file, 'r', encoding='utf-8') as f:
             encrypted_data = json.load(f)
 
-        account = _decrypt_field(key, encrypted_data.get('username'))
-        password = _decrypt_field(key, encrypted_data.get('password'))
-
-        return account, password
+        return tuple(_decrypt_field(key, encrypted_data.get(field)) for field in fields)
     except Exception as e:
         logger.error(f'读取账号失败: {e}')
-        return None, None
+        return tuple(None for _ in fields)
+
+
+def save_secret(config_name: str, field: str, value: str):
+    save_secrets(config_name, {field: value})
+
+
+def load_secret(config_name: str, field: str) -> str:
+    return load_secrets(config_name, field)[0]
+
+
+def save_account(config_name: str, account: str = None, password: str = None):
+    """
+    保存账号和密码，可以只传其中一个；支持追加合并保存
+    """
+    save_secrets(config_name, {USERNAME_FIELD: account, PASSWORD_FIELD: password})
+
+
+def load_account(config_name: str) -> (str, str):
+    """
+    读取并解密账号和密码，可以只读取其中一个
+    """
+    return load_secrets(config_name, USERNAME_FIELD, PASSWORD_FIELD)
 
 
 if __name__ == '__main__':

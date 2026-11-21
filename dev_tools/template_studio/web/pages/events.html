@@ -31,8 +31,8 @@
     <div class="event-crop-target"><label for="cropTemplate">目标模板</label><select id="cropTemplate" disabled></select><p id="cropMode" class="hint"></p><p id="cropRule" class="hint"></p></div>
     <div class="event-crop-controls"><div class="section-title"><h3>选区坐标 <span id="cropDimensions" class="count"></span></h3><button id="btnCropReset" class="text-button" disabled>重新框选</button></div>
       <div class="event-crop-coordinates"><label for="cropX0">左 x0<input id="cropX0" type="number" step="1" min="0" disabled></label><label for="cropY0">上 y0<input id="cropY0" type="number" step="1" min="0" disabled></label><label for="cropX1">右 x1<input id="cropX1" type="number" step="1" min="2" disabled></label><label for="cropY1">下 y1<input id="cropY1" type="number" step="1" min="2" disabled></label></div>
-      <p id="cropValidation" class="crop-validation" role="status"></p><p id="cropConfirmed" class="notice" hidden>此模板已确认。保存修改后退回草稿，需要重新确认。</p><p id="cropError" class="dialog-error" role="alert" hidden></p>
-      <button id="btnCropSave" class="primary full" disabled>保存裁剪草稿</button>
+      <p id="cropValidation" class="crop-validation" role="status"></p><p id="cropConfirmed" class="notice" hidden>此模板已确认。点击“保存并确认模板”将使用当前选区替换并重新确认。</p><p id="cropError" class="dialog-error" role="alert" hidden></p>
+      <button id="btnConfirm" class="primary full" disabled>保存并确认模板 <kbd>Enter</kbd></button>
     </div>
     </section>
   <section class="source-workspace surface">
@@ -43,31 +43,34 @@
   <section class="review-workspace surface" hidden>
     <aside class="template-panel"><div class="panel-heading"><div><span class="eyebrow">TEMPLATES</span><h2>模板清单 <span id="tplCount" class="count">0 / 0</span></h2></div></div><div class="template-filters"><label class="sr-only" for="templateSearch">搜索模板</label><input id="templateSearch" placeholder="搜索模板名或用途"><div class="filter-row"><label class="sr-only" for="templateScene">模板场景</label><select id="templateScene"><option value="">所有场景</option></select><label class="sr-only" for="templateStatus">模板状态</label><select id="templateStatus"><option value="">所有状态</option><option value="todo">待处理</option><option value="draft">待校对</option><option value="missing">待生成</option><option value="confirmed">已确认</option><option value="rejected">已打回</option></select></div></div><div id="tplList" class="template-list"><div class="empty">手动截取和 agent 提案都将在这里显示。</div></div></aside>
     <aside class="inspector"><div class="inspector-scroll"><div class="section-title"><h2>模板校对</h2><span id="templateBadge" class="badge">未选择</span></div><div id="tplInfo"><div class="empty">选择模板，查看裁剪结果与历史参考。</div></div>
-      <div id="liveCropSection" class="review-section" hidden><div class="section-title"><h3>本次裁剪 · 未保存</h3></div><div class="image-frame"><canvas id="cropPreview" role="img" aria-label="本次裁剪实时预览"></canvas></div><p class="hint">保存裁剪草稿后再确认模板。</p></div><div id="reviewDetails" hidden><div class="review-section"><div class="section-title"><h3>当前裁剪结果</h3><span id="cropSize" class="count"></span></div><div class="image-frame"><img id="previewImg" alt="当前模板裁剪预览" hidden><p id="previewEmpty" class="empty">可手动截取，或等待 agent 生成提案。</p></div><p id="sourceInfo" class="hint filename"></p><p id="agentNote" class="hint"></p></div>
+      <div id="liveCropSection" class="review-section" hidden><div class="section-title"><h3>本次裁剪 · 未保存</h3></div><div class="image-frame"><canvas id="cropPreview" role="img" aria-label="本次裁剪实时预览"></canvas></div><p class="hint">点击“保存并确认模板”一次完成保存与确认。</p></div><div id="reviewDetails" hidden><div class="review-section"><div class="section-title"><h3>当前裁剪结果</h3><span id="cropSize" class="count"></span></div><div class="image-frame"><img id="previewImg" alt="当前模板裁剪预览" hidden><p id="previewEmpty" class="empty">可手动截取，或等待 agent 生成提案。</p></div><p id="sourceInfo" class="hint filename"></p><p id="agentNote" class="hint"></p></div>
         <div class="review-section"><div class="section-title"><h3>历史参考</h3><span class="hint">复制来源活动</span></div><div class="image-frame reference"><img id="refImg" alt="历史同名模板参考" hidden><p id="refEmpty" class="empty">未找到历史模板。</p></div><p id="refPath" class="hint filename"></p></div>
         <div class="review-section"><label for="reviewNote">校对意见 <span class="muted">发给 agent 修正</span></label><textarea id="reviewNote" rows="3" placeholder="如：裁剪范围过大，请缩小到按钮文字，排除周围装饰"></textarea><button id="btnSaveReview" class="small">保存意见</button><p id="tplMeta" class="hint mono"></p></div>
         <details class="advanced"><summary>提案管理</summary><p class="hint">清除后可手动截取，或交给 agent 重新裁剪。</p><button id="btnClear" class="text-button danger" disabled>清除此提案</button></details>
       </div></div>
-      <div class="review-actions"><button id="btnManualCrop" class="full" disabled>定位到裁剪画布</button><button id="btnConfirm" class="primary full" disabled>确认模板 <kbd>Enter</kbd></button><div class="filter-row"><button id="btnReject" class="danger" disabled>打回给 agent</button><button id="btnNext" disabled>下一个待处理</button></div><label class="toggle"><input id="autoNext" type="checkbox" checked>确认后自动前往下一项</label><button id="btnExport" class="full" disabled>导出已确认模板</button></div>
+      <div class="review-actions"><button id="btnManualCrop" class="full" disabled>定位到裁剪画布</button><div class="filter-row"><button id="btnReject" class="danger" disabled>打回给 agent</button><button id="btnNext" disabled>下一个待处理</button></div><label class="toggle"><input id="autoNext" type="checkbox" checked>确认后自动前往下一项</label><button id="btnExport" class="full" disabled>导出已确认模板</button></div>
     </aside>
   </section>
   </div>
 </main>
 <footer><span id="status" role="status" aria-live="polite">正在读取会话…</span><span id="dataPath" class="filename hint"></span></footer><div id="toast" role="status" hidden></div>
 <dialog id="sessionDialog" aria-labelledby="sessionDialogTitle"><div class="dialog-heading"><div><span class="eyebrow">ACTIVITY</span><h2 id="sessionDialogTitle">活动会话</h2></div><button data-close="sessionDialog" class="text-button" aria-label="关闭活动会话弹窗">关闭</button></div><div class="dialog-body">
-  <div class="session-block"><div class="section-title"><h3>管理已有会话</h3><button id="btnReloadSessions" class="text-button">刷新列表</button></div>
-    <label for="sessionSel">选择会话</label><select id="sessionSel" aria-describedby="selectedSessionInfo"></select>
+  <div class="session-block"><div class="section-title"><h3>选择已有活动</h3><button id="btnReloadSessions" class="text-button">刷新列表</button></div>
+    <label for="sessionSel">选择活动</label><select id="sessionSel" aria-describedby="selectedSessionInfo"></select>
     <p id="selectedSessionInfo" class="hint filename" aria-live="polite"></p>
+    <div id="initialPhaseBlock" hidden><label for="initialPhase">本次更新阶段</label><select id="initialPhase"></select></div>
+    <p class="hint">已有会话直接打开；没有会话时按所选阶段创建，不重复登记活动、不复制资源、不修改剧情时间表。</p>
     <div class="filter-row"><button id="btnOpen" disabled>打开会话</button><button id="btnDeleteSession" class="danger" disabled>删除会话</button></div>
   </div>
   <div id="phaseBlock" class="session-block" hidden><h3>追加更新阶段</h3><p id="phaseSessionInfo" class="hint filename"></p><p class="hint">保留已有截图和校对结果，补入所选阶段的模板。</p><div class="filter-row"><label for="advancePhase" class="sr-only">更新阶段</label><select id="advancePhase"></select><button id="btnAdvance">追加阶段</button></div></div>
-  <div class="session-block"><h3>新建活动会话</h3>
+  <div class="session-block"><h3>创建全新活动</h3>
     <label for="eventId">活动日期</label><input id="eventId" placeholder="如 20261029" autocomplete="off" aria-describedby="eventIdHint" required><p id="eventIdHint" class="hint" aria-live="polite">自动添加 event_ 前缀，不限制日期格式或位数。</p>
     <label for="eventName">活动名称</label><input id="eventName" placeholder="游戏中显示的活动名称" autocomplete="off" required>
     <label for="baseEventSel">复制哪个历史活动</label><select id="baseEventSel" aria-describedby="baseEventInfo"></select><p id="baseEventInfo" class="hint"></p>
     <div class="form-grid"><div><label for="typeLabel">活动类型</label><input id="typeLabel" readonly></div><div><label for="phaseSel">本次更新阶段</label><select id="phaseSel"></select></div></div>
     <label for="eventPosition">插入 EVENTS 的位置</label><select id="eventPosition"><option value="1">第 1 位 · Event 主活动</option><option value="2">第 2 位 · Event2 第二活动</option></select>
     <p class="hint">原有条目依次后移，历史活动保留。创建时复制整套资源；YAML 清单内的模板随后全部重新裁剪。</p>
+    <p class="hint">有效的 YYYYMMDD 日期自动按当天 04:00（UTC+8）及大小活动类型生成每周剧情时间表；其它 ID 需手动补充。本次更新阶段不影响时间表。</p>
     <p class="hint">小游戏、扩展玩法与关卡布局参数由你手动配置；新活动默认关闭小游戏与扩展玩法。</p>
     <button id="btnNew" class="primary full" disabled>复制资源并创建活动</button></div></div><p class="dialog-error" id="sessionError" role="alert" hidden></p></dialog>
 <dialog id="deleteSessionDialog" aria-labelledby="deleteSessionTitle" aria-describedby="deleteSessionScope">

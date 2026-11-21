@@ -121,8 +121,11 @@ function renderEditor() {
   updateButtons();
 }
 function chooseAsset(name) {
-  if (busy || !allowDiscard()) return;
-  clearDraft(); selected = library?.assets.find(a => a.name === name) || null;
+  if (busy) return;
+  const target = library?.assets.find(a => a.name === name) || null;
+  metadataDirty = metadataDirty || Boolean(selection?.box && selected?.name !== target?.name);
+  selected = target;
+  selectionDirty = Boolean(selection?.box) && (selection.changed || metadataDirty);
   $('outputName').value = selected ? selected.name.replace(/\.(png|gif)$/, '') : '';
   if (selected) $('outputMode').value = selected.mode;
   renderAssets(); refreshSelection(); renderComparison();

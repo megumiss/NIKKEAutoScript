@@ -59,12 +59,12 @@ class ChampionArena(UI, ArenaBase):
                 self.device.screenshot()
 
             # 晋级赛
-            if click_timer.reached() and self.appear_then_click(PROMOTION, offset=10, interval=3):
+            if click_timer.reached() and self.appear_then_click(PROMOTION, offset=60, interval=3):
                 click_timer.reset()
                 continue
 
             # 冠军争霸赛
-            if click_timer.reached() and self.appear_then_click(CHAMPION, offset=10, interval=3):
+            if click_timer.reached() and self.appear_then_click(CHAMPION, offset=60, interval=3):
                 click_timer.reset()
                 continue
 
@@ -148,8 +148,9 @@ class ChampionArena(UI, ArenaBase):
                 self.device.screenshot()
 
             if (
-                self.appear(PROGRESS_NEXT_SEASON, offset=(30, 30))
-                or self.appear(PROGRESS_TEAM, offset=(30, 30))
+                self.appear(ARENA_NEXT_SEASON, offset=(30, 30))
+                or self.appear(PROGRESS_NEXT_SEASON, offset=(30, 30))
+                or self.appear_any([PROGRESS_TEAM, PROGRESS_TEAM_EDIT], offset=(30, 30))
                 or self.appear(PROGRESS_FIGHTING, offset=(30, 30))
                 or self.appear(PROGRESS_RESULTING, offset=(30, 30))
                 or self.appear(PROGRESS_END, offset=(30, 30))

@@ -641,10 +641,21 @@ def _run_manager(action, timeout=120, skip_copy=False):
     if skip_copy and action == 'install':
         command.append('-SkipCopy')
     try:
-        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='replace',
+            # PowerShell's UTF-8 output must not change the parent's console code page.
+            creationflags=subprocess.CREATE_NO_WINDOW,
+            # os.environ normalizes Windows keys, unlike the raw inherited environment block.
+            env=os.environ.copy(),
+            timeout=timeout,
+        )
     except subprocess.TimeoutExpired:
         raise VirtualMouseDriverError(f'Driver {action} timed out after {timeout}s')
-    output = result.stdout + result.stderr
+    output = '\n'.join((result.stdout or '', result.stderr or ''))
     records = []
     for line in output.splitlines():
         line = line.strip()

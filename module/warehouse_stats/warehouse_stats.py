@@ -272,7 +272,7 @@ class WarehouseStats(UI):
         match_trace = ', '.join(f'{digit}@{score:.3f}' for _, _, digit, score, _, _ in refined)
         logger.debug(
             f'WarehouseStats: [DirectTemplateFallback] item={item_name or "INVENTORY_ITEM"}, '
-            f'digits={"".join(digits)}, value={value}, threshold={used_threshold:.2f}, matches=[{match_trace}]'
+            f'digits={"".join(digits)}, value={value}, threshold={used_threshold:.3f}, matches=[{match_trace}]'
         )
         return value
 
@@ -878,7 +878,7 @@ class WarehouseStats(UI):
             hit = similarity >= threshold
             logger.debug(
                 f'WarehouseStats: [ItemMatch] item={item_id}, '
-                f'similarity={similarity:.4f}, threshold={threshold:.4f}, hit={hit}'
+                f'similarity={similarity:.3f}, threshold={threshold:.3f}, hit={hit}'
             )
 
             if similarity > best_similarity:
@@ -888,13 +888,13 @@ class WarehouseStats(UI):
         if best_item_id and best_similarity >= threshold:
             logger.debug(
                 f'WarehouseStats: [ItemMatch] selected={best_item_id}, '
-                f'similarity={best_similarity:.4f}, threshold={threshold:.4f}'
+                f'similarity={best_similarity:.3f}, threshold={threshold:.3f}'
             )
             return best_item_id
 
         logger.debug(
             f'WarehouseStats: [ItemMatch] no hit, best={best_item_id}, '
-            f'best_similarity={best_similarity:.4f}, threshold={threshold:.4f}'
+            f'best_similarity={best_similarity:.3f}, threshold={threshold:.3f}'
         )
         return None
 

@@ -31,6 +31,7 @@ async def status(request: Request):
         'version': _git_version(), 'updater_state': updater.state,
         'theme': State.deploy_config.Theme, 'language': lang.LANG,
         'home_page': State.deploy_config.HomePage,
+        'config_migration_pending': State.config_migration_pending,
         'console_enabled': bool(State.deploy_config.ConsoleEnabled),
     })
     return JSONResponse(result, headers={'Cache-Control': 'no-store'})
@@ -38,10 +39,21 @@ async def status(request: Request):
 
 async def update_status(_: Request):
     local = updater.get_commit(short_sha1=True)
-    upstream = updater.get_commit(f'origin/{updater.Branch}', short_sha1=True)
-    history = updater.get_commit(f'origin/{updater.Branch}', n=20, short_sha1=True)
+    if updater.UpdateSource == 'mirrorchyan':
+        upstream = (None, None, None, None)
+        history = updater.get_commit(f'origin/{updater.Branch}', n=20, short_sha1=True,
+                                     cwd=updater.history_directory) if updater.history_directory.is_dir() else []
+        history = [commit for commit in history if isinstance(commit, (list, tuple)) and commit[0]]
+        if not history:
+            history = updater.get_commit('HEAD', n=20, short_sha1=True)
+        elif local[0] and not any(commit[0] == local[0] for commit in history):
+            history.append(local)
+    else:
+        upstream = updater.get_commit(f'origin/{updater.Branch}', short_sha1=True)
+        history = updater.get_commit(f'origin/{updater.Branch}', n=20, short_sha1=True)
     return JSONResponse({
-        'state': updater.state, 'error': updater.check_error,
+        'state': updater.state, 'error': updater.check_error, 'update_error': updater.update_error,
+        'source': updater.UpdateSource, **updater.source_info,
         'local': local, 'upstream': upstream, 'history': history or [],
     })
 
@@ -213,6 +225,17 @@ async def restart(_: Request):
 async def update(_: Request):
     if updater.state in ['checking', 'start', 'wait', 'run update']:
         return _json_error(f'Update already in progress. Current state: {updater.state}', 409)
+    from deploy.update_lock import UpdateLock
+    if UpdateLock.busy(updater.root_filepath):
+        return _json_error('另一个源码或启动器更新正在运行。', 409)
+    updater.read()
+    if updater.UpdateSource == 'mirrorchyan':
+        from deploy.mirrorchyan import MirrorError, read_cdk
+        try:
+            if not read_cdk(updater.file):
+                return _json_error('下载需要有效的 Mirror酱 CDK，请在部署页填写，或切换原更新源。', 422)
+        except MirrorError as error:
+            return _json_error(str(error), 422)
     # run_update blocks for the whole wait-pull-install cycle; run it off the
     # event loop so the SPA can poll the update state while it progresses.
     threading.Thread(target=updater.run_update, daemon=True).start()

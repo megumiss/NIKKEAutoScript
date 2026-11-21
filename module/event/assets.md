@@ -1,5 +1,12 @@
 困难难度是否开放由 `module/event/story.py` 的 `appear_hard_locked()` 在右下角区域执行 OCR 判断，只匹配倒计时提示文字，不依赖时长或图片模板。无需为困难锁定状态裁剪模板；困难切换、解锁弹窗模板仍需维护。
 
+# 共用活动商店模板
+
+| 图片 | 描述 | 预览 |
+|------|------|------|
+| **SHOP_ITEM_LOAD_CHECK_GEM** | 首页右下角商品的钻石图标，用于加载检查；中英文共用 | <img src="../../assets/zh-CN/event/SHOP_ITEM_LOAD_CHECK_GEM.png" width="200"> |
+| **TEMPLATE_SHOP_ITEM_LIMITED_TIME_BADGE** | 商品左上角橙色限时小钟图标；困难买票每次点击商品前检查，无角标直接结束钻石购买；中英文共用 | <img src="../../assets/zh-CN/event/TEMPLATE_SHOP_ITEM_LIMITED_TIME_BADGE.png" width="46"> |
+
 # 大型活动
 ## 不需要重新截图
 | 图片 | 描述 | 使用状态 | 预览 |

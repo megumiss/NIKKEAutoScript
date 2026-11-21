@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { api } from '../api/client'
+import { api, isExpectedDisconnect } from '../api/client'
 import { t } from '../i18n'
 import router from '../router'
 import type { Instance } from '../types'
@@ -19,7 +19,9 @@ export const useInstancesStore = defineStore('instances', () => {
   function avatarUrl(name?: string) { return name ? `/avatars/${name}` : '' }
 
   async function loadInstances() {
-    try { instances.value = await api.get('/api/instances') } catch (exception: any) { toast.error = exception.message }
+    try { instances.value = await api.get('/api/instances') } catch (exception: any) {
+      if (!isExpectedDisconnect(exception)) toast.error = exception.message
+    }
     await loadSerial()
   }
   async function loadSerial() {

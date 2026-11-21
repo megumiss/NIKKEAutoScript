@@ -1,4 +1,3 @@
-import multiprocessing
 import threading
 from multiprocessing.managers import SyncManager
 from typing import TYPE_CHECKING, Callable, Generic, TypeVar
@@ -8,6 +7,19 @@ if TYPE_CHECKING:
     from module.webui.config import DeployConfig
 
 T = TypeVar("T")
+
+
+def _ocr_service():
+    from module.ocr.server import get_shared_ocr_server
+
+    return get_shared_ocr_server()
+
+
+class NkasManager(SyncManager):
+    pass
+
+
+NkasManager.register('ocr', callable=_ocr_service, exposed=('predict', 'recognize', 'shutdown'))
 
 
 class cached_class_property(Generic[T]):
@@ -57,18 +69,37 @@ class State:
 
     restart_event: threading.Event = None
     manager: SyncManager = None
+    ocr_server = None
     electron: bool = False
     theme: str = "light"
+    config_migration_pending: bool = False
 
     @classmethod
     def init(cls):
-        cls.manager = multiprocessing.Manager()
+        cls.manager = NkasManager()
+        cls.manager.start()
+        try:
+            # 共享模型单例不会保住 Manager 注册；父进程需在各实例启停期间持有代理。
+            cls.ocr_server = cls.manager.ocr()
+        except BaseException:
+            cls.manager.shutdown()
+            raise
         cls._init = True
+        cls._clearup = False
 
     @classmethod
     def clearup(cls):
-        cls.manager.shutdown()
-        cls._clearup = True
+        if cls.manager is None or cls._clearup:
+            return
+        try:
+            if cls.ocr_server is not None:
+                cls.ocr_server.shutdown()
+        finally:
+            try:
+                cls.manager.shutdown()
+            finally:
+                cls.ocr_server = None
+                cls._clearup = True
 
     @cached_class_property
     def deploy_config(self) -> "DeployConfig":

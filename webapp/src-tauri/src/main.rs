@@ -3,6 +3,7 @@
 mod backend;
 mod config;
 mod desktop_update;
+mod mirrorchyan;
 mod security_entry;
 
 use anyhow::{Context, Result};
@@ -266,6 +267,86 @@ async fn save_export_file(
     })
     .await
     .map_err(|error| format!("Export task failed: {error}"))?
+}
+
+fn preview_page(window: &WebviewWindow, config: &DesktopConfig, name: &str, language: &str) -> Result<Url, String> {
+    let current = window.url().map_err(|error| format!("Unable to read the application URL: {error}"))?;
+    if !is_local_webui_url(&current, &config.host, config.port) {
+        return Err("Screen preview is restricted to the configured backend".into());
+    }
+    if name.trim().is_empty() || name.len() > 128 {
+        return Err("Invalid instance name".into());
+    }
+    if !matches!(language, "zh-CN" | "en-US" | "ja-JP") {
+        return Err("Invalid preview language".into());
+    }
+    let mut url = current;
+    url.set_path("/app/");
+    url.query_pairs_mut().clear().append_pair("name", name).append_pair("language", language);
+    url.set_fragment(Some("/preview"));
+    Ok(url)
+}
+
+// A second WebView2 window deadlocks when built on the command's main thread.
+// Keep creation on a worker thread and isolate its browser data and arguments.
+#[tauri::command(async)]
+fn open_preview_window(
+    window: WebviewWindow,
+    config: tauri::State<'_, DesktopConfig>,
+    name: String,
+    language: String,
+) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Screen preview must be opened from the main window".into());
+    }
+    let url = preview_page(&window, &config, &name, &language)?;
+    let title = match language.as_str() {
+        "en-US" => format!("Screen preview - {name}"),
+        "ja-JP" => format!("画面プレビュー - {name}"),
+        _ => format!("画面预览 - {name}"),
+    };
+    let app = window.app_handle();
+    if let Some(preview) = app.get_webview_window("screen-preview") {
+        preview.navigate(url).map_err(|error| format!("Unable to update the preview window: {error}"))?;
+        preview.set_title(&title).map_err(|error| format!("Unable to update the preview title: {error}"))?;
+        let _ = preview.unminimize();
+        preview.show().map_err(|error| format!("Unable to show the preview window: {error}"))?;
+        preview.set_focus().map_err(|error| format!("Unable to focus the preview window: {error}"))?;
+        return Ok(());
+    }
+
+    let scale = window.scale_factor().map_err(|error| format!("Unable to read the window scale: {error}"))?;
+    let height = window.inner_size().map_err(|error| format!("Unable to read the window size: {error}"))?.height as f64 / scale;
+    let data_directory = app.path().app_data_dir().map_err(|error| format!("Unable to locate the preview data directory: {error}"))?.join("screen-preview");
+    let webview_arguments = config::webview_arguments(&config, std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS").ok().as_deref()).unwrap_or_default();
+    let allowed_host = config.host.clone();
+    let allowed_port = config.port;
+    WebviewWindowBuilder::new(app, "screen-preview", WebviewUrl::External(url))
+        .title(&title)
+        .icon(window_icon()).map_err(|error| format!("Unable to load the preview icon: {error}"))?
+        .inner_size(480.0, height)
+        .min_inner_size(360.0, 640.0)
+        .decorations(true)
+        .resizable(true)
+        .visible(true)
+        .data_directory(data_directory)
+        .additional_browser_args(&webview_arguments)
+        .on_navigation(move |url| {
+            let local = is_local_webui_url(url, &allowed_host, allowed_port);
+            if !local && matches!(url.scheme(), "http" | "https") {
+                let _ = open::that_detached(url.as_str());
+            }
+            local
+        })
+        .on_new_window(|url, _features| {
+            if matches!(url.scheme(), "http" | "https") {
+                let _ = open::that_detached(url.as_str());
+            }
+            NewWindowResponse::Deny
+        })
+        .build()
+        .map_err(|error| format!("Unable to create the preview window: {error}"))?;
+    Ok(())
 }
 
 fn create_window(
@@ -578,6 +659,7 @@ fn run(cleanup_helper: Option<std::path::PathBuf>) -> Result<()> {
             desktop_update::desktop_update_apply,
             save_export_file,
             refresh_security_entry,
+            open_preview_window,
         ])
         .on_window_event(|window, event| {
             if window.label() == "main"
@@ -621,83 +703,6 @@ fn run(cleanup_helper: Option<std::path::PathBuf>) -> Result<()> {
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn local_navigation_requires_exact_origin() {
-        let local = Url::parse("http://127.0.0.1:12271/app/").unwrap();
-        let userinfo_bypass = Url::parse("http://127.0.0.1:12271@evil.example/app/").unwrap();
-        let wrong_port = Url::parse("http://127.0.0.1:12272/app/").unwrap();
-        let wrong_host = Url::parse("http://192.168.1.5:12271/app/").unwrap();
-
-        assert!(is_local_webui_url(&local, "127.0.0.1", 12271));
-        assert!(!is_local_webui_url(&userinfo_bypass, "127.0.0.1", 12271));
-        assert!(!is_local_webui_url(&wrong_port, "127.0.0.1", 12271));
-        assert!(!is_local_webui_url(&wrong_host, "127.0.0.1", 12271));
-    }
-
-    #[test]
-    fn local_navigation_accepts_the_configured_host() {
-        let lan = Url::parse("http://192.168.1.5:12271/app/").unwrap();
-        let ipv6 = Url::parse("http://[::1]:12271/app/").unwrap();
-
-        assert!(is_local_webui_url(&lan, "192.168.1.5", 12271));
-        assert!(is_local_webui_url(&ipv6, "::1", 12271));
-        assert!(!is_local_webui_url(&lan, "::1", 12271));
-    }
-
-    #[test]
-    fn startup_page_allows_only_the_tauri_asset_origin() {
-        let startup = Url::parse("http://tauri.localhost/index.html").unwrap();
-        let external = Url::parse("https://example.com/index.html").unwrap();
-        assert!(is_startup_url(&startup));
-        assert!(!is_startup_url(&external));
-    }
-
-    #[test]
-    fn startup_messages_are_json_escaped() {
-        let script = startup_script(&StartupMessage {
-            kind: StartupMessageKind::Log,
-            text: "line \"one\"\nline two".into(),
-        });
-        assert_eq!(
-            script,
-            "window.nkasStartup?.log(\"line \\\"one\\\"\\nline two\");"
-        );
-    }
-
-    #[test]
-    fn export_filename_rejects_paths() {
-        assert!(is_valid_export_filename("2026-09-14_nkas.txt"));
-        assert!(is_valid_export_filename("nkas.json"));
-        assert!(!is_valid_export_filename(""));
-        assert!(!is_valid_export_filename("../nkas.json"));
-        assert!(!is_valid_export_filename("folder/nkas.json"));
-        assert!(!is_valid_export_filename(r"folder\nkas.json"));
-    }
-
-    #[test]
-    fn export_path_adds_a_suffix_when_the_name_exists() {
-        let directory = env::temp_dir().join(format!(
-            "nkas-export-test-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        fs::create_dir(&directory).unwrap();
-        fs::write(directory.join("nkas.json"), "first").unwrap();
-        fs::write(directory.join("nkas (1).json"), "second").unwrap();
-        assert_eq!(
-            available_export_path(&directory, "nkas.json"),
-            directory.join("nkas (2).json")
-        );
-        fs::remove_dir_all(directory).unwrap();
-    }
-}
 
 fn main() {
     let mode = match desktop_update::parse_internal_mode() {

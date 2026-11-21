@@ -164,13 +164,13 @@ class RookieArena(UI, ArenaBase):
             if (
                 not already_start
                 and click_timer.reached()
-                and self.appear_then_click(INTO_COMPETITION, offset=(30, 30), interval=5, static=False)
+                and self.appear_then_click(INTO_COMPETITION, offset=(30, 30), interval=2, static=False)
             ):
                 confirm_timer.reset()
                 click_timer.reset()
                 continue
 
-            if click_timer.reached() and self.appear(END_COMPETITION, offset=5, interval=2):
+            if click_timer.reached() and self.appear(END_COMPETITION, offset=5, interval=1):
                 logger.info('Click %s @ %s' % (point2str(100, 100), 'END_COMPETITION'))
                 self.device.handle_control_check(END_COMPETITION)
                 self.device.click_xy(100, 100)

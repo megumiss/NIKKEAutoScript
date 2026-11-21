@@ -33,6 +33,11 @@ param(
     [switch]$SkipCopy
 )
 
+# JSON uses UTF-8 regardless of the caller's console code page.
+if ($Json) {
+    [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+}
+
 $ErrorActionPreference = 'Stop'
 $DepotId = '869589'
 $SourceDir = Join-Path $PSScriptRoot 'driver_hid_virtual'
@@ -100,12 +105,14 @@ try {
         exit 1
     }
     try {
+        $stage = 'checking driver files'
         $bundled = Join-Path $SourceDir 'virtual_driver_manager.exe'
         if (-not (Test-Path $bundled)) {
             throw "Bundled driver installer not found: $bundled"
         }
         if ($Action -eq 'install') {
             if (-not $SkipCopy -or -not (Test-DepotConsistent)) {
+                $stage = 'copying driver files'
                 New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
                 Copy-Item -Path (Join-Path $SourceDir '*') -Destination $TargetDir -Force
             }
@@ -118,6 +125,7 @@ try {
         }
 
         $argument = "--$Action"
+        $stage = 'preparing installer output'
         # The manager is a console program: redirect its output explicitly, otherwise the
         # child inherits this console and its stdout never reaches the caller's pipe
         # (Python runs us with capture_output), leaving only an exit code to report.
@@ -125,9 +133,11 @@ try {
         $stdoutFile = Join-Path $env:TEMP "nkas-virtual-mouse-$Action-$PID.out.txt"
         $stderrFile = Join-Path $env:TEMP "nkas-virtual-mouse-$Action-$PID.err.txt"
         Remove-Item $stdoutFile, $stderrFile -Force -ErrorAction SilentlyContinue
+        $stage = 'starting installer'
         $proc = Start-Process -FilePath $installer -ArgumentList $argument `
             -WorkingDirectory (Split-Path $installer) -Wait -PassThru `
             -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile
+        $stage = 'reading installer result'
         $log = @()
         foreach ($file in @($stdoutFile, $stderrFile)) {
             if (Test-Path $file) {
@@ -161,7 +171,11 @@ try {
         Write-Record @{ status = 'success'; action = $Action; message = $message; reboot_required = $rebootRequired; log = $tail }
         exit 0
     } catch {
-        Write-Record @{ status = 'error'; action = $Action; message = $_.Exception.Message }
+        Write-Record @{
+            status = 'error'
+            action = $Action
+            message = "Virtual mouse driver $Action failed during ${stage}: $($_.Exception.Message)"
+        }
         exit 1
     }
 } finally {

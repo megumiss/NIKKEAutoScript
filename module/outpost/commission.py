@@ -94,7 +94,6 @@ class Commission(UI):
 
     def select_favorite(self, skip_first_screenshot=True):
         logger.hr('Select favorite item', 2)
-        click_timer = Timer(0.3)
 
         # 获取当前收藏品数量
         num = 0
@@ -107,7 +106,6 @@ class Commission(UI):
             if self.appear(COMMISSION_CHECK, offset=10) and self.appear_then_click(
                 ITEM_SELECTED, threshold=20, interval=1
             ):
-                click_timer.reset()
                 continue
 
             if self.appear(ITEM_SELECTED_NUM_CHECK, offset=200):
@@ -122,16 +120,13 @@ class Commission(UI):
                     if not self.appear(ITEM_SELECTED_NUM_CHECK, offset=200) and self.appear(
                         COMMISSION_CHECK, offset=10
                     ):
-                        click_timer.reset()
                         break
                     if self.appear(ITEM_SELECTED_NUM_CHECK, offset=200):
                         logger.info('Click %s @ %s' % (point2str(10, 10), 'CLOSE_ITEM'))
                         self.device.click_xy(10, 10)
                         self.device.sleep(0.5)
-                        click_timer.reset()
                         continue
 
-                click_timer.reset()
                 break
 
         nikke_list = self.shop_delay_list.copy()
@@ -148,13 +143,11 @@ class Commission(UI):
                 self.device.screenshot()
 
                 if self.appear(COMMISSION_CHECK, offset=10) and self.appear_then_click(ITEM_SELECT, offset=(100, 10)):
-                    click_timer.reset()
                     continue
                 if self.appear(ITEM_LIST_CHECK, offset=(70, 10)) and self.appear(
                     ITEM_LIST_SELECT_CONFIRM, threshold=10
                 ):
                     list_opened = True
-                    click_timer.reset()
                     break
 
             current = None
@@ -179,7 +172,6 @@ class Commission(UI):
                     if self.appear(ITEM_LIST_CHECK, offset=(70, 10)) and self.appear_then_click(
                         ITEM_LIST_SELECT_CONFIRM, threshold=10
                     ):
-                        click_timer.reset()
                         continue
                     if self.appear(COMMISSION_CHECK, offset=10):
                         break
@@ -204,12 +196,10 @@ class Commission(UI):
                     if self.appear(COMMISSION_CHECK, offset=10) and self.appear_then_click(
                         ITEM_SELECT, offset=(100, 10)
                     ):
-                        click_timer.reset()
                         continue
                     if self.appear(ITEM_LIST_CHECK, offset=(70, 10)) and self.appear(
                         ITEM_LIST_SELECT_CONFIRM, threshold=10
                     ):
-                        click_timer.reset()
                         break
 
             # 循环判断超出数量的是哪个收藏品
@@ -247,23 +237,24 @@ class Commission(UI):
 
                 # 选择收藏品（这里取的是删除旧收藏品之后的第一个）
                 if self.appear(ITEM_LIST_CHECK, offset=(70, 10)) and nikke_list:
-                    if self.appear_then_click(
-                        self.get_item_button(nikke_list[0]), offset=10, click_offset=(150, 0), interval=1, static=False
-                    ):
-                        logger.info(f'Select new favorite item: {nikke_list[0]}')
-                        click_timer.reset()
+                    item_button = self.get_item_button(nikke_list[0])
+                    if self.appear(item_button, offset=10, static=False):
+                        item_loc = self.appear_location(item_button, offset=10, static=False)
+                        selected_loc = self.appear_location(ITEM_SELECTED_IN_FAVORITE_LIST, offset=10, static=False)
+                        if selected_loc and abs(item_loc[1] - selected_loc[1]) < 50:
+                            logger.info(f'Select new favorite item: {nikke_list[0]}')
+                            self.appear_then_click(ITEM_LIST_SELECT_CONFIRM, threshold=10)
+                            continue
+
+                        if self.appear_then_click(
+                            item_button, offset=10, click_offset=(150, 0), interval=1, static=False
+                        ):
+                            continue
                     else:
                         # 未找到收藏品，进行滑动
                         self.device.sleep(0.5)
                         self.ensure_sroll((620, 1000), (620, 700), speed=5, count=1, delay=0.5, method='scroll')
                         continue
-
-                # 派遣选择
-                if self.appear(ITEM_LIST_CHECK, offset=(70, 10)) and self.appear_then_click(
-                    ITEM_LIST_SELECT_CONFIRM, threshold=10
-                ):
-                    click_timer.reset()
-                    continue
 
     def dispatch(self, skip_first_screenshot=True):
         logger.hr('Dispatch commission', 2)

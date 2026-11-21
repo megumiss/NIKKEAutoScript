@@ -1,8 +1,6 @@
 import atexit
 import os
 import re
-import subprocess
-import threading
 import time
 from collections import deque
 
@@ -12,19 +10,22 @@ from module.base.utils import publish_preview_frame
 from module.device.adb.app_control import AppControl
 from module.device.adb.control import Control
 from module.device.adb.env import IS_WINDOWS
-from module.device.adb.screenshot import Screenshot, ScreenshotSizeError
+from module.device.adb.screen_unlock import ScreenUnlock
+from module.device.adb.screenshot import Screenshot
 from module.exception import (
     EmulatorNotRunningError,
     GameNotRunningError,
     GameStuckError,
+    GameTaskRestart,
     GameTooManyClickError,
     RequestHumanTakeover,
 )
 from module.logger import logger
 from module.ocr.models import OCR_MODEL
+from module.ocr.sidecar_launch import set_adb_target
 
 
-class Device(Screenshot, Control, AppControl):
+class Device(Screenshot, Control, AppControl, ScreenUnlock):
     get_location = OCR_MODEL.get_location
 
     # 尝试检测的 Button 集合
@@ -34,6 +35,9 @@ class Device(Screenshot, Control, AppControl):
     # 操作计时器
     stuck_timer = Timer(360, count=60).start()
     stuck_timer_long = Timer(480, count=180).start()
+    stuck_check_minute = 0
+    stuck_recovery_active = False
+    stuck_recovery_handled = False
     """ 
         如果 detect_record 含有在 stuck_long_wait_list 中的 Button，在 stuck_timer_long 到达上限前不会 raise exception
         detect_record 值为 str(Button)，在 Button 类中，重写为该 asset 的名称
@@ -41,9 +45,6 @@ class Device(Screenshot, Control, AppControl):
     stuck_long_wait_list = ['LOGIN_CHECK', 'PAUSE']
 
     def __init__(self, *args, **kwargs):
-        self._virtual_display_process = None
-        self._virtual_display_reader = None
-        self._virtual_display_ready = threading.Event()
         self._virtual_display_id = None
         self._virtual_capture_port = None
         self._virtual_socket_name = None
@@ -85,299 +86,84 @@ class Device(Screenshot, Control, AppControl):
             _ = self.emulator_instance
 
         if self.config.PhysicalDevice_Enable:
+            # OCR 侧车（部署设置 OcrSidecar）经同一台设备的 ADB 启动
+            set_adb_target(self.adb_binary, self.serial)
+            # 解锁需在改分辨率/建虚拟屏之前完成，锁屏界面只在原生主屏上
+            self.screen_unlock()
             if self.config.PhysicalDevice_VirtualDisplay:
                 self._virtual_display_start()
             else:
+                from module.device.adb.virtual_display_session import prepare_primary_display
+                prepare_primary_display({
+                    'config_name': self.config.config_name,
+                    'identity': self.config.PhysicalDevice_VirtualDisplayId,
+                    'adb_binary': self.adb_binary, 'serial': self.serial, 'package': self.package,
+                })
                 if self.config.Emulator_ControlMethod == 'minitouch':
                     logger.warning('minitouch is unavailable on physical devices, '
                                    'please set Emulator.ControlMethod to uiautomator2 or ADB')
                 self._physical_device_resolution_set()
 
     @staticmethod
-    def _bridge_display_id(line: str):
-        match = re.search(r'NKAS_VD_READY id=(\d+)', line)
-        return int(match.group(1)) if match else None
+    def _bridge_display_id(line):
+        from module.device.adb.virtual_display import VirtualDisplayBridge
+        return VirtualDisplayBridge._bridge_display_id(line)
 
     @staticmethod
-    def _bridge_display_info(line: str):
-        """Parse the bridge INFO/READY geometry without requiring a device."""
-        match = re.search(
-            r'(?:NKAS_VD_READY|OK)\s+id=(?P<id>\d+)'
-            r'(?:[^\n]*?\s+size=(?P<w>\d+)x(?P<h>\d+))?'
-            r'(?:[^\n]*?\s+rotation=(?P<rotation>\d+))?',
-            line,
-        )
-        if not match:
-            return None
-        return {
-            'id': int(match.group('id')),
-            'width': int(match.group('w')) if match.group('w') else None,
-            'height': int(match.group('h')) if match.group('h') else None,
-            'rotation': int(match.group('rotation')) if match.group('rotation') else 0,
-        }
-
-    def _read_virtual_display_output(self):
-        process = self._virtual_display_process
-        if process is None or process.stdout is None:
-            self._virtual_display_ready.set()
-            return
-        try:
-            for line in process.stdout:
-                line = line.rstrip()
-                if line:
-                    logger.info(f'Virtual display: {line}')
-                display_id = self._bridge_display_id(line)
-                if display_id is not None:
-                    self._virtual_display_id = display_id
-                    info = self._bridge_display_info(line)
-                    if info:
-                        self._virtual_display_raw_width = info['width'] or self._virtual_display_raw_width
-                        self._virtual_display_raw_height = info['height'] or self._virtual_display_raw_height
-                        self._virtual_display_rotation = info['rotation']
-                    self._virtual_display_ready.set()
-        finally:
-            process.stdout.close()
-            self._virtual_display_ready.set()
-
-    def _refresh_virtual_display_info(self):
-        """Refresh bridge geometry after the display has settled on an OEM ROM."""
-        try:
-            response = self._virtual_display_command(b'INFO\n', timeout=2)
-            if isinstance(response, bytes):
-                response = response.decode('utf-8', errors='replace')
-            info = self._bridge_display_info(response)
-            if not info:
-                return False
-            self._virtual_display_id = info['id']
-            if info['width'] and info['height']:
-                self._virtual_display_raw_width = info['width']
-                self._virtual_display_raw_height = info['height']
-            self._virtual_display_rotation = info['rotation']
-            logger.debug(
-                f'Virtual display geometry: raw={self._virtual_display_raw_width}x'
-                f'{self._virtual_display_raw_height}, rotation={self._virtual_display_rotation}'
-            )
-            return True
-        except Exception as e:
-            logger.debug(f'Virtual display INFO unavailable: {e}')
-            return False
-
-    def _repin_app_to_virtual_display(self):
-        """Move an OEM-relocated app task back to the virtual display."""
-        try:
-            response = self._virtual_display_command(
-                f'REPIN {self.package}\n'.encode('utf-8'), timeout=3
-            )
-            if isinstance(response, bytes) and response.startswith(b'OK'):
-                return True
-        except Exception as e:
-            logger.debug(f'Virtual display repin command unavailable: {e}')
-
-        output = self.adb_shell(['dumpsys', 'activity', 'activities'])
-        blocks = re.split(
-            r'(?=^\s*(?:Display #\d+|Display:\s*mDisplayId=\d+))',
-            output, flags=re.MULTILINE,
-        )
-        for block in blocks:
-            display = re.search(r'(?:Display #|Display:\s*mDisplayId=)(\d+)', block)
-            if not display or self.package not in block:
-                continue
-            display_id = int(display.group(1))
-            if display_id == self._virtual_display_id:
-                return True
-            task = re.search(r'Task\{[^#]*#(\d+)', block)
-            if not task:
-                task = re.search(r'\btaskId[=:](\d+)', block)
-            if not task:
-                continue
-            task_id = int(task.group(1))
-            logger.warning(
-                f'App task drifted to display {display_id}; move task {task_id} '
-                f'to {self._virtual_display_id}'
-            )
-            result = self.adb_shell([
-                'am', 'display', 'move-stack', task_id, self._virtual_display_id,
-            ])
-            if not re.search(r'(?i)error|exception|fail', result or ''):
-                try:
-                    self.app_start_adb()
-                except Exception:
-                    pass
-                return True
-            break
-        try:
-            self.app_start_adb()
-            return True
-        except Exception as e:
-            logger.debug(f'Failed to relaunch app on virtual display: {e}')
-            return False
+    def _bridge_display_info(line):
+        from module.device.adb.virtual_display import VirtualDisplayBridge
+        return VirtualDisplayBridge._bridge_display_info(line)
 
     def _virtual_display_start(self):
-        bridge = os.path.abspath(os.path.join('bin', 'virtual_display', 'nkas-vd-server.jar'))
-        scrcpy_server = os.path.abspath(os.path.join('bin', 'scrcpy', 'scrcpy-server'))
-        if not os.path.isfile(bridge) or not os.path.isfile(scrcpy_server):
-            logger.critical('Virtual display bridge files are missing from ./bin/')
-            raise RequestHumanTakeover
+        from module.device.adb.virtual_display_session import acquire_display
+        self._virtual_display_target = {
+            'config_name': self.config.config_name,
+            'identity': self.config.PhysicalDevice_VirtualDisplayId,
+            'adb_binary': self.adb_binary,
+            'serial': self.serial,
+            'package': self.package,
+        }
+        self._apply_virtual_display(acquire_display(self._virtual_display_target))
 
-        remote_bridge = '/data/local/tmp/nkas-vd-server.jar'
-        remote_scrcpy = '/data/local/tmp/nkas-scrcpy-server.jar'
-        self.adb_push(bridge, remote_bridge)
-        self.adb_push(scrcpy_server, remote_scrcpy)
+    def _apply_virtual_display(self, target):
+        self._virtual_display_id = target['display_id']
+        self._virtual_capture_port = target['port']
+        self._virtual_socket_name = target['socket']
+        self._virtual_display_generation = target['generation']
+        self._virtual_display_raw_width = target['width']
+        self._virtual_display_raw_height = target['height']
+        self._virtual_display_rotation = target['rotation']
+        self._virtual_display_checked = time.monotonic()
 
-        self._virtual_socket_name = f'nkas-vd-{os.getpid()}-{int(time.time() * 1000) % 1000000}'
-        remote_command = (
-            f'CLASSPATH={remote_bridge}:{remote_scrcpy} app_process / '
-            'com.nkas.virtualdisplay.Server 720 1280 240 '
-            f'{self._virtual_socket_name}'
-        )
-        command = [
-            self.adb_binary, '-s', self.serial, 'shell', remote_command,
-        ]
-        logger.info(f'Start virtual display: {command}')
-        self._virtual_display_ready.clear()
+    def _check_virtual_display(self, force=False):
+        from module.device.adb.virtual_display_session import resolve_display, check_worker_cancelled
+        check_worker_cancelled()
+        if not force and time.monotonic() - getattr(self, '_virtual_display_checked', 0) < 1:
+            return
         try:
-            self._virtual_display_process = subprocess.Popen(
-                command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, encoding='utf-8', errors='replace', bufsize=1, shell=False,
-                creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
-            )
-        except OSError as e:
-            logger.critical(f'Failed to start virtual display bridge: {e}')
-            raise RequestHumanTakeover
-
-        self._virtual_display_reader = threading.Thread(
-            target=self._read_virtual_display_output, daemon=True
-        )
-        self._virtual_display_reader.start()
-        if not self._virtual_display_ready.wait(timeout=15) or self._virtual_display_id is None:
-            self._virtual_display_stop()
-            logger.critical('Android did not create a virtual display within 15 seconds')
-            raise RequestHumanTakeover
-
-        self._virtual_capture_port = self.adb_forward(
-            f'localabstract:{self._virtual_socket_name}'
-        )
-        self._refresh_virtual_display_info()
-        self.app_stop_adb()
-        self.app_start_adb()
-        # Some vendor ROMs (notably One UI and several Android 16 builds) move
-        # a newly launched task back to display 0. Give the bridge time to pin
-        # it again, while keeping the capture thread free to deliver frames.
-        started_at = time.time()
-        deadline = started_at + 30
-        ready_after = started_at + 10
-        logger.info('Virtual display startup grace: 10s')
-        # Let the game and SurfaceFlinger render their first frame before
-        # starting the ADB capture polling loop on low-power physical devices.
-        time.sleep(5)
-        image = None
-        attempts = 0
-        stable_frames = 0
-        last_info = 0.0
-        last_repin = 0.0
-        try:
-            while time.time() < deadline:
-                now = time.time()
-                if now - last_info >= 1:
-                    self._refresh_virtual_display_info()
-                    last_info = now
-                try:
-                    image = self.screenshot_virtual_display()
-                except ScreenshotSizeError as e:
-                    # ImageReader has no buffer until the launched app renders its
-                    # first frame; some Android 16 ROMs take several seconds.
-                    if '/0' not in str(e):
-                        raise
-                    image = None
-                # A task being reported on the target display is not proof that
-                # SurfaceFlinger has produced a usable frame yet.  MatePad and
-                # several Android 12/13 ROMs report the task first, while the
-                # ImageReader still returns black buffers for a few seconds.
-                # Keep polling until a non-black frame is available; otherwise
-                # the old `app_on_target` shortcut stopped the loop and the
-                # final black-frame check immediately tore the bridge down.
-                frame_ready = image is not None and image.shape[:2] == (1280, 720) and image.max() > 20
-                if frame_ready and now >= ready_after:
-                    stable_frames += 1
-                else:
-                    stable_frames = 0
-                if stable_frames >= 3:
-                    break
-                attempts += 1
-                if now - last_repin >= 1.5:
-                    self._repin_app_to_virtual_display()
-                    last_repin = now
-                # Keep a short focus nudge during the black-frame window even
-                # when REPIN reports success.  ActivityOptions moves the task
-                # to the display, but some OEM launchers do not start drawing
-                # until the display receives an input event (the original
-                # MatePad path relied on this behavior).
-                if attempts <= 8 and attempts % 2 == 0:
-                    try:
-                        self._adb_input('tap', 360, 640)
-                    except Exception:
-                        pass
-                time.sleep(0.5)
-        except Exception as e:
-            self._virtual_display_stop()
-            logger.critical(f'Cannot capture the Android virtual display: {e}')
-            raise RequestHumanTakeover
-        if stable_frames < 3 or image is None or image.shape[:2] != (1280, 720) or image.max() <= 20:
-            shape = None if image is None else image.shape
-            self._virtual_display_stop()
-            logger.critical(
-                f'Virtual display did not provide 3 stable frames: '
-                f'stable_frames={stable_frames}, shape={shape}'
-            )
-            raise RequestHumanTakeover
-
-        logger.info(
-            f'Virtual display ready: logical={self._virtual_display_id}, '
-            f'capture=tcp:{self._virtual_capture_port}, '
-            f'raw={self._virtual_display_raw_width}x{self._virtual_display_raw_height}, '
-            f'rotation={self._virtual_display_rotation}'
-        )
-        atexit.register(self._virtual_display_stop)
-
-    def _virtual_display_stop(self):
-        process = self._virtual_display_process
-        port = self._virtual_capture_port
-        self._virtual_display_process = None
-        if process is not None and process.poll() is None:
-            logger.info('Stop virtual display')
-            if port is not None:
-                try:
-                    self._virtual_display_command(b'STOP\n', timeout=2)
-                except Exception:
-                    pass
-            try:
-                process.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                process.terminate()
-                try:
-                    process.wait(timeout=3)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait(timeout=3)
-        if port is not None:
-            try:
-                self.adb_forward_remove(f'tcp:{port}')
-            except Exception:
-                pass
-        self._virtual_display_id = None
-        self._virtual_capture_port = None
-        self._virtual_socket_name = None
-        self._virtual_display_width = 720
-        self._virtual_display_height = 1280
-        self._virtual_display_rotation = 0
-        self._virtual_display_raw_width = 720
-        self._virtual_display_raw_height = 1280
+            target = resolve_display(self._virtual_display_target)
+            if target['generation'] != self._virtual_display_generation:
+                raise RequestHumanTakeover('Virtual display session changed; restart the task')
+            self._apply_virtual_display(target)
+        except (OSError, RuntimeError, RequestHumanTakeover):
+            self._virtual_display_id = None
+            raise RequestHumanTakeover('Virtual display target cannot be verified')
 
     @staticmethod
     def _wm_override_value(output: str, key: str):
         """wm size/density 输出中存在 Override 行时返回其值，否则 None。"""
         match = re.search(rf'Override {key}: (\S+)', output)
         return match.group(1) if match else None
+
+    @staticmethod
+    def _wm_current_value(output: str, key: str):
+        # 当前值等于原生值时 wm 不输出 Override；存在 Override 时不能回退到 Physical。
+        values = {}
+        for line in output.splitlines():
+            name, separator, value = line.partition(':')
+            if separator:
+                values[name.strip()] = value.strip()
+        return values.get(f'Override {key}', values.get(f'Physical {key}'))
 
     def _physical_device_debug_state(self, stage: str):
         """分辨率/方向改动前后的设备显示状态快照，仅 debug 级输出，用于排查厂商 ROM 差异。"""
@@ -419,14 +205,17 @@ class Device(Screenshot, Control, AppControl):
         # 记录用户已有的 override，退出时还原具体值；直接 reset 会丢掉用户自己的分辨率/DPI 覆盖
         self._physical_size_override = self._wm_override_value(size_out, 'size')
         self._physical_density_override = self._wm_override_value(density_out, 'density')
-        self.adb_shell(['wm', 'size', '720x1280'])
-        self.adb_shell(['wm', 'density', '240'])
-        # 锁定竖屏：关闭自动旋转并固定 user_rotation=0（自然方向，手机即竖屏），
-        # 否则设备平放/旋转时画面会横过来，截图与坐标全部错位
         self._physical_rotation_backup = {
             key: self.adb_shell(['settings', 'get', 'system', key]).strip()
             for key in ('accelerometer_rotation', 'user_rotation')
         }
+        # 首次修改前完成备份并注册恢复，确保初始化失败退出时也能还原设备。
+        if self.config.PhysicalDevice_AutoRestoreResolution:
+            atexit.register(self._physical_device_resolution_reset)
+        self.adb_shell(['wm', 'size', '720x1280'])
+        self.adb_shell(['wm', 'density', '240'])
+        # 锁定竖屏：关闭自动旋转并固定 user_rotation=0（自然方向，手机即竖屏），
+        # 否则设备平放/旋转时画面会横过来，截图与坐标全部错位
         self.adb_shell(['settings', 'put', 'system', 'accelerometer_rotation', '0'])
         self.adb_shell(['settings', 'put', 'system', 'user_rotation', '0'])
         # wm size 立即写入但显示管线生效有延迟，等它真正切换完成，避免首帧截图拿到旧分辨率
@@ -434,15 +223,15 @@ class Device(Screenshot, Control, AppControl):
         # 读回校验：设备拒绝 wm 命令时 adb_shell 不抛异常，静默继续只会让后续截图/坐标全错
         size_now = self.adb_shell(['wm', 'size'])
         density_now = self.adb_shell(['wm', 'density'])
-        if 'Override size: 720x1280' not in size_now or 'Override density: 240' not in density_now:
+        size_ok = self._wm_current_value(size_now, 'size') == '720x1280'
+        density_ok = self._wm_current_value(density_now, 'density') == '240'
+        if not size_ok or not density_ok:
             logger.critical(
                 f'Failed to set physical device resolution to 720x1280@240: '
                 f'size={size_now!r}, density={density_now!r}'
             )
             raise RequestHumanTakeover
         self._physical_device_debug_state('after set')
-        if self.config.PhysicalDevice_AutoRestoreResolution:
-            atexit.register(self._physical_device_resolution_reset)
 
     def _physical_device_resolution_reset(self):
         logger.info('Restore physical device resolution')
@@ -471,22 +260,33 @@ class Device(Screenshot, Control, AppControl):
             Returns:
                 np.ndarray:
         """
-        self.stuck_record_check()
-        super().screenshot()
-        publish_preview_frame(self.image, source={
-            'serial': self.serial,
-            'display_id': self._virtual_display_id or 0,
-        })
-        return self.image
+        while 1:
+            super().screenshot()
+            source = {
+                'serial': self.serial,
+                'display_id': self._virtual_display_id or 0,
+            }
+            if self._virtual_display_id is not None and self._virtual_capture_port is not None:
+                # Lets the Web UI sample the bridge directly while this process is busy (e.g. long OCR).
+                source['virtual_display'] = {
+                    'port': self._virtual_capture_port,
+                    'rotation': self._virtual_display_rotation,
+                    'width': self._virtual_display_width,
+                    'height': self._virtual_display_height,
+                }
+            publish_preview_frame(self.image, source=source)
+            if not self.stuck_record_check():
+                return self.image
 
     def handle_control_check(self, button: Button):
         """
-            当点击(匹配到)Button时，清空尝试匹配过的按钮，重置操作计时器，并记录此Button，再检查点击过的Buttons
+        记录点击并检查重复点击；普通点击清空卡死记录，恢复过程中的点击保留卡死计时。
 
-            Args:
-                button: Button
+        Args:
+            button: Button
         """
-        self.stuck_record_clear()
+        if not self.stuck_recovery_active:
+            self.stuck_record_clear()
         self.click_record_add(button)
         self.click_record_check()
 
@@ -548,9 +348,20 @@ class Device(Screenshot, Control, AppControl):
             如果 detect_record 含有在 stuck_long_wait_list 中的 Button，在 stuck_timer_long 到达上限前不会 raise exception
             detect_record 值为 str(Button)，在 Button 类中，默认重写为该 asset 的名称
 
+            Returns:
+                bool: 已处理当前画面时返回 True，调用方应重新截图。
+
             Raises:
                 GameStuckError:
         """
+        if self.stuck_recovery_active:
+            return False
+
+        from module.handler.info_handle import InfoHandler
+
+        if InfoHandler.handle_stuck(self):
+            return True
+
         reached = self.stuck_timer.reached()
         reached_long = self.stuck_timer_long.reached()
 
@@ -563,17 +374,14 @@ class Device(Screenshot, Control, AppControl):
 
         logger.warning('Wait too long')
         logger.warning(f'Waiting for {self.detect_record}')
+        recovery_handled = self.stuck_recovery_handled
         self.stuck_record_clear()
 
-        # from module.ui.ui import UI
-        # ui = UI(self.config, device=self)
-        # if ui.ui_additional():
-        #     return False
-
-        if self.app_is_running():
-            raise GameStuckError('Wait too long')
-        else:
+        if not self.app_is_running():
             raise GameNotRunningError('Game died')
+        if recovery_handled:
+            raise GameTaskRestart('Task made no progress after stuck recovery')
+        raise GameStuckError('Wait too long')
 
     def stuck_record_clear(self):
         """
@@ -582,6 +390,8 @@ class Device(Screenshot, Control, AppControl):
         self.detect_record = set()
         self.stuck_timer.reset()
         self.stuck_timer_long.reset()
+        self.stuck_check_minute = 0
+        self.stuck_recovery_handled = False
 
     def disable_stuck_detection(self):
         """
@@ -609,6 +419,8 @@ class Device(Screenshot, Control, AppControl):
         """
             启动NIKKE
         """
+        # 调度等待期间真机可能已自动锁屏
+        self.screen_unlock()
         super().app_start()
         self.stuck_record_clear()
         self.click_record_clear()

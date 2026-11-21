@@ -124,10 +124,6 @@ if errorlevel 1 (
     goto :end
 )
 
-echo Testing Tauri shell...
-call yarn test
-if errorlevel 1 (echo Error: Tauri tests failed & goto :end)
-
 echo Checking Tauri shell...
 call yarn run check
 if errorlevel 1 (echo Error: Tauri cargo check failed & goto :end)

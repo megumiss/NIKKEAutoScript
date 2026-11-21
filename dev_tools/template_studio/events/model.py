@@ -11,8 +11,7 @@ import os
 import re
 import shutil
 import tempfile
-from pprint import pformat
-from textwrap import indent
+from datetime import datetime, timedelta, timezone
 
 import cv2
 import numpy as np
@@ -20,6 +19,7 @@ import yaml
 from filelock import FileLock
 
 from module.base.utils import get_bbox, get_color
+from module.config.event_stage import available_story_stages
 from module.config.manual_config import ManualConfig
 from module.logger import logger
 
@@ -64,6 +64,17 @@ def historical_events():
     return [dict(event, source_dir=event_assets_source(event['event_id'])) for event in events]
 
 
+def new_story_schedule(event_id, event_type):
+    date = re.fullmatch(r'event_([0-9]{8})', event_id)
+    if date is None:
+        return None
+    try:
+        start = datetime.strptime(date[1], '%Y%m%d').replace(hour=4, tzinfo=timezone(timedelta(hours=8)))
+    except ValueError:
+        return None
+    return {'start_at': start.isoformat(), 'stages': list(available_story_stages({'event_type': event_type}))}
+
+
 def create_event_session(event_id, event_name, base_event_id, position, phase, rules):
     """发布新资源与会话后再注册活动，失败时仅回滚本次创建的目录。"""
     session_path(event_id)
@@ -94,10 +105,18 @@ def create_event_session(event_id, event_name, base_event_id, position, phase, r
                  'mini_game': False, 'mini_game_play': True, 'extend': False,
                  'story_part': 'Story_2' if phase.startswith('story2') else 'Story_1',
                  'story_difficulty': 'Hard' if phase in ('hard', 'story2_hard') else 'Normal',
-                 'story_schedule': None}
+                 'story_schedule': new_story_schedule(event_id, base['event_type'])}
         lines = source.splitlines(keepends=True)
         insertion = node.elts[position - 1].lineno - 1 if len(node.elts) >= position else node.end_lineno - 1
-        lines.insert(insertion, indent(pformat(event, width=100, sort_dicts=False), '    ') + ',\n')
+        event_lines = ['    {\n']
+        for key, value in event.items():
+            if isinstance(value, dict):
+                literal = json.dumps(value, ensure_ascii=False, indent=4).replace('\n', '\n        ')
+            else:
+                literal = json.dumps(value, ensure_ascii=False) if isinstance(value, str) else repr(value)
+            event_lines.append(f'        "{key}": {literal},\n')
+        event_lines.append('    },\n')
+        lines.insert(insertion, ''.join(event_lines))
         updated_source = ''.join(lines)
         ast.parse(updated_source)
         created = []
@@ -142,6 +161,25 @@ def create_event_session(event_id, event_name, base_event_id, position, phase, r
         events.insert(position - 1, event)
         ManualConfig.EVENTS[:] = events
         return session
+
+
+def open_event_session(event_id, phase, rules):
+    """已有会话直接打开；否则只为已登记的活动创建裁剪会话。"""
+    path = session_path(event_id)
+    os.makedirs(SESSION_ROOT, exist_ok=True)
+    with FileLock(os.path.join(SESSION_ROOT, '.events.lock')):
+        if os.path.isfile(path):
+            return load_session(event_id), False
+        _, _, events = read_events()
+        event = next((e for e in events if e['event_id'] == event_id), None)
+        if event is None:
+            raise ValueError('活动不在 EVENTS 中，请刷新列表或创建全新活动')
+        session = new_session(event_id, event['event_type'], phase, rules)
+        session.update(event_name=event['event_name'], base_event_id=event_id,
+                       base_assets_dir=event_assets_source(event_id))
+        save_session(session)
+        logger.info(f'已为已有活动创建模板会话: {event_id}, phase={phase}')
+        return session, True
 
 
 def load_rules():
@@ -660,6 +698,7 @@ def export_session(session, rules, out_root=None, run_extract=None, allow_partia
     Args:
         out_root: 覆盖输出目录（默认 assets/zh-CN/event_dated/<event_id>，测试用）
         run_extract: 是否跑 button_extract 重新生成 assets.py（默认仅在 out_root 为 None 时）
+        allow_partial: 是否允许仍有必需模板未确认时导出
 
     Returns:
         dict: exported(名单), missing(未确认清单), out_dir

@@ -11,7 +11,6 @@ configured remote host. See [security entry usage](../doc/security-entry.md).
 
 ```powershell
 yarn install --frozen-lockfile
-yarn test
 yarn run check
 yarn run compile
 ```

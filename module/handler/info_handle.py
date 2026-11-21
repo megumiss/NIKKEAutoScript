@@ -7,11 +7,21 @@ from module.base.utils import point2str
 from module.config.account import load_account
 
 # from module.event.event_5.assets import SKIP, TOUCH_TO_CONTINUE
-from module.exception import AccountError, CaptchaRequired, GameServerUnderMaintenance, GameStuckError, GameSystemError
+from module.exception import (
+    AccountError,
+    CaptchaRequired,
+    GameServerUnderMaintenance,
+    GameStart,
+    GameStuckError,
+    GameSystemError,
+)
 from module.handler.assets import *
 from module.interception.assets import TEMPLATE_RED_CIRCLE_LEFT, TEMPLATE_RED_CIRCLE_RIGHT, TEMPLATE_RED_CIRCLE_TOP
 from module.logger import logger
 from module.ui.assets import GOTO_BACK, MAIN_CHECK
+
+
+STUCK_RECOVERY_MINUTES = 3
 
 
 class InfoHandler(ModuleBase):
@@ -29,7 +39,11 @@ class InfoHandler(ModuleBase):
 
         return False
 
-    def handle_login_reward(self):
+    def handle_login_reward(self, in_login=False):
+        # 收获页也有“获得奖励”，普通导航不能按这段文字领取。
+        if not in_login:
+            return False
+
         # 完成提示不是页面标识，只在本次领取后的短确认窗口内用于关闭。
         confirm_timer = getattr(self, '_login_reward_confirm_timer', None)
         if confirm_timer is not None and not confirm_timer.reached():
@@ -157,10 +171,16 @@ class InfoHandler(ModuleBase):
             return True
 
     def handle_announcement(self):
-        if self.appear(ANNOUNCEMENT_CHECK, offset=(30, 30), threshold=0.74, static=False) and self.appear_then_click(
-            ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.74, static=False
-        ):
+        if ANNOUNCEMENT_CHECK.match_with_scale(
+            self.device.image, threshold=0.85, scale_range=(0.75, 1.05)
+        ) and self.appear_then_click(ANNOUNCEMENT, offset=(30, 30), interval=3, threshold=0.85, static=False):
             return True
+
+    def handle_unknown_popup(self):
+        # POPUP_CONFIRM 使用勾选图标，兼容通知弹窗的无阴影文字样式。
+        return self.appear_then_click_any(
+            [POPUP_CONFIRM, CONFIRM_A, CONFIRM_B, CONFIRM_C], offset=(30, 30), interval=3, static=False
+        )
 
     def handle_event_popup(self):
         if self.appear(EVENT_POPUP_CHECK, offset=(30, 30), static=False) and self.appear_then_click(
@@ -181,30 +201,115 @@ class InfoHandler(ModuleBase):
             self.device.sleep(10)
             return True
 
+    def detect_system_error(self):
+        for check in [SYSTEM_ERROR_CHECK, PRODUCT_INFO_ERROR_CHECK, SERVER_DISCONNECTED_CHECK]:
+            if self.appear(check, offset=(30, 30), static=False):
+                return check
+
     def handle_system_error(self):
-        if self.appear(SYSTEM_ERROR_CHECK, offset=(30, 30), static=False):
-            raise GameSystemError('Detected SYSTEM_ERROR_CHECK')
+        check = self.detect_system_error()
+        if check:
+            raise GameSystemError(f'Detected {check.name}')
+
+    @staticmethod
+    def handle_stuck(device):
+        """卡死计时前三分钟，每分钟尝试恢复一次并返回原任务。"""
+        minute = int(device.stuck_timer.current() // 60)
+        if minute <= device.stuck_check_minute or minute > STUCK_RECOVERY_MINUTES:
+            return False
+
+        device.stuck_check_minute = minute
+        device.stuck_recovery_active = True
+        try:
+            handler = InfoHandler(device.config, device=device)
+            check = handler.detect_system_error()
+            if check:
+                logger.warning(f'Recovering {check.name} at stuck minute {minute}')
+                handler.ensure_system_error_closed()
+                device.stuck_recovery_handled = True
+                return True
+
+            handled = bool(handler.ui_additional(check_system_error=False))
+            if handled:
+                device.stuck_recovery_handled = True
+                logger.info(f'Stuck recovery handled current screen at minute {minute}')
+            return handled
+        finally:
+            device.stuck_recovery_active = False
+
+    def ui_additional(self, check_system_error=True):
+        """处理任务等待期间出现的奖励、公告和登录等界面。"""
+        if self.handle_level_up():
+            return True
+
+        if self.handle_reward():
+            return True
+
+        if self.handle_paid_gift():
+            return True
+
+        if self.handle_announcement():
+            return True
+
+        if self.handle_login_reward():
+            return True
+
+        if self.handle_server():
+            raise GameStart
+
+        if self.handle_download():
+            raise GameStart
+
+        if check_system_error and self.handle_system_error():
+            return True
+
+        if self.handle_system_maintenance():
+            return True
+
+        if self.appear(LOGIN_PAGE_CHECK, offset=(30, 30)):
+            raise GameStart
+
+        if self.appear(LOGO_PAGE_CHECK, offset=(30, 30)):
+            raise GameStart
+
+        if self.handle_login():
+            return True
+
+        if self.handle_unknown_popup():
+            return True
+
+        return False
 
     def ensure_system_error_closed(self):
-        self.device.stuck_record_clear()
+        """立即关闭错误弹窗，最多等待 60 秒返回主页或登录页。"""
+        if not self.device.stuck_recovery_active:
+            self.device.stuck_record_clear()
         self.device.click_record_clear()
-        timeout = Timer(60, count=60).start()
+        recovery_timeout = Timer(60, count=60).start()
 
         while 1:
+            # 恢复过程有独立超时，恢复中的截图不再触发嵌套卡死检查。
+            if not self.device.stuck_recovery_active:
+                self.device.stuck_record_clear()
             self.device.screenshot()
 
-            if timeout.reached():
-                raise GameStuckError('System error recovery timed out waiting for main page')
+            if recovery_timeout.reached():
+                raise GameStuckError('System error recovery timed out waiting for main or login page')
 
-            if self.appear(SYSTEM_ERROR_CHECK, offset=(30, 30), static=False):
-                self.appear_then_click(CONFIRM_B, offset=(30, 30), interval=3, static=False)
+            if self.detect_system_error():
+                self.handle_unknown_popup()
                 continue
 
             # 弹窗下的主页仍可能匹配模板，需同时检查颜色，确认遮罩已经消失。
-            if self.appear(MAIN_CHECK, offset=30) and self.appear(MAIN_CHECK, threshold=10):
-                self.device.stuck_record_clear()
+            returned_to_main = self.appear(MAIN_CHECK, offset=30) and self.appear(MAIN_CHECK, threshold=10)
+            returned_to_login = self.appear_any(
+                [LOGIN_PAGE_CHECK, LOGO_PAGE_CHECK, LOGIN_CHECK, LOGIN_CHECK_B], offset=(30, 30)
+            )
+            if returned_to_main or returned_to_login:
+                if not self.device.stuck_recovery_active:
+                    self.device.stuck_record_clear()
                 self.device.click_record_clear()
-                logger.info('Returned to main after system error')
+                logger.info('System error recovery completed')
                 return
 
     def handle_system_maintenance(self):

@@ -57,7 +57,10 @@ function applyState(next) {
     for (const id of ['shotFilter', 'shotScene', 'templateScene']) $(id).value = '';
     selectedFiles.clear(); updateImportCount();
   }
-  if (previousShot && !changed) shotIndex = state.session?.screenshots.findIndex(s => s.file === previousShot.file && s.phase === previousShot.phase) ?? -1;
+  if (previousShot && !changed) {
+    shotIndex = state.session?.screenshots.findIndex(s => s.file === previousShot.file && s.phase === previousShot.phase) ?? -1;
+    if (shotIndex < 0) shotIndex = state.session?.screenshots.findIndex(s => s.file === previousShot.file) ?? -1;
+  }
   if (shotIndex < 0 && state.session?.screenshots.length) shotIndex = 0;
   if (templateName && !state.session?.templates.some(t => t.name === templateName)) templateName = '';
   const session = state.session;
@@ -91,15 +94,15 @@ function updateButtons() {
   for (const id of ['btnPrepare','btnPrepareMain']) $(id).disabled = !session || session.screenshots.some(s => !s.scene) || !session.templates.some(t => t.status !== 'confirmed');
   for (const id of ['btnRemoveShot','btnSaveShot','shotScene']) $(id).disabled = !shot;
   const cropDirty = window.eventCrop?.dirty() || false;
-  $('btnConfirm').disabled = cropDirty || !template || template.status === 'confirmed' || confirmInfo?.name !== template.name || !confirmInfo.valid;
+  $('btnConfirm').disabled = !window.eventCrop?.canConfirm();
   $('btnReject').disabled = cropDirty || !template || !template.box;
   $('btnClear').disabled = cropDirty || !template?.box;
   $('btnManualStart').disabled = !session?.screenshots.length || !session?.templates.length;
   $('btnManualCrop').disabled = !template || !session?.screenshots.length;
   $('btnManualCrop').textContent = '定位到裁剪画布';
-  $('btnNext').disabled = !session?.templates.some(t => t.status !== 'confirmed');
+  $('btnNext').disabled = window.eventCrop?.busy() || !session?.templates.some(t => t.status !== 'confirmed');
   $('btnSaveReview').disabled = !template;
-  $('btnExport').disabled = cropDirty || !session || !session.templates.length || Boolean(state.missing?.length);
+  $('btnExport').disabled = cropDirty || !session || !session.templates.some(t => t.status === 'confirmed');
   if (cropDirty) for (const id of ['btnPrepare','btnPrepareMain','btnAdvance','btnRemoveShot']) $(id).disabled = true;
   $('btnPrevPage').disabled = browseOffset === 0;
   $('btnNextPage').disabled = browseOffset + BROWSE_PAGE_SIZE >= browseTotal;
@@ -107,7 +110,10 @@ function updateButtons() {
   $('eventIdHint').textContent = eventId ? `活动 ID：${eventId}` : '自动添加 event_ 前缀，不限制日期格式或位数。';
   $('btnNew').disabled = !eventId || !$('eventName').value.trim() || !historyEvents.some(e => e.event_id === $('baseEventSel').value && e.source_dir);
   const selected = sessionDetails.find(s => s.event_id === $('sessionSel').value);
-  for (const id of ['btnOpen', 'btnDeleteSession']) $(id).disabled = !selected || $(id).hasAttribute('aria-busy');
+  const event = historyEvents.find(e => e.event_id === $('sessionSel').value);
+  $('btnOpen').disabled = (!selected && !state?.types[event?.event_type]) || $('btnOpen').hasAttribute('aria-busy');
+  $('btnOpen').textContent = selected ? '打开会话' : '创建并打开会话';
+  $('btnDeleteSession').disabled = !selected || $('btnDeleteSession').hasAttribute('aria-busy');
   $('btnDeleteSession').textContent = selected && selected.event_id === state?.current ? '删除当前会话' : '删除会话';
   $('btnConfirmDeleteSession').disabled = !pendingDelete || deletingSession;
   $('btnCancelDeleteSession').disabled = deletingSession;
@@ -158,17 +164,25 @@ async function selectShot(index) {
   await saveAnnotation(); shotIndex = index; annotationDirty = false; renderShots(); renderShotEditor(); updateButtons(); return true;
 }
 async function selectTemplate(name) {
-  if (name !== templateName && !window.eventCrop?.allowDiscard()) return;
+  if (window.eventCrop?.busy()) return;
+  const keepCrop = window.eventCrop?.dirty();
   if (reviewDirty) await saveReview();
   templateName = name; reviewDirty = false;
   const template = state.session.templates.find(t => t.name === name);
-  if (template?.source) {
+  if (template?.source && !keepCrop) {
     const index = state.session.screenshots.findIndex(s => s.file === template.source && s.phase === template.phase);
     if (index >= 0 && index !== shotIndex) {
       if (await selectShot(index) === false) return;
     }
   }
-  renderTemplates(); window.eventCrop?.sync(); updateButtons(); await loadTemplateInfo();
+  renderTemplates(); window.eventCrop?.sync(); updateButtons();
+  if (!template) {
+    confirmInfo = null; $('reviewDetails').hidden = true;
+    $('templateBadge').textContent = '未选择'; $('templateBadge').className = 'badge';
+    $('tplInfo').innerHTML = '<div class="empty">先框选或选择目标模板，选区会随模板选择保留。</div>';
+    return;
+  }
+  await loadTemplateInfo();
 }
 async function loadTemplateInfo() {
   const seq = ++infoSequence, name = templateName;
@@ -206,7 +220,7 @@ function switchView(mode) {
   document.querySelector('.source-workspace').hidden = mode !== 'source'; document.querySelector('.review-workspace').hidden = mode !== 'review';
   $('btnSource').classList.toggle('active', mode === 'source'); $('btnReview').classList.toggle('active', mode === 'review');
   $('btnSource').setAttribute('aria-pressed', String(mode === 'source')); $('btnReview').setAttribute('aria-pressed', String(mode === 'review'));
-  if (mode === 'review' && !templateName && state?.session?.templates.length) selectTemplate(state.session.templates.find(t => t.status === 'draft')?.name || state.session.templates[0].name).catch(e => notify(e.message, true));
+  if (mode === 'review' && !templateName && !window.eventCrop?.dirty() && state?.session?.templates.length) selectTemplate(state.session.templates.find(t => t.status === 'draft')?.name || state.session.templates[0].name).catch(e => notify(e.message, true));
   window.eventCrop?.sync();
 }
 async function refresh() {
@@ -232,16 +246,26 @@ function phaseOptions() {
 }
 function renderSessionSelection() {
   const selected = sessionDetails.find(s => s.event_id === $('sessionSel').value);
-  const type = state?.types[selected?.event_type];
-  $('selectedSessionInfo').textContent = selected
-    ? `${selected.event_id === state?.current ? '当前会话 · ' : ''}${type?.label || ''}活动 · ${type?.phases[selected.phase] || selected.phase} · ${selected.screenshot_count} 张截图 · 模板 ${selected.confirmed_count} / ${selected.template_count} 已确认`
-    : '暂无会话，可以在下方新建活动会话。';
+  const event = historyEvents.find(e => e.event_id === $('sessionSel').value);
+  const type = state?.types[(selected || event)?.event_type];
+  if (selected) {
+    $('selectedSessionInfo').textContent = `${selected.event_id === state?.current ? '当前会话 · ' : ''}${type?.label || ''}活动 · ${type?.phases[selected.phase] || selected.phase} · ${selected.screenshot_count} 张截图 · 模板 ${selected.confirmed_count} / ${selected.template_count} 已确认`;
+  } else if (event && type) {
+    $('selectedSessionInfo').textContent = `${type.label}活动 · 尚未创建会话，选择本次更新阶段后创建。${event.source_dir ? '' : '当前资源缺失，仍可导入截图重新裁剪。'}`;
+  } else {
+    $('selectedSessionInfo').textContent = event ? '当前工作台不支持此活动类型的剧情模板。' : '暂无活动，可以在下方创建全新活动。';
+  }
+  $('initialPhaseBlock').hidden = !!selected || !type;
+  const phase = $('initialPhase').value;
+  $('initialPhase').innerHTML = Object.entries(type?.phases || {}).map(([key,label]) => `<option value="${esc(key)}">${esc(label)}</option>`).join('');
+  if ([...$('initialPhase').options].some(o => o.value === phase)) $('initialPhase').value = phase;
   updateButtons();
 }
 function renderSessionList(preferred = state?.current) {
-  $('sessionSel').innerHTML = sessionDetails.map(s => `<option value="${esc(s.event_id)}">${s.event_id === state?.current ? '【当前】' : ''}${esc(s.event_name || s.event_id)}${s.event_name ? ` · ${esc(s.event_id)}` : ''}</option>`).join('') || '<option value="">暂无会话</option>';
-  $('sessionSel').value = sessionDetails.some(s => s.event_id === preferred) ? preferred : sessionDetails[0]?.event_id || '';
-  $('sessionSel').disabled = !sessionDetails.length;
+  const events = [...historyEvents, ...sessionDetails.filter(s => !historyEvents.some(e => e.event_id === s.event_id))];
+  $('sessionSel').innerHTML = events.map(e => `<option value="${esc(e.event_id)}">${e.event_id === state?.current ? '【当前】' : ''}${esc(e.event_name || e.event_id)} · ${esc(e.event_id)}${sessionDetails.some(s => s.event_id === e.event_id) ? '（已有会话）' : ''}</option>`).join('') || '<option value="">暂无活动</option>';
+  $('sessionSel').value = events.some(e => e.event_id === preferred) ? preferred : events[0]?.event_id || '';
+  $('sessionSel').disabled = !events.length;
   $('phaseBlock').hidden = !state?.session;
   $('phaseSessionInfo').textContent = state?.session ? `当前会话：${state.session.event_name || state.current} · ${state.current}` : '';
   if (state?.session) {
@@ -326,7 +350,11 @@ bind('btnSaveShot',async()=>{ annotationDirty=true; await saveAnnotation(); noti
 bind('btnRemoveShot',async()=>{ const next=await api('/api/shots/remove',{index:shotIndex}); annotationDirty=false; applyState(next); notify('已移除截图记录，原图保留'); });
 bind('btnSaveReview',async()=>{ await saveReview(); notify('校对意见已保存'); });
 bind('btnNew',async()=>{ const data=await api('/api/session/new',{event_id:newEventId(),event_name:$('eventName').value.trim(),base_event_id:$('baseEventSel').value,position:Number($('eventPosition').value),phase:$('phaseSel').value}); applyState(data); switchView('source'); $('sessionDialog').close(); notify(`已复制资源并创建活动，插入 EVENTS 第 ${data.session.event_position} 位`); },'sessionError');
-bind('btnOpen',async()=>{ applyState(await api('/api/session/open',{event_id:$('sessionSel').value})); $('sessionDialog').close(); notify('已打开会话'); },'sessionError');
+bind('btnOpen',async()=>{
+  const data = await api('/api/session/from-event',{event_id:$('sessionSel').value,phase:$('initialPhase').value});
+  applyState(data); $('sessionDialog').close();
+  notify(data.created_session ? '已为已有活动创建会话，活动配置与资源保持不变' : '已打开会话');
+},'sessionError');
 bind('btnAdvance',async()=>{ applyState(await api('/api/session/phase',{phase:$('advancePhase').value})); $('sessionDialog').close(); notify('已补入阶段模板，已有结果保留'); },'sessionError');
 bind('btnImportDialog',async()=>{ await saveAnnotation(); $('importError').hidden=true; $('importDialog').showModal(); if(!browseFiles.length) await browse(); },'importError');
 bind('btnBrowse',()=>browse(0),'importError'); bind('btnPrevPage',()=>browse(Math.max(0,browseOffset-BROWSE_PAGE_SIZE)),'importError'); bind('btnNextPage',()=>browse(browseOffset+BROWSE_PAGE_SIZE),'importError');
@@ -342,7 +370,7 @@ async function nextTemplate() {
   if(next) { $('templateSearch').value=''; $('templateScene').value=''; $('templateStatus').value=''; await selectTemplate(next.name); }
 }
 bind('btnNext',nextTemplate);
-bind('btnConfirm',async()=>{ if(reviewDirty) await saveReview(); applyState(await api('/api/status',{name:templateName,value:'confirmed'})); notify('模板已确认'); if($('autoNext').checked) await nextTemplate(); });
+bind('btnConfirm',async()=>{ if(await window.eventCrop.confirm() && $('autoNext').checked) await nextTemplate(); });
 bind('btnReject',async()=>{ await saveReview(true); notify('已打回，重新生成 agent 任务即可带上校对意见'); });
 bind('btnClear',async()=>{ applyState(await api('/api/clear',{name:templateName})); notify('提案已清除，可手动截取或交给 agent 重新生成'); });
 bind('btnExport',async()=>{ if(reviewDirty) await saveReview(); const result=await api('/api/export',{}); $('exportResult').textContent=`已导出 ${result.exported.length} 个模板。`; $('exportPath').textContent=result.out_dir; $('exportDialog').showModal(); notify('模板导出完成'); });

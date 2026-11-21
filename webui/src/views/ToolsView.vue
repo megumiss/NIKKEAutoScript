@@ -619,7 +619,7 @@ watch(toolsTab, tab => {
           </div>
         </div>
         <div v-if="driverSubDevice === false" class="hosts-unsupported">
-          <AppIcon name="alert-triangle" :size="14" /> {{ t('驱动已安装，但 HID 子设备未呈现（Windows 代码 45），注入的报告会被丢弃、光标不会移动。请重启虚拟鼠标总线设备或重启系统后重试。') }}
+          <AppIcon name="alert-triangle" :size="14" /> {{ t('驱动已安装，但 HID 子设备未呈现（Windows 代码 45），请尝试直接启动或者重启系统后重试。') }}
         </div>
         <div class="hosts-actions">
           <button class="btn" :disabled="driverBusy" @click="loadDriver"><AppIcon name="refresh" :size="14" /> {{ t('刷新状态') }}</button>
