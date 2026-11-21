@@ -10,7 +10,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse
 
-from module.config.serial_state import modify_state, read_serial_config
+from module.config.serial_state import clear_serial_failed, modify_state, read_serial_config
 from module.config.utils import DEFAULT_TIME, deep_get, filepath_args, filepath_config, nkas_instance, nkas_template, read_file
 from module.logger import logger
 from module.submodule.utils import get_config_mod, load_config
@@ -356,25 +356,6 @@ async def set_avatar(request: Request):
     return JSONResponse({'status': 'success', 'avatar': avatar})
 
 
-def _clear_serial_failed(name):
-    """
-    手动启动实例视为用户要求重跑：清除该实例的串行出错标记，并解除
-    OnError=stop 的全组停止。否则出错记录还在，编排器永远不会把令牌
-    授予它，实例会一直卡在等待令牌状态。
-    """
-    config = read_serial_config()
-    if not config.enable or name not in config.group:
-        return
-
-    def _fn(s):
-        cleared = s['failed'].pop(name, None) is not None or bool(s.get('halted'))
-        s['halted'] = False
-        return cleared
-
-    if modify_state(_fn):
-        logger.info(f'Instance "{name}" manually started, cleared serial failed/halted marks')
-
-
 async def start(request: Request):
     name = request.path_params['name']
     names = nkas_instance() if name == 'all' else [name]
@@ -419,7 +400,7 @@ async def start(request: Request):
             return _response_error(f'Instance "{name}" was renamed or deleted.', 404)
         if result == START_RUNNING:
             return _response_error(f'Instance "{name}" is already running.', 409)
-        _clear_serial_failed(name)
+        clear_serial_failed(name)
         return JSONResponse({'status': 'success', 'message': f'Instance "{name}" started.'})
     results = []
     for instance in names:
@@ -459,7 +440,7 @@ async def start(request: Request):
         if result == START_RUNNING:
             results.append({'instance': instance, 'status': 'skipped', 'message': 'Already running.'})
             continue
-        _clear_serial_failed(instance)
+        clear_serial_failed(instance)
         results.append({'instance': instance, 'status': 'success', 'message': 'Started.'})
     return JSONResponse({'status': 'success', 'results': results})
 

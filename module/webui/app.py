@@ -1,5 +1,6 @@
 import argparse
 import mimetypes
+import os
 import sys
 import threading
 from typing import Any, Dict, List
@@ -21,6 +22,7 @@ from starlette.staticfiles import StaticFiles
 
 import module.webui.lang as lang
 from module.config.env import IS_ON_PHONE_CLOUD
+from module.config.utils import filepath_config, nkas_instance
 from module.logger import logger
 from module.webui.process_manager import ProcessManager
 from module.webui.remote_access import RemoteAccess
@@ -222,6 +224,14 @@ def _build_screen_number_options(current_value: Any = None) -> List[Dict[str, An
 
 
 def startup():
+    """初始化后端服务，并在没有实例配置时创建可启动的默认实例。
+
+    默认实例只在启动阶段落盘；配置读取和进程启动仍拒绝恢复已删除的实例，
+    避免运行期间的并发请求把删除操作撤销。已有实例不被覆盖或补建。
+    """
+    if nkas_instance() == ['nkas'] and not os.path.exists(filepath_config('nkas')):
+        State.config_updater.update_file('nkas')
+        logger.info('已初始化默认实例配置：nkas。')
     from module.device.adb.virtual_display_session import sessions
     sessions().prepare()
     State.init()

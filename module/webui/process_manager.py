@@ -62,6 +62,9 @@ class ProcessManager:
         self.preview_wanted = State.manager.Event()
         self.latest_preview: Tuple[float, bytes] = None
         self.preview_source = None
+        self.latest_campaign = None
+        self.campaign_revision = 0
+        self._campaign_started_at = 0
         self.preview = PreviewSampler(self)
         self._process: Process = None
         # Keep a new worker behind any cleanup still running for its predecessor.
@@ -168,6 +171,9 @@ class ProcessManager:
             self._process = process
         self.preview_source = None
         self.latest_preview = None
+        self.latest_campaign = None
+        self.campaign_revision = 0
+        self._campaign_started_at = time.time()
         # Queued frames belong to the previous worker even if it used the same display.
         while True:
             try:
@@ -218,19 +224,29 @@ class ProcessManager:
         self.thd_preview_handler.start()
 
     def _thread_preview_handler(self) -> None:
-        while self.alive:
+        while True:
             try:
                 item = self._preview_queue.get(timeout=1)
             except queue.Empty:
+                if not self.alive:
+                    break
                 continue
             except (EOFError, OSError):
                 # Worker died and the queue pipe broke; keep the last frame.
                 break
-            if isinstance(item, tuple) and len(item) == 2:
-                item, self.preview_source = item
             source = self.preview_source if isinstance(self.preview_source, dict) else {}
+            if isinstance(item, tuple) and len(item) == 2:
+                item, source = item
+                if isinstance(source, dict) and 'campaign' in source:
+                    snapshot = source['campaign']
+                    if snapshot and snapshot.get('captured_at', 0) >= self._campaign_started_at:
+                        self.latest_campaign = snapshot
+                        self.campaign_revision += 1
+                else:
+                    self.preview_source = source
             if isinstance(item, bytes):
-                self.latest_preview = (source.get('captured_at') or time.time(), item)
+                captured_at = source.get('captured_at') if isinstance(source, dict) else None
+                self.latest_preview = (captured_at or time.time(), item)
 
     def current_preview(self, interval=1.0):
         """

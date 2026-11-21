@@ -35,13 +35,16 @@ LAUNCHER_PROCESS = {
 
 class AppControl(WinClient, Login):
     config: NikkeConfig
+    target_resolution = (720, 1280)
 
-    def __init__(self, config):
+    def __init__(self, config, resolution=(720, 1280)):
         """
         Args:
             config (NikkeConfig, str): Name of the user config under ./config
+            resolution (tuple): Target game client size in pixels.
         """
         logger.hr('Device', level=1)
+        self.target_resolution = resolution
         if isinstance(config, str):
             self.config = NikkeConfig(config, task=None)
         else:
@@ -136,7 +139,7 @@ class AppControl(WinClient, Login):
                     raise RequestHumanTakeover
 
             # 设置屏幕方向
-            if self.config.PCClient_ScreenRotate:
+            if self.config.PCClient_ScreenRotate and self.target_resolution[0] < self.target_resolution[1]:
                 self.screen_rotate(self.config.PCClient_ScreenNumber, 1)
                 time.sleep(3)
 
@@ -199,6 +202,7 @@ class AppControl(WinClient, Login):
     def app_start(self):
         logger.info('Game starting')
         MAX_RETRY = 3
+        width, height = self.target_resolution
 
         def wait_until(condition, timeout, period=1):
             """等待直到条件满足或超时"""
@@ -211,14 +215,11 @@ class AppControl(WinClient, Login):
 
         # 检查屏幕分辨率
         # if not self.config.PCClient_ScreenNumber:
-        self.check_screen_resolution(self.config.PCClient_ScreenNumber, 720, 1280)
+        self.check_screen_resolution(self.config.PCClient_ScreenNumber, width, height)
         self.launcher_running = False
         self.current_window = self.game
-        # 关闭自动HDR
-        if self.config.PCClient_CloseAutoHdr:
-            self.change_auto_hdr('disable')
-        else:
-            self.change_auto_hdr('unset')
+        # 自动 HDR 会改变截图色彩，按配置统一在这里应用
+        self.apply_auto_hdr_setting()
         for retry in range(MAX_RETRY):
             # 上一轮清理可能停留在启动器，不能把它当成已启动的游戏。
             self.current_window = self.game
@@ -227,9 +228,9 @@ class AppControl(WinClient, Login):
                 if self.switch_to_program():
                     logger.info('Game is already running, verifying resolution')
                     self.ensure_resolution(
-                        self.config.PCClient_ScreenNumber, 720, 1280, self.config.PCClient_GameWindowPosition
+                        self.config.PCClient_ScreenNumber, width, height, self.config.PCClient_GameWindowPosition
                     )
-                    self.check_resolution(720, 1280)
+                    self.check_resolution(width, height)
                     if self.config.PCClient_DisableVoice:
                         self.mute_window(True)
                     break
@@ -260,9 +261,9 @@ class AppControl(WinClient, Login):
                     raise RequestHumanTakeover
                 # 设置游戏分辨率
                 self.ensure_resolution(
-                    self.config.PCClient_ScreenNumber, 720, 1280, self.config.PCClient_GameWindowPosition
+                    self.config.PCClient_ScreenNumber, width, height, self.config.PCClient_GameWindowPosition
                 )
-                self.check_resolution(720, 1280)
+                self.check_resolution(width, height)
                 if self.config.PCClient_DisableVoice:
                     self.mute_window(True)
 

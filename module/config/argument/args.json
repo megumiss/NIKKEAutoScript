@@ -4093,6 +4093,46 @@
       }
     }
   },
+  "AutoMainStory": {
+    "CampaignSettings": {
+      "DebugMode": {
+        "type": "checkbox",
+        "value": false
+      },
+      "MissedEnemyScan": {
+        "type": "checkbox",
+        "value": false
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
+  "AutoMainCollectible": {
+    "CampaignSettings": {
+      "DebugMode": {
+        "type": "checkbox",
+        "value": false
+      },
+      "MissedEnemyScan": {
+        "type": "checkbox",
+        "value": false
+      }
+    },
+    "Storage": {
+      "Storage": {
+        "type": "storage",
+        "value": {},
+        "valuetype": "ignore",
+        "display": "disabled"
+      }
+    }
+  },
   "AutoTower": {
     "AutoTower": {
       "Enable": {

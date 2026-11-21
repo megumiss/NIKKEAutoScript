@@ -226,6 +226,14 @@
       "name": "Interception",
       "help": ""
     },
+    "AutoMainStory": {
+      "name": "Auto Main Story",
+      "help": "Fully automatic main story progression."
+    },
+    "AutoMainCollectible": {
+      "name": "Auto Main Story Collectibles",
+      "help": "Fully automatic collection of scattered items on campaign maps."
+    },
     "AutoTower": {
       "name": "Auto Tower",
       "help": ""
@@ -1404,6 +1412,20 @@
     "ModifierList": {
       "name": "Overclock Options",
       "help": "Supports common overclock options only:\nENEMY_WEAPON_UP_1/2/3: Enemy Weapon Up I/II/III\nENEMY_ARMOR_UP_1/2/3: Enemy Armor Up I/II/III\nENEMY_VITALS_UP_1/2/3: Enemy Vitals Up I/II/III\nNO_RECYCLING: Disable Recycling\nAGGRESSIVE_TACTICS: Aggressive Tactics\nRUSH_HOUR_1/2/3: Rush Hour I/II/III\nRELEVANT_PERSONNEL_ONLY: Relevant Personnel Only\nDefault selection is Enemy Weapon Up III, Enemy Armor Up III, Enemy Vitals Up III, Disable Recycling, Aggressive Tactics, Rush Hour III, Relevant Personnel Only (total 25x). Fill one per line. Reduce options if your collection strength is insufficient.\nIf the top record shown on the overclock page is equal to or higher than the total multiplier entered below, overclock will be skipped"
+    }
+  },
+  "CampaignSettings": {
+    "_info": {
+      "name": "Campaign settings",
+      "help": ""
+    },
+    "DebugMode": {
+      "name": "Debug mode",
+      "help": "Off by default. Save screenshots, events and offline replays for each campaign run to help diagnose issues.\nSave location: log/campaign/<difficulty>_<chapter>/runs/<timestamp>_<random-suffix>/\nAfter the task ends, open index.html in that folder to view the replay."
+    },
+    "MissedEnemyScan": {
+      "name": "Missed-enemy scan before Boss",
+      "help": "Off by default. Check chapter enemy progress and scan unobserved roads in the current area for missed enemies before fighting the Boss. This feature is not very stable; enabling it is not recommended."
     }
   },
   "AutoTower": {

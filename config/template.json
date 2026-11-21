@@ -980,5 +980,23 @@
     "Storage": {
       "Storage": {}
     }
+  },
+  "AutoMainStory": {
+    "CampaignSettings": {
+      "DebugMode": false,
+      "MissedEnemyScan": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
+  },
+  "AutoMainCollectible": {
+    "CampaignSettings": {
+      "DebugMode": false,
+      "MissedEnemyScan": false
+    },
+    "Storage": {
+      "Storage": {}
+    }
   }
 }

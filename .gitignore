@@ -23,6 +23,7 @@ bin/paddleocr/
 bin/parsec_vdd/debug.log
 /tmp
 **.acc
+# 运行地图等资源来自独立的资源仓库，按需同步到 data/resources，不进入本仓库
 data/
 android/
 .workbuddy/

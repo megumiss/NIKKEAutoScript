@@ -137,6 +137,28 @@ class Automation:
         self.secretly_press_key = self.input_handler.secretly_press_key
         self.press_mouse = self.input_handler.press_mouse
 
+    def verify_input_channel(self):
+        """检查控制方案的输入通道，返回该通道是否属于自动剧情验证过的方案。
+
+        driver 方案依赖虚拟鼠标驱动：设备缺失或变成幽灵设备时按键报告会被直接丢弃，先按预检
+        的顺序尝试修复一次，仍不可用就交人工处理，避免任务跑到一半才以「点击无效」的形式失败。
+        其它方案（pyautogui / postmessage）不阻断，只告警：自动剧情要在展开的小地图里拖动
+        视图，这条路径只在 driver 方案下验证过。
+        """
+        scheme = str(self.config.PCClientInfo_ControlScheme)
+        if scheme != 'driver':
+            logger.warning(f'当前控制方案为 {scheme}，自动剧情的小地图拖动未在该方案下验证')
+            return False
+        ensure_channel = getattr(self.input_handler, 'ensure_channel', None)
+        if ensure_channel is not None and ensure_channel():
+            logger.info('虚拟鼠标驱动通道可用')
+            return True
+        logger.error(
+            '虚拟鼠标驱动通道不可用：driver 方案要求虚拟鼠标驱动已安装，接口能打开且 HID 子设备'
+            '实际呈现（设备变幽灵时报告会被丢弃）。请重启 G HUB 总线设备或重装驱动后重试。'
+        )
+        raise RequestHumanTakeover
+
     def screenshot(self, crop=(0, 0, 1, 1), retry=True):
         """
         捕获窗口截图

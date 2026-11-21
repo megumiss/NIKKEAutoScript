@@ -67,17 +67,34 @@
 
     如果有问题或需求，欢迎到 <a href="https://github.com/megumiss/NIKKEAutoScript/issues" target="_blank">Issues</a> 反馈。
 - id: notice_history
-  date: 2026-11-18
+  date: 2026-11-21
   title: 更新历史
   type: info
   pinned: true
   items:
+    - id: notice_20261121_auto_main_story
+      date: 2026-11-21
+      title: 支持主线自动推图
+      content: |
+        <b>新增主线自动推图支持</b>
+        入口：工具 → 自动主线剧情。
+        可自动处理小怪、Boss、机关、电梯及剧情等场景。
+
+        <b>使用限制</b>
+        仅支持 PC 客户端，最低支持分辨率为 1080P、100% 缩放。
+        运行可能报错，100% 会漏怪，速度较慢；部分章节存在地图限制。
+        使用前请阅读任务页的「注意事项，必读」，介意上述问题请勿使用。
     - id: notice_20261118_config_migration
       date: 2026-11-18
       title: 新增配置迁移
       content: |
         <b>「多开」页面新增「迁移配置」按钮</b>
         支持从旧部署迁移配置和持久化数据。
+    - id: notice_20261107_story2_normal_sweep
+      date: 2026-11-07
+      title: Story2 Normal 关卡扫荡可能无法正常执行
+      content: |
+        <b>本次活动的 Story2 Normal 关卡扫荡可能无法正常执行</b>
     - id: notice_20261030
       date: 2026-10-30
       title: 支持伏特骰子领取

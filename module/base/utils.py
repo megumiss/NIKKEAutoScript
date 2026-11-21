@@ -1,4 +1,5 @@
 import io
+import queue
 import random
 import re
 import time
@@ -348,7 +349,7 @@ def publish_preview_frame(image, interval=1.0, source=None, captured_at=None):
     Args:
         image (np.ndarray): RGB 截图
         interval (float): 有观看者时的最小发布间隔（秒）
-        source (dict): 可选的实际 ADB Serial、display_id 与虚拟屏桥接信息，供预览定位屏幕。
+        source (dict): 可选的实际 ADB Serial、display_id、虚拟屏桥接信息或任务观测快照。
         captured_at (float): 截图时刻（time.time()），缺省为调用时刻。
     """
     global _preview_last_write, _preview_last_source
@@ -376,10 +377,18 @@ def publish_preview_frame(image, interval=1.0, source=None, captured_at=None):
     try:
         buf = io.BytesIO()
         Image.fromarray(image).save(buf, 'JPEG', quality=70)
-        q.put_nowait((buf.getvalue(), item_source))
+        item = (buf.getvalue(), item_source)
+        try:
+            q.put_nowait(item)
+        except queue.Full:
+            try:
+                q.get_nowait()
+            except queue.Empty:
+                pass
+            q.put_nowait(item)
         _preview_last_source = source
     except Exception:
-        # queue.Full（消费慢时丢帧）与编码异常都直接丢弃；来源缓存不更新，以便重试
+        # 队列竞争与编码异常不影响自动化；来源缓存仅在发布成功后更新。
         pass
 
 
