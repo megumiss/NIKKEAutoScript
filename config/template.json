@@ -73,7 +73,7 @@
       "ScreenshotMethod": "pyautogui",
       "ScreenshotInterval": 0.3,
       "ControlScheme": "pyautogui",
-      "MoveBackend": "driver"
+      "MoveBackend": "cursor"
     },
     "PCClient": {
       "Screens": false,

@@ -167,7 +167,7 @@ PCClientInfo:
     value: pyautogui
     option: [ pyautogui, postmessage, driver ]
   MoveBackend:
-    value: driver
+    value: cursor
     option: [ driver, cursor ]
 Optimization:
   AutoRedCircle: false

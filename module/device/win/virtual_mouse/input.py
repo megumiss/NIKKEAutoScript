@@ -114,7 +114,7 @@ class VirtualMouseInput(Input):
     # 方案：它是 SetCursorPos + PostMessage 的形态），所以直定位对游戏可见。
     MOVE_BACKENDS = ('driver', 'cursor')
     # 缺省值，实际取值由 PCClientInfo.MoveBackend 经构造函数传入。
-    MOVE_BACKEND = 'driver'
+    MOVE_BACKEND = 'cursor'
 
     def __init__(self, config_name=None, move_backend=None):
         """

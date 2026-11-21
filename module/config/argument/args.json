@@ -341,7 +341,7 @@
       },
       "MoveBackend": {
         "type": "select",
-        "value": "driver",
+        "value": "cursor",
         "option": [
           "driver",
           "cursor"
