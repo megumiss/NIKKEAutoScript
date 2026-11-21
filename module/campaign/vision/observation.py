@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 
 from module.campaign.vision.minimap import map_visible, minimap_control_visible
-from module.campaign.vision.frame import EXPANDED_ROI, frame_inputs, observation_frame
+from module.campaign.vision.frame import EXPANDED_ROI as EXPANDED_ROI, frame_inputs, observation_frame
 from module.campaign.vision.matching import (ACCEPT_COARSE_MARGIN, ACCEPT_PARAMETER_SPREAD_PX,
                                              ACCEPT_ROAD_IOU, MapMatcher)
 from module.campaign.vision.barriers import affine_project, project_barriers, scene_anchor

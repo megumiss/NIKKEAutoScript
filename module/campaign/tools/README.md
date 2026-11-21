@@ -1,87 +1,53 @@
-# 自动主线实验工具
+# 自动推图独立维护适配
 
-本目录只保留 CLI 与实验窗口适配。共用实现见[统一模块目录](../README.md)，
-正式任务不导入本子包。
+本目录为地图编辑器的移动任务和位移标定提供独立窗口、地图校验与定位适配。
+正式任务不导入本子包；导航算法仍位于 `../navigation/`，不注册额外调度任务。
+现场运行使用中文 Windows 客户区 `1776×999`。
 
-本目录提供战役地图定位、镜头导航、局部移动标定和离线回放。独立命令与地图标注工具共用导航逻辑；不注册 `main.py` 调度任务。现场运行使用中文 Windows 客户区 `1776×999`。
+## 保留文件与调用方
 
-- [运行控制、地图包与导航原理](../../../doc/campaign-prototype-principles.md)
-- [地图采集、重建与 Wiki 标注原理](../../../doc/minimap-wiki-principles.md)
-- [地图标注与移动操作](../../../doc/map-annotation.md)
-- [标定脚本、采样步骤与验收条件](../../../doc/campaign-calibration.md)
-
-## 代码与数据
-
-| 文件 | 用途 |
+| 文件 | 用途与调用方 |
 | --- | --- |
-| `settings.py`、`runtime.py` | 路径、窗口检查、停止、释放与命令失败契约 |
-| `map_package.py`、`prepare_package.py` | 地图包验证和从已有静态地图导入独立实验副本 |
-| `goto.py` | 公共地图控制、标记识别及 41 章缓存离线回放 |
-| `probe.py`、`adaptive.py` | 固定／自适应道路定位、局部路线与投影换算 |
-| `live.py`、`../vision/arrow_anchor.py` | 白／橙箭头检测、容错周期采样与单步移动实验 |
-| `../navigation/movement_feedback.py` | 小地图位移与静态地面交叉恢复箭头锚点、有限目标触发 |
-| `../navigation/camera_navigation.py`、`manual_move.py` | 管理界面与命令入口共用的远点平移、完整目标点击、停稳检测与到达修正 |
-| `../vision/surface_motion.py` | 局部道路配准、几何支持域检查及独立样本的位移标定 |
-| `run.py`、`camera_to.py` | 单次观察／自动移动／指定手势及有限镜头寻位 |
-| `../vision/match_coarse.py`、`match_scene.py` | 道路相关辅助与 Wiki 场景落点估计 |
-| `check_controls.py`、`scene_pan.py`、`pan_check.py` | 地图状态切换及两类镜头行为的现场实验 |
-| `../vision/assets/` | 弹窗与箭头模板、共享移动标定 |
+| `manual_move.py` | 编辑器移动任务子进程入口；`capture/calibrate.py` 复用地图准备与 `GameSession` |
+| `adaptive.py`、`probe.py` | 移动与标定使用的自适应道路定位；`probe.py` 仅加载绑定地图与标定 |
+| `goto.py` | 移动与标定使用的地图控件适配、普通／EX 弹窗处理，不提供独立寻敌入口 |
+| `map_package.py`、`prepare_package.py` | 实验副本的版本、哈希、道路及标定校验；支持导入新副本 |
+| `check_controls.py` | 标定前的截图与地图开合检查，不移动小队 |
+| `settings.py`、`runtime.py`、`window.py` | 独立工具的路径、停止、受保护输入、窗口释放与结果契约 |
 
-命令行实验包默认在 `data/campaign_prototype/chapter_38/`，输出在 `log/campaign_prototype/`，两者均为本机数据。正式运行的章节地图位于 `data/resources/maps/`，由 [runtime.py](../../../dev_tools/campaign/maps/runtime.py) 从完整采集包导出；完整采集、重建与辅助数据位于 `data/chapter_maps/local/`，不提交。平面章节使用下方命令导入实验包。分层章节保留局部定位所需参考帧和深度数据，移动标定在任务内临时生成，不需要现场标定包。
-
-Wiki 全场景图为可选本地参照，默认路径 `data/campaign_prototype/wiki_references/NN.png`；没有它们仍可运行地图校验、定位回放及控制检查。
-
-## YOLO 模型
-
-`../vision/models/bundle.json` 绑定场景、缩略小地图和展开小地图三个专用模型，适用于中文 Windows `1776×999` 客户区。场景统一整图推理一次，小地图按本帧形态互斥选择对应模型；不再使用旧场景切片。运行依赖保留在独立的 `requirements-yolo.txt`，不纳入主程序依赖。自动推图启动时会在观测前检查并按需安装，沿用部署镜像与 `InstallDependencies` 设置；普通任务不触发安装。离线工具或禁用自动安装时，可用当前运行环境的 Python 执行 `-m pip install -r requirements-yolo.txt`（部署副本为 `toolkit\python.exe`，开发环境为 `.venv\Scripts\python.exe`），运行端不需要训练环境。类别、输入尺寸和阈值由各角色元数据声明；模型契约与离线验证边界见 [模型说明](../vision/models/README.md)。
-
-普通关卡优先使用 YOLO 识别；敌人移动模式出现普通战斗准备弹窗时保留，出现 EX 弹窗时关闭一次并返回 `ex_stage_skipped`，结束本次移动。该结果不表示普通关卡到达或战斗完成。
+正式地图由资源仓库同步到 `data/resources/maps/`。独立工具默认实验包位于
+`data/campaign_prototype/chapter_38/`，输出位于 `log/campaign_prototype/`；这些本机数据不提交。
+编辑器移动任务会创建绑定当前地图与标注版本的独立副本。
 
 ## 常用入口
 
-从仓库根目录执行，默认使用项目已有虚拟环境。查看任意入口参数：
+在仓库根目录执行，使用项目已有虚拟环境。`--help` 不取得游戏输入控制。
 
 ```powershell
-.venv\Scripts\python.exe -m module.campaign.tools.run --help
-.venv\Scripts\python.exe -m module.campaign.tools.map_package
+# 编辑器：移动、扫描与 Wiki 导入共用统一页面
+.venv\Scripts\python.exe -m dev_tools.campaign.editor
+
+# 查看独立维护入口参数
+.venv\Scripts\python.exe -m module.campaign.tools.manual_move --help
+.venv\Scripts\python.exe -m module.campaign.tools.prepare_package --help
+.venv\Scripts\python.exe -m module.campaign.tools.adaptive --help
+.venv\Scripts\python.exe -m module.campaign.tools.check_controls --help
 ```
 
-把已导出的静态地图导入到**尚不存在**的目录。下面的源路径应替换为实际采集包；默认标定只在已有 38 章实验中验证过。
+从静态地图导入到尚不存在的实验目录，章节号与源路径必须匹配：
 
 ```powershell
 .venv\Scripts\python.exe -m module.campaign.tools.prepare_package --source data/resources/maps/chapter_38 --destination data/campaign_prototype/chapter_38 --chapter 38
 ```
 
-离线定位需传入一张 `486×462` 的展开地图 ROI：
+`check_controls --cycles 0` 只截图，`1..10` 次会实际展开／收回地图，仍取得游戏输入控制。
+不要为检查目录或参数而运行现场控制。普通敌人弹窗保留给上层处理；EX 弹窗关闭一次并返回
+`ex_stage_skipped`，结束本次移动，不能把它视为普通目标到达或战斗成功。
 
-```powershell
-.venv\Scripts\python.exe -m module.campaign.tools.adaptive log/campaign_prototype/sample_roi.png --tag replay_01
-```
+## 说明
 
-现场检查会取得游戏输入控制。每次用新标签保留证据；第一次可用零次循环只截图：
-
-```powershell
-.venv\Scripts\python.exe -m module.campaign.tools.check_controls --cycles 0 --tag snapshot_01
-.venv\Scripts\python.exe -m module.campaign.tools.check_controls --cycles 10 --tag controls_01
-```
-
-管理界面的到点／收集品／敌人模式、`live --move`、现场 `probe` 和 `run --move` 均共用远距离镜头规划。
-目标离屏时按目标相对位置分批斜向长拖动，每批最多三次，两轴等比例缩放；批内沿同一实测基准累计位移。
-批末、预计相对位移完成或拖后画面基本不变时用小地图校正；确认无进展且目标仍不可点击时停止。
-估算视野仅用于镜头规划；点击完整目标前必须通过小地图定位确认，再交给游戏寻路，单次计划最多平移 8 次。
-点击后直接采样紧凑小地图，仅按连续四帧道路稳定结束等待，随后独立定位小队；
-圆环是否可见不参与停稳判定，等待期间不反复展开面板。
-镜头校正发现小队位置变化时，管理界面移动测试丢弃旧点击基准，停稳后重新定位，最多恢复两次。
-管理界面移动测试无法恢复箭头时，若有有效局部场景标定及小地图小队定位，可沿同层连续道路短移一次；平面地图没有局部场景标定时，改按镜头居中近似向附近开阔道路做一次唤醒短移（橙环站位不渲染箭头，等待不会出现，仅平面地图适用）。
-短移落点须通过标定截图与当前地面的交叉配准，唤醒落点须通过道路净空、敌人距离与路径验证；停稳后重新定位并直接采样箭头，仍不可见则停止，不继续试点。
-收集品模式检测到带放大镜的橙色倒三角即停止并保存现场，不再微调或点击拾取。
-`live --step` 只用于显式短移实验；`run --click`／`--pan` 仍执行指定手势。
-分层地图在移动任务开始时自动做两点临时标定，平移和落点都限制在小队所在表面的连通道路内。
-
-停止可用 `Ctrl+C`，或在另一终端创建共享停止文件：
-
-```powershell
-New-Item -ItemType File -Path log/campaign_prototype/STOP -Force
-```
-
-停止文件保留直到操作者准备重新开始并移除它；程序不会自动清除。退出码 `0` 只表示本次命令完成，`1` 表示失败，`130` 表示取消；不代表物品已拾取、战斗获胜或章节完成。
+- [自动主线模块与运行依赖](../README.md)
+- [坐标、地图包与导航原理](../../../doc/campaign-prototype-principles.md)
+- [编辑器移动操作与游戏内验收](../../../doc/map-annotation.md)
+- [位移标定与控制检查](../../../doc/campaign-calibration.md)
+- [模型契约与验证边界](../vision/models/README.md)

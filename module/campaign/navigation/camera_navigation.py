@@ -1,6 +1,5 @@
 """共享的远点镜头规划；小队位置与镜头观测分开保存，点击后重新确认小队停稳。"""
 
-from types import SimpleNamespace
 
 import cv2
 import numpy as np
@@ -13,7 +12,6 @@ from module.campaign.vision import perception
 from module.campaign.vision.surface_motion import project
 
 FIELD_BOUNDS = (300, 220, 1450, 820)
-ROI_BOUNDS = (12, 12, 474, 420)
 # 横向利用场景全宽，纵向利用中部全高；两个矩形均避开固定 UI。
 PAN_REGIONS = ((24, 320, 1752, 880), (250, 70, 1490, 880))
 # 避让小队时的取样步长（客户区像素）。排除矩形覆盖原 120×150 椭圆的外接范围，
@@ -166,45 +164,6 @@ def target_projection(chart, observation, target):
     return roi, project(chart, roi)
 
 
-def camera_offset(chart, observation, target):
-    """在最近一次实测视野上，把目标相对位置换算为场景方向和距离。"""
-    matrix = np.asarray(observation['roi_to_map'], float)
-    center = np.array([243., 231.])
-    return jacobian(chart, center) @ np.linalg.solve(jacobian(matrix, center),
-                                                     np.asarray(target) - project(matrix, center))
-
-
-def camera_drag(chart, observation, target, gain=1.):
-    """远处点只用局部方向规划镜头，避免视野外的透视地平线反转拖动方向。
-
-    target 使用地图像素，gain 表示实测镜头响应比例；仅在 ROI 中心线性化目标方向。
-    结果为避开固定 UI 的客户区拖动向量；幅度不足 8px 时抛出 ValueError，防止无效微拖循环。
-    """
-    drag = -camera_offset(chart, observation, target) / gain
-    _, scale = pan_region(drag)
-    drag *= scale
-    if np.linalg.norm(drag) < 8:
-        raise ValueError('目标仍不可点击，但镜头已没有有效平移方向。')
-    return drag
-
-
-def camera_response(chart, before, after, drag):
-    """用重新配准的视野位移测量拖动响应，只接受方向一致且可测的推进。
-
-    比较拖动前后 ROI 中心的地图坐标，并换算为场景位移。
-    方向余弦至少为 0.8、位移至少为 8px 且增益在 0.2～2 内才返回增益，否则返回 None 供规划器忽略。
-    """
-    center = np.array([243., 231.])
-    matrix = np.asarray(before['roi_to_map'], float)
-    moved = project(after['roi_to_map'], center) - project(matrix, center)
-    travel = jacobian(chart, center) @ np.linalg.solve(jacobian(matrix, center), moved)
-    gain = float(travel @ -drag / (drag @ drag))
-    alignment = float(travel @ -drag / max(np.linalg.norm(travel) * np.linalg.norm(drag), 1))
-    if np.linalg.norm(travel) < 8 or alignment < .8 or not .2 <= gain <= 2:
-        return None
-    return gain
-
-
 def pan_scene(session, drag):
     """用当前场景箭头避让后发送一次镜头拖动，不发送小队移动点击。
 
@@ -269,119 +228,6 @@ def observe_camera(session, squad_position, *, known_squad=False):
     return report
 
 
-def predict_camera(chart, view, drag, gain):
-    """用本批实测基准和累计拖动估算相对位移，不重复外推透视；不能作为点击依据。"""
-    center = np.array([243., 231.])
-    matrix = np.asarray(view['roi_to_map'])
-    translation = np.eye(3)
-    translation[:2, 2] = jacobian(matrix, center) @ np.linalg.solve(
-        jacobian(chart, center), -np.asarray(drag) * gain)
-    matrix = translation @ matrix
-    return dict(roi_to_map=matrix.tolist(), position=project(matrix, [243, 231]).tolist(),
-                position_kind='predicted_viewport', player_roi=None)
-
-
-def scene_unchanged(before, after):
-    """仅检测长拖后画面是否基本没变，不用场景配准估计位移或透视。"""
-    frames = [cv2.resize(cv2.cvtColor(frame[320:880, 250:1490], cv2.COLOR_BGR2GRAY), (248, 112))
-              for frame in (before, after)]
-    # 空白或遮挡画面不足以判断边缘；少量角色动画不影响大部分静止地形。
-    return bool(min(frame.std() for frame in frames) > 12
-                and np.mean(cv2.absdiff(*frames) <= 6) > .95)
-
-
-def plan_world_move(session, observation, target, max_pans=8, anchor=None):
-    """优先点击完整目标；视野外先平移，不按固定地图距离切成短步。
-
-    以真实小队观测和箭头锚点建立场景投影，target 是调用者已验证的地图目标。
-    目标同时进入 ROI 与场景安全区后返回客户区点击坐标；最多平移 max_pans 次，边界、身份或定位异常会中止。
-    每批最多三次长拖动，以同一实测基准累计相对位移；估计位移完成或画面不动时提前校正。
-    批末及点击前用小地图确认，估算位置不能直接用于点击。
-    """
-    from module.campaign.navigation.movement_feedback import resolve_anchor
-    target = np.asarray(target, float)
-    squad_position = np.asarray(observation['position'], float).copy()
-    if np.linalg.norm(target - squad_position) < 2:
-        raise ValueError('当前落点与小队过近。')
-    goto.map_close(session.win)
-    field = goto.capture_client(session.win)
-    session.identity(field)
-    session.check_collectible(field)
-    session.preview(field)
-    if anchor is None:
-        anchor = resolve_anchor(session, field, observation)
-    chart = field_chart(session.localizer, observation, anchor)
-    view, previous_center, responses = observation, None, []
-    batch_pans, batch_drag = 0, np.zeros(2)
-    batch_start = observation
-    session.camera_pans = getattr(session, 'camera_pans', 0)
-    for count in range(max_pans + 1):
-        session.check()
-        try:
-            roi, click = target_projection(chart, view, target)
-        except ValueError:
-            roi = click = np.array([np.nan, np.nan])
-        if batch_pans == 0 and inside(roi, ROI_BOUNDS) and inside(click, FIELD_BOUNDS):
-            field = goto.capture_client(session.win)
-            session.identity(field)
-            session.check_collectible(field)
-            session.preview(field)
-            session.emit(state='planning', navigation_method='camera_pan' if count else 'direct_target',
-                         camera_pans=session.camera_pans, plan_camera_pans=count,
-                         planned_target=target.tolist(), click=click.tolist(),
-                         message='目标已进入可点击区域，准备发送移动点击')
-            return click
-        if count == max_pans:
-            raise ValueError(f'已平移 {max_pans} 次，目标仍不在有效画面内；未发送移动点击。')
-        center = project(view['roi_to_map'], [243, 231])
-        if batch_pans == 0 and previous_center is not None and np.linalg.norm(center - previous_center) < 3:
-            raise ValueError('镜头已到边界或没有产生有效平移，未发送移动点击。')
-        if batch_pans == 0:
-            previous_center = center
-            batch_start = view
-        gain = float(np.median(responses[-3:])) if responses else 1.
-        drag = camera_drag(chart, view, target, gain=gain)
-        session.emit(state='panning', camera_pans=session.camera_pans + 1, plan_camera_pans=count + 1,
-                     camera_drag=drag.tolist(), camera_gain=gain,
-                     message=f'正在平移画面寻找目标（{count + 1}/{max_pans}）…')
-        before = goto.capture_client(session.win)
-        pan_scene(session, drag)
-        session.camera_pans += 1
-        current = goto.capture_client(session.win)
-        session.identity(current)
-        session.check_collectible(current)
-        session.preview(current)
-        batch_pans += 1
-        batch_drag += drag
-        reason = 'prediction_failed'
-        try:
-            updated = predict_camera(chart, batch_start, batch_drag, gain)
-            remaining = camera_offset(chart, updated, target)
-            reason = ('no_scene_motion' if scene_unchanged(before, current) else
-                      'pan_budget' if count + 1 == max_pans else
-                      'batch_limit' if batch_pans >= 3 else
-                      'relative_target_reached' if np.linalg.norm(remaining) < 8 else None)
-        except ValueError:
-            pass
-        needs_fix = reason is not None
-        if needs_fix:
-            session.emit(camera_correction_reason=reason)
-            updated = observe_camera(session, squad_position)
-            roi, click = target_projection(chart, updated, target)
-            if (np.linalg.norm(project(updated['roi_to_map'], [243, 231])
-                               - project(batch_start['roi_to_map'], [243, 231])) < 3
-                    and not (inside(roi, ROI_BOUNDS) and inside(click, FIELD_BOUNDS))):
-                raise ValueError('镜头已到边界或没有产生有效平移，未发送移动点击。')
-            response = camera_response(chart, batch_start, updated, batch_drag)
-            if response is not None:
-                responses.append(response)
-            batch_pans, batch_drag = 0, np.zeros(2)
-        session.emit(camera_tracking='minimap' if needs_fix else 'predicted', camera_batch_pans=batch_pans)
-        view = updated
-        session.emit(camera_view_position=view['position'], camera_position_kind=view['position_kind'])
-    raise AssertionError('Unreachable camera planning state')
-
-
 def wait_for_squad(session):
     """采样紧凑小地图，连续四帧道路稳定后返回最后一帧客户区图像。
 
@@ -417,31 +263,6 @@ def wait_for_squad(session):
         session.preview(field)
         return field
     raise RuntimeError('等待小地图道路停稳超时，未追加移动点击。')
-
-
-def window_session(win, localizer, evidence, tag, folder=None, pause=None):
-    """独立命令复用同一规划器，保留原命令的窗口与日志生命周期。
-
-    folder / pause 可由实验入口注入，默认使用生产证据目录与窗口状态检查。
-    把现有窗口、定位器和证据字典适配为规划器需要的会话接口。
-    截图写入统一输出目录，状态合并到 evidence；窗口创建和释放仍由外层命令负责。
-    """
-    def identity(field):
-        """检查客户区是否出现战斗准备弹窗。
-
-        相关分数超过 0.8 时抛出 RuntimeError，使独立命令在规划下一次输入前停止。
-        """
-        if goto.battle_popup_score(field) > .8:
-            raise RuntimeError('Battle popup; stop movement')
-
-    from pathlib import Path
-    folder = Path(folder) if folder is not None else Path(__file__).resolve().parents[3] / 'log/campaign'
-    package = localizer.package.path
-    return SimpleNamespace(win=win, localizer=localizer, folder=folder, index=0, tag=tag, package=package,
-                           check=win.check, pause=pause or (lambda seconds: goto.pause_window(win, seconds)),
-                           identity=identity, emit=evidence.update,
-                           check_collectible=lambda field: None,
-                           preview=lambda field: runtime.write_image(folder / f'{tag}_field.png', field))
 
 
 def panel_delta_to_client(a, delta):
@@ -570,7 +391,6 @@ def fusion_acceptable(session, candidate, matrix, road, valid, origin, predicted
         return False
     session.emit(fused_iou=round(score, 3), fused_deviation=round(deviation, 1))
     return True
-
 
 
 def compact_viewport(session, matcher, panel, road, valid):

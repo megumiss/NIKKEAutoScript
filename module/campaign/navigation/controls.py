@@ -1,6 +1,5 @@
 """共享客户区标定、小地图控件与弹窗模板；不加载采集器或实验配置。"""
 
-import time
 from pathlib import Path
 
 import cv2
@@ -10,7 +9,6 @@ from module.campaign.vision import perception
 from module.campaign.vision.minimap import terrain as terrain
 
 ASSETS = Path(__file__).resolve().parents[1] / 'vision/assets'
-MAP_MINIMIZE = (644 + 14, 280 - 11)
 # 客户区位移 = A_INV @ 标定参考平面位移；使用前须核对地图包中的配套矩阵。
 A_INV = np.array([[-1.9955, 1.2530], [1.6580, 0.8463]])
 # 展开小地图 ROI → 标定参考平面的单应（calibration.json 的 projection）。参考平面是全局共享的，
@@ -22,15 +20,14 @@ ROI_TO_PLANE = np.array(
         [3.0143883607574224e-05, 0.0026849827674979183, 1.0],
     ]
 )
-# 视野中心对应的客户区像素；30 帧历史截图实测均值，见 tmp/barrier_test/historical_error.json。
+# 视野中心对应的客户区像素；1776×999 客户区实测均值。
 VIEWPORT_PIXEL = (887.7, 496.0)
 # 地面点的底图位移 → 客户区位移的固定镜头仿射（1776×999 客户区）。2026-10-22 用第 38 章
 # 两次独立运行的光幕／立柱脚部轨迹标定：拟合残差 ≤16.5 客户区像素，跨运行预测误差
 # ≤18 客户区像素（约 9 地图像素），同运行 SIFT 场景位移复核误差 ≤9px。
 # 固定朝向纯平移的镜头用于预标注关联与机关状态投影，不用于估算光幕封锁位置。
 GROUND_TO_CLIENT = np.array([[1.9091, -0.5931], [-0.0173, 1.5890]])
-# 紧凑面板里相机注视点的位置：小队居中停稳时圆环稳定在此（非面板几何中心），实测见
-# tmp/barrier_test/center_first.json。
+# 紧凑面板里相机注视点的位置：小队居中停稳时圆环稳定在此，不能用面板几何中心替代。
 GAZE = (107.2, 104.0)
 # 箭头动画中点距小队脚下地面的客户区像素：箭头锚点换算脚点的标定约定（1776×999 客户区），
 # 场景投影共用同一数值，见 arrow_anchor.cycle_ground_anchor、barriers.scene_anchor。
@@ -123,11 +120,3 @@ def movement_click(anchor, offset):
         elif delta < 0:
             scale = min(scale, (lower - anchor[axis]) / delta)
     return anchor + screen_offset * scale
-
-
-def pause_window(win, seconds):
-    """短周期等待期间检查受控窗口，供不持有调度器的实验适配器复用。"""
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        win.check()
-        time.sleep(min(0.1, max(0, deadline - time.monotonic())))

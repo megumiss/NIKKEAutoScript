@@ -31,7 +31,7 @@ RESOURCE_RECHECK_SECONDS = 6 * 3600
 RESOURCE_SYNC_TIMEOUT = 1800
 # 小地图被关闭时左上角水滴箭头控件的客户区点击坐标；与采集器 args.map_open 同源（紧凑展开按钮）。
 MINIMAP_TOGGLE_POSITION = (42, 98)
-# 展开面板左上角的最小化按钮；与 navigation.controls.MAP_MINIMIZE 同源。
+# 展开面板左上角的最小化按钮；固定客户区坐标为 (658, 269)。
 MINIMAP_COLLAPSE_POSITION = (EXPANDED_ROI[0] + 14, EXPANDED_ROI[1] - 11)
 # 小地图重新打开后的面板动画等待秒数；采集器 wait_for 也按 1.2s 预留动画时间。
 MINIMAP_REOPEN_WAIT_SECONDS = 1.5

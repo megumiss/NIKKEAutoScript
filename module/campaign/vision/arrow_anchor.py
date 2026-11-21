@@ -85,28 +85,3 @@ def sample_ground_anchor(session, field):
         return anchor, field
     session.emit(arrow_attempts=48, arrow_missed_frames=missing, anchor_method=None)
     raise ArrowUnavailable(f'箭头采样 48 帧后仍无法确定地面位置（漏检 {missing} 帧）：{failure}', field)
-
-
-def sample_window_anchor(win, field, evidence):
-    """独立实验入口共用周期采样，保留窗口、停止和战斗弹窗检查。
-
-    使用 win 的停止检查和共享可取消等待 组成轻量会话，采样证据直接合并到 evidence。
-    返回与 sample_ground_anchor 相同的锚点和截图；首次图像及后续帧都需通过战斗弹窗检查。
-    """
-    from types import SimpleNamespace
-
-    from module.campaign.navigation import controls as goto
-
-    def check_field(current):
-        """对周期采样的客户区图检查战斗准备模板。
-
-        命中后直接抛错，避免把弹窗中的亮色形状识别成小队箭头继续采样。
-        """
-        if goto.battle_popup_score(current) > .8:
-            raise RuntimeError('Battle popup during arrow sampling; stop')
-
-    win.check()
-    check_field(field)
-    session = SimpleNamespace(win=win, check=win.check, pause=lambda seconds: goto.pause_window(win, seconds),
-                              identity=check_field, emit=evidence.update)
-    return sample_ground_anchor(session, field)

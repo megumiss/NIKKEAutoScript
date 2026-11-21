@@ -748,7 +748,3 @@ class CampaignSceneController:
         self.session.record('noncombat_state', field=field, state=state, scores=scores)
         self.session.pause(NONCOMBAT_POLL_SECONDS)
         return {'state': 'noncombat', 'page': state}
-
-
-# 保留既有导入名称；实例的持有者改为 Campaign 任务上层。
-CampaignNoncombat = CampaignSceneController

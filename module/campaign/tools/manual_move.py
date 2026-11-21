@@ -13,7 +13,6 @@ from filelock import FileLock, Timeout
 import numpy as np
 
 from module.campaign.navigation.movement import (
-    movement_plan as movement_plan,
     navigate as navigate,
 )
 from module.campaign.navigation.session import NavigationSession
@@ -78,10 +77,6 @@ def prepare(request, folder):
     if not road.any() or distance[y, x] > 12:
         raise ValueError('目标不在已采集道路附近，请选择道路上的目标点。')
     return destination, hashes
-
-
-
-
 
 
 class GameSession(NavigationSession):
@@ -245,8 +240,6 @@ class GameSession(NavigationSession):
         存在活动窗口时同时检查窗口状态，取消或失焦会中断等待而不是继续后续点击。
         """
         runtime.pause(seconds)
-
-
 
 
 def main():

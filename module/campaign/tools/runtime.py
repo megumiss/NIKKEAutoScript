@@ -1,7 +1,6 @@
 """Bounded standalone control and failure reporting, independent of task scheduling."""
 import functools
 import json
-import subprocess
 import sys
 import time
 
@@ -13,8 +12,6 @@ from module.campaign.navigation.evidence import (
 from module.campaign.tools import settings
 
 _active = None
-
-
 
 
 def check_stop():
@@ -51,7 +48,7 @@ def command(main):
     def run(*args, **kwargs):
         """执行被包装的入口，向标准错误输出结构化失败原因并保留异常链。
 
-        执行被装饰入口并区分用户取消与预期的文件、参数、图像和子进程错误。
+        执行被装饰入口并区分用户取消与预期的文件、参数和图像错误。
         错误 JSON 包含 status 和 reason，SystemExit 保留异常链，不把失败变成正常命令返回。
         """
         try:
@@ -59,7 +56,7 @@ def command(main):
         except KeyboardInterrupt as exc:
             print(json.dumps({'status': 'cancelled', 'reason': str(exc)}), file=sys.stderr, flush=True)
             raise SystemExit(130) from exc
-        except (OSError, ValueError, RuntimeError, KeyError, TypeError, cv2.error, subprocess.SubprocessError) as exc:
+        except (OSError, ValueError, RuntimeError, KeyError, TypeError, cv2.error) as exc:
             print(json.dumps({'status': 'failed', 'reason': str(exc)}), file=sys.stderr, flush=True)
             raise SystemExit(1) from exc
     return run
@@ -151,37 +148,3 @@ def finish(window, receipt, report):
             raise
     if release_error is not None:
         raise release_error
-
-
-def run_child(cmd, log, timeout=180):
-    """串行等待子进程并传播非零退出码；超时或取消通过共享 STOP 请求子进程释放后退出。
-
-    把子进程 stdout/stderr 合并到 log，在仓库目录运行并轮询共享停止信号及超时。
-    异常时创建 STOP，给子进程 15 秒释放资源，超时再回收；正常结束仍检查非零退出码。
-    """
-    check_stop()
-    with log.open('w', encoding='utf-8') as stream:
-        child = subprocess.Popen(cmd, stdout=stream, stderr=subprocess.STDOUT, cwd=settings.ROOT)
-        try:
-            deadline = time.monotonic() + timeout
-            while child.poll() is None:
-                check_stop()
-                if time.monotonic() >= deadline:
-                    raise TimeoutError('Camera child timed out')
-                time.sleep(.1)
-        except BaseException:
-            try:
-                settings.stop_file.parent.mkdir(parents=True, exist_ok=True)
-                settings.stop_file.touch()
-            except OSError as exc:
-                print(f'Could not signal child through STOP: {exc}', file=sys.stderr, flush=True)
-            finally:
-                # 留出时间让子进程进入 finally；停止文件写盘失败也必须回收进程。
-                try:
-                    child.wait(timeout=15)
-                except subprocess.TimeoutExpired:
-                    child.kill()
-                    child.wait()
-            raise
-        if child.returncode:
-            raise RuntimeError(f'Camera child failed ({child.returncode}); see {log}')

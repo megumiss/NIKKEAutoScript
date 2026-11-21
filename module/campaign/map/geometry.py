@@ -30,30 +30,6 @@ def transform(value, point):
     return projected[:2] / projected[2]
 
 
-def screenshot_to_client(point, screenshot_size, client_size=(1776, 999)):
-    """按等比例截图尺寸换算客户区像素；裁剪或黑边导致的比例差异必须另行建模。
-
-    point 属于未裁剪截图，尺寸参数均按宽、高排列，返回对应客户区浮点像素。
-    要求截图与客户区宽高比一致且点在截图内部；黑边、裁剪及非等比缩放必须另建变换。
-    """
-    size = np.asarray(screenshot_size, float)
-    client = np.asarray(client_size, float)
-    point = np.asarray(point, float)
-    if (
-        size.shape != (2,)
-        or client.shape != (2,)
-        or point.shape != (2,)
-        or not np.isfinite([*size, *client, *point]).all()
-        or min(*size, *client) <= 0
-        or np.any(point < 0)
-        or np.any(point >= size)
-    ):
-        raise ValueError('Invalid screenshot coordinate or size')
-    if not np.isclose(size[0] / size[1], client[0] / client[1]):
-        raise ValueError('Screenshot aspect ratio differs; crop/letterbox transform required')
-    return point * client / size
-
-
 project = transform
 
 

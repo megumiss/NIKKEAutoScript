@@ -1,7 +1,6 @@
 """箭头周期定位、小地图辅助恢复与有限目标触发。"""
 
 import re
-from pathlib import Path
 
 import cv2
 import numpy as np

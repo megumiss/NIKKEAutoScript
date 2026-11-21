@@ -151,7 +151,6 @@ class Projection:
         return cv2.warpPerspective(terrain(image), self.matrix, self.size, flags=cv2.INTER_NEAREST)
 
 
-
 class DriverWindow:
     """扫描用的游戏窗口：锁定客户区与屏幕原点，并持有截图资源和虚拟鼠标。
 
@@ -1167,26 +1166,11 @@ class MetricGrid:
         """
         return self.warp(image)[:, :, 0].astype(np.float32)
 
-    def grid_mask(self, image):
-        """将原始网格投影为零到一的浮点掩码，供平移相关使用。"""
-        return cv2.warpPerspective(raw_grid(image), self.matrix, self.size,
-                                   flags=cv2.INTER_NEAREST).astype(np.float32) / 255
 
     def terrain_mask(self, image):
         """在统一平面中生成道路二值掩码，保持与网格投影同一坐标基准。"""
         return cv2.warpPerspective(terrain(image), self.matrix, self.size, flags=cv2.INTER_NEAREST)
 
-    def dots(self, image):
-        """用顶帽运算突出暗背景上的网格点，并裁去无效投影区域。
-
-        Grid dot points via top-hat; the signal that survives in dim blank regions.
-        """
-        blue = self.warp(image)[:, :, 0]
-        tophat = cv2.morphologyEx(blue, cv2.MORPH_TOPHAT,
-                                  cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (25, 25)))
-        mask = (tophat > 10).astype(np.uint8) * 255
-        mask[self.valid == 0] = 0
-        return mask
 
     def markers(self, image):
         """按当前投影返回小队与敌人中心，与道路掩码使用相同坐标。"""
@@ -1350,48 +1334,6 @@ class GridTracker:
         if iou < 0.85 or np.linalg.norm(delta) > max(before_terrain.shape) * 0.65:
             return None
         return {'delta': delta.tolist(), 'score': round(float(1 + iou), 4)}
-
-    def measure_dots(self, before_dots, after_dots, prediction):
-        """道路不足时按点阵和速度预测维持里程计，不能用周期点阵独立证明绝对位置。
-
-        Last-resort tracking through blank regions using grid dots.
-
-        Dots are exactly periodic, so the alias nearest the velocity prediction
-        wins; the pose is re-anchored against terrain when roads reappear.
-        """
-        if min(np.count_nonzero(before_dots), np.count_nonzero(after_dots)) < 3000:
-            return None
-        cell = self.grid.cell
-        kernel = np.ones((5, 5), np.uint8)
-        dilated = cv2.dilate(before_dots, kernel)
-        total = np.count_nonzero(before_dots) + np.count_nonzero(after_dots)
-        anchor = np.zeros(2) if prediction is None else np.asarray(prediction, float)
-        scored = []
-        for i in (-1, 0, 1):
-            for j in (-1, 0, 1):
-                seed = anchor + np.array([i * cell, j * cell])
-                matrix = np.float32([[1, 0, -seed[0]], [0, 1, -seed[1]]])
-                moved = cv2.warpAffine(after_dots, matrix, self.grid.size, flags=cv2.INTER_NEAREST)
-                dice = 2.0 * np.count_nonzero((dilated > 0) & (moved > 0)) / total
-                scored.append((seed, float(dice)))
-        top = max(score for _, score in scored)
-        if top < 0.3:
-            return None
-        tied = [seed for seed, score in scored if score >= top - 0.05]
-        best = min(tied, key=lambda seed: np.linalg.norm(seed - anchor))
-        a = cv2.GaussianBlur(before_dots.astype(np.float32) / 255, (5, 5), 0)
-        b = cv2.GaussianBlur(after_dots.astype(np.float32) / 255, (5, 5), 0)
-        matrix = np.float32([[1, 0, best[0]], [0, 1, best[1]]])
-        try:
-            _, refined = cv2.findTransformECC(
-                a, b, matrix, cv2.MOTION_TRANSLATION,
-                (cv2.TERM_CRITERIA_COUNT | cv2.TERM_CRITERIA_EPS, 100, 1e-6), self.grid.valid, 5)
-            delta = refined[:, 2].astype(float)
-            if np.linalg.norm(delta - best) < cell / 2:
-                best = delta
-        except cv2.error:
-            pass
-        return {'delta': best.tolist(), 'score': round(float(top), 4)}
 
 
 class RasterScanner:

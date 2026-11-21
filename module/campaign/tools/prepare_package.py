@@ -37,8 +37,6 @@ def main():
         for name in names:
             shutil.copyfile(args.source / name, candidate / name)
         shutil.copyfile(args.calibration, candidate / 'calibration.json')
-        if (args.source / 'reference.png').exists():
-            shutil.copyfile(args.source / 'reference.png', candidate / 'reference.png')
         metadata = json.loads((candidate / 'map.json').read_text(encoding='utf-8'))
         manifest = {
             'sha256': {name: hashlib.sha256((candidate / name).read_bytes()).hexdigest()

@@ -9,16 +9,8 @@ import numpy as np
 from module.campaign.map.annotations import COORDINATES, validate_annotations
 from module.campaign.map.geometry import (
     matrix as matrix,
-    screenshot_to_client as screenshot_to_client,
-    transform as transform,
 )
 from module.campaign.tools import settings
-
-
-
-
-
-
 
 
 class MapPackage:
@@ -29,10 +21,10 @@ class MapPackage:
     """
 
     def __init__(self, path=None, chapter=None, difficulty=None):
-        """在取得输入控制前绑定章节、难度、文件哈希、裁剪、投影及覆盖质量，并筛选同难度点目标。
+        """在取得输入控制前绑定章节、难度、文件哈希、裁剪、投影及覆盖质量。
 
         读取地图、标注、缓存、标定与 validation.json，严格校验身份、文件哈希、坐标和观测道路覆盖。
-        修订道路覆盖原道路概率，targets 仅收录同难度且带唯一编号的点；任何不一致在取得输入前失败。
+        修订道路覆盖原道路概率；任何不一致在取得输入前失败。
         """
         self.path = Path(path or settings.package).resolve()
         chapter = settings.chapter if chapter is None else chapter
@@ -114,22 +106,6 @@ class MapPackage:
             raise ValueError('Calibration capture geometry differs from package')
         self.old_projection = matrix(calibration['projection'])
         self.field_inverse = matrix(calibration['field_inverse'], (2, 2))
-        self.targets = {}
-        for obj in annotations['objects']:
-            if obj['type'] != 'point':
-                continue
-            if obj.get('source', {}).get('difficulty') != difficulty:
-                continue
-            number = obj.get('source', {}).get('number')
-            if number is None:
-                continue
-            point = np.asarray(obj['points'][0], float)
-            if point.shape != (2,) or not np.isfinite(point).all() or np.any(point < 0) or np.any(point >= size):
-                raise ValueError('Annotation outside map')
-            number = int(number)
-            if number in self.targets:
-                raise ValueError('Duplicate target number')
-            self.targets[number] = point
         self.binding = {'chapter': chapter, 'difficulty': difficulty, 'image_sha256': digest,
                         'package_sha256': hashlib.sha256((self.path / 'validation.json').read_bytes()).hexdigest(),
                         'coverage': manifest['coverage'],

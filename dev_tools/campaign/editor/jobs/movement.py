@@ -1,7 +1,6 @@
 """标注工具的单任务移动控制；设备输入始终在独立子进程中执行。"""
 
 import copy
-import hashlib
 import json
 import math
 import os

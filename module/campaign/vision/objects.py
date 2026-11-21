@@ -16,7 +16,6 @@ OBJECTS = {
 }
 # 默认返回导航对象；箭头和收集提示复用原图的场景推理，需要时再筛选。
 DEFAULT_SCENE_KINDS = ('ground_mechanism', 'elevator', 'barrier', 'enemy_ring')
-SCENE_KINDS = DEFAULT_SCENE_KINDS + ('squad_arrow', 'collectible_indicator')
 
 
 def requested(kinds, default):

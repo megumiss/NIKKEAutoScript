@@ -7,7 +7,7 @@ import numpy as np
 from module.campaign.run_state import MAX_FAILURES, RunState, located, panel_quad
 from module.campaign.goals import describe, frontier_point, nearest_enemy, unobserved_component_cells
 from module.campaign.report import (BATTLE_OUTCOMES, BATTLE_STATES, EVIDENCE_KINDS, GOAL_KINDS, GOAL_REASONS,
-                                    RESULT_STATES, TARGET_SOURCES, label, points_text)
+                                    RESULT_STATES, label, points_text)
 from module.campaign.route_planning import planning_routes, route_path
 from module.campaign.scouting import scout_focus
 from module.campaign.session import DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, SETTLE_TAP_INTERVAL

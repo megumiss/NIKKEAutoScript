@@ -8,30 +8,6 @@ import numpy as np
 LOCALIZATION_FAILURE_LIMIT = 3
 
 
-def movement_plan(localizer, observation, target, anchor):
-    """验证道路连通性并生成画面内完整目标的落点与路线长度。
-
-    先在修订道路上验证连通性，再把完整 target 投影到 ROI 和场景安全区域。
-    返回客户区点击点与道路路径长度；离屏目标抛出 ValueError，供调用者选择镜头规划流程。
-    """
-    from module.campaign.navigation.camera_navigation import (
-        FIELD_BOUNDS,
-        ROI_BOUNDS,
-        field_chart,
-        inside,
-        target_projection,
-    )
-
-    position = np.asarray(observation['position'], float)
-    _, path = localizer.route(position, target)
-    if np.linalg.norm(np.asarray(target) - position) < 2:
-        raise ValueError('当前道路没有可用的前进落点，停止移动。')
-    roi, click = target_projection(field_chart(localizer, observation, anchor), observation, target)
-    if not inside(roi, ROI_BOUNDS) or not inside(click, FIELD_BOUNDS):
-        raise ValueError('目标不在当前有效画面内，需要先平移镜头。')
-    return click, float(np.linalg.norm(np.diff(path, axis=0), axis=1).sum())
-
-
 def navigate(
     session, target, emit, max_moves=24, arrival_radius=None, required_near=3, purpose='position', elevators=None,
     enemy_kind='normal'

@@ -16,7 +16,6 @@
 | `maps/wiki_collectibles.py` | Wiki 下载、配准、复核与增量标注导入 | 否；可联网、写缓存及标注 |
 | `vision/dataset.py` | 采集清点、候选标注、复核拼图与完整面板补裁 | 否 |
 | `vision/evaluate.py` | 使用运行期检测器进行离线回放评估 | 否 |
-| `vision/requirements-train.txt` | 独立训练环境依赖，不用于主程序环境 | 否 |
 | `editor/` | 本机地图编辑器、后台任务与静态页面 | 打开页面不会；执行扫描或移动时是 |
 
 编辑器结构见 [地图编辑器说明](editor/README.md)。现行三模型训练由独立训练工程负责，
@@ -58,7 +57,7 @@ python -m dev_tools.campaign.vision.evaluate --help
 - 正式运行地图仍由资源仓库同步到 `data/resources/maps/`；不要随本次目录整理移动或提交。
 - 本地采集、原始包、实验数据仍在 `data/chapter_maps/local/`；日志仍在 `log/`。
 - 运行地图读写格式与连通算法在 `module/campaign/map/`；设备和导航实现仍沿用现有模块。
-- YOLO 训练依赖在独立环境安装，不加入主程序的依赖清单。
+- YOLO 训练及训练依赖由独立训练工程维护，本仓库只保留运行模型、采集整理与离线评估。
 
 ## 操作说明
 
