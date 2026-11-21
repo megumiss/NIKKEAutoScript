@@ -9,7 +9,8 @@
 - 中文 Windows 客户区固定为 `1776×999`；展开小地图 ROI 为 `(644, 280, 1130, 742)`，尺寸 `486×462`。
 - 每章采集 6 个训练样本和 3 个独立验证样本，得到采样道路附近的局部位移标定。
 - 新结果写入该地图包的 `movement_calibration/normal/flat_calibration.json`。
-- 当前平面移动仍使用 `module/campaign/vision/assets/calibration.json` 的共享标定。
+- 正式平面导航使用 `module/campaign/navigation/controls.py` 的共享矩阵；实验包保存
+  `module/campaign/vision/assets/calibration.json` 并按包摘要校验，不由正式任务直接读取该 JSON。
   新采集文件带有 `runtime_auto_loaded=false`、`whole_chapter_verified=false`，不会自动接入移动执行器。
   管理界面显示 `shared`、地图扫描完整、到达某一点，都不能证明逐章标定已通过。
 

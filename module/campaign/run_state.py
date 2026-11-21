@@ -529,14 +529,6 @@ class RunState:
         self.target_failures.pop('story-location', None)
         return self.story_target
 
-    def confirm_ex_target(self, identifier):
-        """兼容既有目标确认入口，按已由弹窗实际关联的编号登记 EX。
-
-        不再要求记录原类型是战斗敌人；重复确认已知 EX 也须保留弹窗证据。
-        调用方必须先关联实际触发编号，不能仅凭移动目标点击调用。
-        """
-        return self.confirm_ex_encounter(identifier)
-
     def confirm_ex_encounter(self, identifier):
         """登记关闭弹窗后实际关联的 EX 编号与位置，不要求它是移动目的地。
 

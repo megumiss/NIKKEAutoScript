@@ -73,35 +73,6 @@ def check_battle_popup(win, log, iteration, phase, image=None):
 
 
 
-def find_squad(win, reference=None):
-    """用短时动画差分估计中央角色位置，供动画诊断使用。
-
-    比较相隔 0.45 秒的客户区图，筛选靠近中心的动画连通块，reference 可约束候选距离。
-    返回最靠下的候选中心或 None；该点只用于动画诊断，不提供箭头周期的地面标定语义。
-    """
-    first = capture_client(win)
-    runtime.pause(0.45)
-    second = capture_client(win)
-    diff = cv2.absdiff(first, second).max(axis=2)
-    mask = (diff > 25).astype(np.uint8) * 255
-    mask[:150] = 0
-    mask[-90:] = 0
-    mask[:, :210] = 0
-    mask[:, -260:] = 0
-    count, _, stats, cents = cv2.connectedComponentsWithStats(mask)
-    # Camera follow keeps the squad near the center; remote animations must not drag the anchor away.
-    center = np.array([888.0, 499.0])
-    blobs = [cents[i] for i in range(1, count)
-             if stats[i, cv2.CC_STAT_AREA] >= 40 and np.linalg.norm(cents[i] - center) < 180]
-    if not blobs:
-        return None
-    if reference is not None:
-        blobs = [b for b in blobs if np.linalg.norm(b - reference) < 150]
-        if not blobs:
-            return None
-    return np.array(max(blobs, key=lambda b: b[1]))
-
-
 class Localizer:
     """基于旧 41 章回放缓存的定位器，只用于复现早期实验。
 

@@ -15,8 +15,6 @@ from module.campaign.run_state import OBSERVED_CELL
 
 # 一个已观测粗格每边包含的 8 像素路网格数。
 CELLS = OBSERVED_CELL // GRID
-# 点落到路程场上时向外找本分量网格的半径（网格数）：2 格即 16 像素，与道路归属容差同量级。
-SNAP_CELLS = 2
 
 
 def walking_field(cut, squad):
@@ -56,20 +54,6 @@ def walking_field(cut, squad):
     field = np.full(mask.shape, np.inf)
     field[rows, columns] = distances + offsets[start]
     return field
-
-
-def field_at(field, point):
-    """点在路程场上的路程：附近 SNAP_CELLS 格内本分量网格的路程加上到该格的直线距离，取最小；附近没有返回 inf。"""
-    point = np.asarray(point, float)
-    if point.shape != (2,) or not np.isfinite(point).all():
-        return float('inf')
-    column, row = int(round(point[0] / GRID)), int(round(point[1] / GRID))
-    top, left = max(0, row - SNAP_CELLS), max(0, column - SNAP_CELLS)
-    window = field[top:row + SNAP_CELLS + 1, left:column + SNAP_CELLS + 1]
-    if not window.size:
-        return float('inf')
-    ys, xs = np.mgrid[top:top + window.shape[0], left:left + window.shape[1]]
-    return float(np.min(window + np.hypot(xs * GRID - point[0], ys * GRID - point[1])))
 
 
 def scout_focus(state, cut, squad, include_unavailable=False, goal=None):

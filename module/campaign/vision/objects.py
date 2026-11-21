@@ -1,6 +1,6 @@
-"""客户区与小地图里的目标识别：把 YOLO 类别统一成后续推图逻辑使用的语义对象。"""
+"""客户区目标识别：把场景 YOLO 类别统一成后续推图逻辑使用的语义对象。"""
 
-from module.campaign.vision.detection import SCENE_LABELS, MINIMAP_LABELS, detect_minimap, detect_scene
+from module.campaign.vision.detection import SCENE_LABELS, detect_scene
 
 # 模型类别到语义的映射；state 区分同一类目标的状态或形态，后续逻辑按 kind 取、按 state 判断。
 OBJECTS = {
@@ -13,15 +13,10 @@ OBJECTS = {
     'scene_barrier_curtain': ('barrier', 'curtain'),
     'scene_barrier_pillar': ('barrier', 'pillar'),
     'scene_enemy_ring': ('enemy_ring', None),
-    'minimap_enemy_normal': ('enemy', 'normal'),
-    'minimap_enemy_ex': ('enemy', 'ex'),
-    'minimap_enemy_boss': ('enemy', 'boss'),
-    'minimap_squad_ring': ('squad_ring', None),
 }
 # 默认返回导航对象；箭头和收集提示复用原图的场景推理，需要时再筛选。
 DEFAULT_SCENE_KINDS = ('ground_mechanism', 'elevator', 'barrier', 'enemy_ring')
 SCENE_KINDS = DEFAULT_SCENE_KINDS + ('squad_arrow', 'collectible_indicator')
-MINIMAP_KINDS = ('enemy', 'squad_ring')
 
 
 def requested(kinds, default):
@@ -66,15 +61,4 @@ def detect_objects(image, kinds=None):
     labels = kind_labels(selected, SCENE_LABELS)
     detections = detect_scene(image, labels) if labels else []
     return sorted((described(item, 'client') for item in detections),
-                  key=lambda item: item['confidence'], reverse=True)
-
-
-def detect_minimap_objects(panel, mode, kinds=None):
-    """小地图面板里的小队圆环与敌人标记，坐标为面板像素。
-
-    panel 由调用方按展开或紧凑模式裁好；圆环与普通敌人的精确中心仍应使用 perception 中
-    对应的精定位，这里只给出检测框中心。
-    """
-    labels = kind_labels(requested(kinds, MINIMAP_KINDS), MINIMAP_LABELS)
-    return sorted((described(item, 'minimap') for item in detect_minimap(panel, mode, labels)),
                   key=lambda item: item['confidence'], reverse=True)

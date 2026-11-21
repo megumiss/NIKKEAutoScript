@@ -38,7 +38,7 @@ class StaticMap:
     """章节地图的只读信息，与 MapMatcher 共享同一份底图与道路修订。
 
     平面地图的连通性来自 connectivity 的 effective 分区，只在道路附近归属分量，远离道路的点视为不可站。
-    `navigation.TargetFinder` 从这里读道路、分区与标注，不自己加载地图包。
+    目标规划与切开路网从这里读取道路、分区和标注，不自行加载地图包。
     """
 
     def __init__(self, package, matcher):
@@ -186,10 +186,6 @@ class StaticMap:
         if not categories:
             return list(self.points)
         return [item for item in self.points if item['category'] in categories]
-
-    def surface_key(self, snapshot):
-        """观测分量查询的缓存键；平面地图统一为 None。"""
-        return None
 
     def _labels(self, key):
         """分量标签图：按 8 像素网格分区展开回全分辨率。"""

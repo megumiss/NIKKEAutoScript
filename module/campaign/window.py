@@ -191,12 +191,6 @@ class CampaignWindow:
             raise WindowChanged('收起小地图失败。')
         return 'compact'
 
-    def click_screen(self, x, y):
-        """按屏幕坐标点一次，与采集器 handler.mouse_click 的坐标约定一致。"""
-        self.check()
-        origin = self.origin or self.client_origin()
-        self.device.click_xy(int(round(x)) - origin[0], int(round(y)) - origin[1])
-
     def close(self):
         """会话收尾：释放窗口相关状态。
 

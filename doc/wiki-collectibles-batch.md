@@ -64,7 +64,7 @@ python dev_tools/campaign/capture/chapters.py --start 38 --end 1 --retries 2
 python -m dev_tools.campaign.maps.runtime --source data/chapter_maps/local/captures/chapter_38 --destination data/resources/maps/chapter_38
 ```
 
-若目标已存在，使用新的名称（如 `data/resources/maps/rescan_20261007/chapter_38`）并在编辑器中选择该版本。导出保留采集包中已有标注；不会把另一坐标系的旧标注自动迁移到新图。
+若目标已存在，使用新的名称（如 `data/resources/maps/rescan_run_01/chapter_38`）并在编辑器中选择该版本。导出保留采集包中已有标注；不会把另一坐标系的旧标注自动迁移到新图。
 
 批量入口支持分别设置探索拖动和保存帧间距。例如，保持 120px 拖动并把保存帧间距减至 40px：
 

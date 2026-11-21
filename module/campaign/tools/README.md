@@ -3,8 +3,6 @@
 本目录只保留 CLI 与实验窗口适配。共用实现见[统一模块目录](../README.md)，
 正式任务不导入本子包。
 
-# 战役地图独立原型
-
 本目录提供战役地图定位、镜头导航、局部移动标定和离线回放。独立命令与地图标注工具共用导航逻辑；不注册 `main.py` 调度任务。现场运行使用中文 Windows 客户区 `1776×999`。
 
 - [运行控制、地图包与导航原理](../../../doc/campaign-prototype-principles.md)
@@ -20,22 +18,22 @@
 | `map_package.py`、`prepare_package.py` | 地图包验证和从已有静态地图导入独立实验副本 |
 | `goto.py` | 公共地图控制、标记识别及 41 章缓存离线回放 |
 | `probe.py`、`adaptive.py` | 固定／自适应道路定位、局部路线与投影换算 |
-| `live.py`、`arrow_anchor.py` | 白／橙箭头检测、容错周期采样与单步移动实验 |
-| `movement_feedback.py` | 小地图位移与静态地面交叉恢复箭头锚点、有限目标触发 |
-| `camera_navigation.py`、`manual_move.py` | 管理界面与命令入口共用的远点平移、完整目标点击、停稳检测与到达修正 |
-| `surface_motion.py` | 指定局部道路的配准、独立停靠样本标定及目标区域落点检查；分层移动复用局部配准与标定验证 |
+| `live.py`、`../vision/arrow_anchor.py` | 白／橙箭头检测、容错周期采样与单步移动实验 |
+| `../navigation/movement_feedback.py` | 小地图位移与静态地面交叉恢复箭头锚点、有限目标触发 |
+| `../navigation/camera_navigation.py`、`manual_move.py` | 管理界面与命令入口共用的远点平移、完整目标点击、停稳检测与到达修正 |
+| `../vision/surface_motion.py` | 局部道路配准、几何支持域检查及独立样本的位移标定 |
 | `run.py`、`camera_to.py` | 单次观察／自动移动／指定手势及有限镜头寻位 |
-| `match_coarse.py`、`match_scene.py` | 道路相关辅助与 Wiki 场景落点估计 |
+| `../vision/match_coarse.py`、`match_scene.py` | 道路相关辅助与 Wiki 场景落点估计 |
 | `check_controls.py`、`scene_pan.py`、`pan_check.py` | 地图状态切换及两类镜头行为的现场实验 |
-| `assets/` | 弹窗与箭头模板、共享移动标定 |
+| `../vision/assets/` | 弹窗与箭头模板、共享移动标定 |
 
-命令行实验包默认在 `data/campaign_prototype/chapter_38/`，输出在 `log/campaign_prototype/`，两者均为本机数据。需要提交的章节地图位于 `data/resources/maps/`，由 [runtime.py](../../../dev_tools/campaign/maps/runtime.py) 从完整采集包导出；完整采集、重建与辅助数据位于 `data/chapter_maps/local/`，不提交。平面章节使用下方命令导入实验包。分层章节保留局部定位所需参考帧和深度数据，移动标定在任务内临时生成，不需要现场标定包。
+命令行实验包默认在 `data/campaign_prototype/chapter_38/`，输出在 `log/campaign_prototype/`，两者均为本机数据。正式运行的章节地图位于 `data/resources/maps/`，由 [runtime.py](../../../dev_tools/campaign/maps/runtime.py) 从完整采集包导出；完整采集、重建与辅助数据位于 `data/chapter_maps/local/`，不提交。平面章节使用下方命令导入实验包。分层章节保留局部定位所需参考帧和深度数据，移动标定在任务内临时生成，不需要现场标定包。
 
 Wiki 全场景图为可选本地参照，默认路径 `data/campaign_prototype/wiki_references/NN.png`；没有它们仍可运行地图校验、定位回放及控制检查。
 
 ## YOLO 模型
 
-`vision/models/bundle.json` 绑定场景、缩略小地图和展开小地图三个专用模型，适用于中文 Windows `1776×999` 客户区。场景统一整图推理一次，小地图按本帧形态互斥选择对应模型；不再使用旧场景切片。运行依赖保留在独立的 `requirements-yolo.txt`，不纳入主程序依赖。自动推图启动时会在观测前检查并按需安装，沿用部署镜像与 `InstallDependencies` 设置；普通任务不触发安装。离线工具或禁用自动安装时，可用当前运行环境的 Python 执行 `-m pip install -r requirements-yolo.txt`（部署副本为 `toolkit\python.exe`，开发环境为 `.venv\Scripts\python.exe`），运行端不需要训练环境。类别、输入尺寸和阈值由各角色元数据声明；模型契约与离线验证边界见 [模型说明](../vision/models/README.md)。
+`../vision/models/bundle.json` 绑定场景、缩略小地图和展开小地图三个专用模型，适用于中文 Windows `1776×999` 客户区。场景统一整图推理一次，小地图按本帧形态互斥选择对应模型；不再使用旧场景切片。运行依赖保留在独立的 `requirements-yolo.txt`，不纳入主程序依赖。自动推图启动时会在观测前检查并按需安装，沿用部署镜像与 `InstallDependencies` 设置；普通任务不触发安装。离线工具或禁用自动安装时，可用当前运行环境的 Python 执行 `-m pip install -r requirements-yolo.txt`（部署副本为 `toolkit\python.exe`，开发环境为 `.venv\Scripts\python.exe`），运行端不需要训练环境。类别、输入尺寸和阈值由各角色元数据声明；模型契约与离线验证边界见 [模型说明](../vision/models/README.md)。
 
 普通关卡优先使用 YOLO 识别；敌人移动模式出现普通战斗准备弹窗时保留，出现 EX 弹窗时关闭一次并返回 `ex_stage_skipped`，结束本次移动。该结果不表示普通关卡到达或战斗完成。
 

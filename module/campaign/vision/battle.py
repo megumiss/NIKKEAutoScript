@@ -182,17 +182,6 @@ def auto_controls(image):
     return dict(shoot=auto_control(image, AUTO_SHOOT_TPL), burst=auto_control(image, AUTO_TPL))
 
 
-def auto_judgement(image):
-    """保持原返回格式读取 AUTO 爆发按钮，未可靠定位或中间颜色不视为开启。"""
-    result = auto_control(image, AUTO_TPL)
-    return result['status'] == 'on', tuple(result['box']), result['score'], result['orange_ratio']
-
-
-def auto_enabled(image):
-    """自动射击与自动爆发是否都已可靠开启，未知状态不能当作已开启。"""
-    return all(item['status'] == 'on' for item in auto_controls(image).values())
-
-
 def ex_stage(image):
     """准备弹窗是不是 EX 关卡：标题区只含 EX 两个字母的窄模板达标即算。"""
     return score(EX_TITLE_TPL, image) >= EX_THRESHOLD

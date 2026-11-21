@@ -15,7 +15,6 @@ from module.campaign.goals import choose_goal, describe
 from module.campaign.map.map_state import StaticMap
 from module.campaign.map.catalog import chapter_map
 from module.campaign.vision.frame import minimap_state as detect_minimap_state
-from module.campaign.navigation.targets import TargetFinder
 from module.campaign.vision.observation import EXPANDED_ROI, CampaignObserver
 from module.campaign.navigation.routing import CutRoads
 from module.campaign.report import (GOAL_REASONS, LOCALIZATION, MINIMAP_MODES, direction_text, label, points_text)
@@ -61,7 +60,7 @@ class Campaign(ModuleBase):
     """自动主线任务的公共基类：校验分辨率、准备地图资源并确认当前章节与小队位置。
 
     章节、资源检查时间等状态都挂在类上而不是实例上，同一进程内多次建任务实例时共用，
-    避免每个任务都重新查一遍资源仓库；地图静态层与目标选择器按章节缓存，换章才重建。
+    避免每个任务都重新查一遍资源仓库；地图静态层按章节缓存，换章才重建。
     last_snapshot 保存章节确认时那一帧的观测结果，定位已经确认过时不必再配准一次。
     run_state 是跨帧累积的运行状态，按每次任务重建：上一次任务见过的敌人与封锁不能直接拿来用。
     """
@@ -71,8 +70,7 @@ class Campaign(ModuleBase):
     current_difficulty = None
     resources_checked_at = 0.0
     chart = None
-    target_finder = None
-    target_finder_chapter = None
+    chart_chapter = None
     last_snapshot = None
     last_goal = None
     last_routes = None
@@ -385,33 +383,19 @@ class Campaign(ModuleBase):
             self.device.sleep(MAIN_STORY_PAGE_INTERVAL)
 
     def ensure_chart(self, chapter):
-        """按章节建一次静态层与目标选择器，换章才重建；构建失败只告警并返回 None。
+        """按章节缓存静态地图，换章才重建；构建失败只告警并返回 None。
 
-        静态层与目标选择器共用同一份道路、分区和标注，所以一起建、一起作废。
+        与观察器共享道路、分区和标注，动态敌人与封锁状态由运行状态及切开路网管理。
+        缓存只以章节为键；同章调用复用原对象，不重复加载地图包。
         """
-        if self.target_finder_chapter != chapter:
-            self.target_finder_chapter, self.chart, self.target_finder = chapter, None, None
+        if self.chart_chapter != chapter:
+            self.chart_chapter, self.chart = chapter, None
             try:
                 package, _ = chapter_map(chapter)
                 self.chart = StaticMap(package, self.observer.matcher)
-                self.target_finder = TargetFinder(self.chart)
             except (OSError, ValueError, KeyError) as exc:
                 logger.warning(f'第 {chapter} 章地图无法用于目标规划：{exc}')
         return self.chart
-
-    def find_next_target(self, snapshot):
-        """选择下一个目标：可连通道路上最近的普通敌人或 Boss，没有敌人时是附近的机关或电梯。
-
-        snapshot 来自 observer.observe，要求定位已被接受；模型不支持或定位不可用时返回 None。
-        """
-        chapter = snapshot.get('chapter')
-        if (chapter is None or snapshot.get('localization') != 'accepted' or snapshot.get('squad') is None
-                or self.observer.matcher is None or chapter != self.observer.chapter):
-            return None
-        self.ensure_chart(chapter)
-        if self.target_finder is None:
-            return None
-        return self.target_finder.find(snapshot)
 
     def log_snapshot_summary(self, snapshot):
         """把章节确认那一帧的观测写进日志，措辞与逐轮观测共用 describe_snapshot。

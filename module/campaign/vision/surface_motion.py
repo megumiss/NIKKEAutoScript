@@ -159,37 +159,3 @@ def fit_calibration(training, validation, training_limit=6, validation_limit=8, 
             'validation_samples': len(validation), 'training_max_px': float(training_error.max()),
             'training_limit_px': training_limit, 'validation_limit_px': validation_limit,
             'validation_max_px': float(validation_error.max()), **map_metrics}
-
-
-def plan_click(target, surface_id, calibration, registration, client=(1776, 999)):
-    """按目标道路自己的标定生成场景落点，不借用小队所在高度的 Jacobian 或二维交叉连通性。
-
-    target 使用标定输入坐标，surface_id 必须匹配，且目标位于标定及图像配准两级支持域中。
-    返回固定尺寸客户区的安全落点；表面不一致、域外或落点接近 UI 时失败，不发送实际点击。
-    """
-    if calibration.get('surface_id') != surface_id:
-        raise ValueError('Target and click calibration belong to different surfaces')
-    if not contains(calibration['support'], target):
-        raise ValueError('Target lies outside the calibrated surface')
-    field_reference = project(calibration['matrix'], target)
-    if not contains(registration['support'], field_reference):
-        raise ValueError('Target lacks current field registration support')
-    click = project(registration['matrix'], field_reference)
-    if tuple(client) != (1776, 999) or not (250 <= click[0] <= 1500 and 180 <= click[1] <= 880):
-        raise ValueError('Target lies outside the validated field area')
-    return click
-
-
-def plan_map_click(geometry, target, surface_id, image_sha256, calibration, registration, client=(1776, 999)):
-    """地图目标先按自己的高度返回标定视角，再使用该表面的实测落点标定。
-
-    先核对标定和配准的底图哈希及表面身份，再把地图目标投回标定来源帧。
-    使用该表面的 plan_click 生成客户区坐标；任一证据属于其他地图或高度时拒绝组合。
-    """
-    if (not image_sha256 or calibration.get('image_sha256') != image_sha256
-            or registration.get('image_sha256') != image_sha256):
-        raise ValueError('Surface movement evidence belongs to a different map')
-    if calibration.get('surface_id') != surface_id or registration.get('surface_id') != surface_id:
-        raise ValueError('Movement target and evidence belong to different surfaces')
-    reference_roi = geometry.roi_point(calibration.get('source_frame'), surface_id, target)
-    return plan_click(reference_roi, surface_id, calibration, registration, client)
