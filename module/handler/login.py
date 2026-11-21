@@ -1,5 +1,5 @@
 from module.base.timer import Timer
-from module.exception import GameStuckError, GameTooManyClickError, RequestHumanTakeover
+from module.exception import GameStart, GameStuckError, GameTooManyClickError, RequestHumanTakeover
 from module.handler.assets import *
 from module.logger import logger
 from module.ui.assets import *
@@ -26,7 +26,10 @@ class LoginHandler(UI):
                 self.device.get_orientation()
                 orientation_timer.reset()
 
-            self.device.screenshot()
+            try:
+                self.device.screenshot()
+            except GameStart:
+                continue
 
             # 当 MAIN_CHECK 累计出现6次，并且保持在5秒以上
             if self.appear(MAIN_CHECK, offset=(30, 30)) and self.appear(MAIN_CHECK, threshold=20):
