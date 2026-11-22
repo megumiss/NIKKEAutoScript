@@ -7,7 +7,6 @@ from math import dist
 import cv2
 
 from module.base.base import ModuleBase
-from module.base.timer import Timer
 from module.base.utils import publish_preview_frame
 from module.campaign.dependencies import ensure_runtime
 from module.campaign.vision.chapter import CLIENT_SIZE, chapter_identity
@@ -26,9 +25,6 @@ from module.logger import logger
 from module.ocr.ocr import Ocr
 from module.webui.resource import resource_manager
 
-# 同一进程内每隔若干小时才重新访问远端，避免每次任务都查一遍资源仓库。
-RESOURCE_RECHECK_SECONDS = 6 * 3600
-RESOURCE_SYNC_TIMEOUT = 1800
 # 小地图被关闭时左上角水滴箭头控件的客户区点击坐标；与采集器 args.map_open 同源（紧凑展开按钮）。
 MINIMAP_TOGGLE_POSITION = (42, 98)
 # 展开面板左上角的最小化按钮；固定客户区坐标为 (658, 269)。
@@ -59,8 +55,7 @@ CAMPAIGN_HOME_RESTART_LIMIT = 1
 class Campaign(ModuleBase):
     """自动主线任务的公共基类：校验分辨率、准备地图资源并确认当前章节与小队位置。
 
-    章节、资源检查时间等状态都挂在类上而不是实例上，同一进程内多次建任务实例时共用，
-    避免每个任务都重新查一遍资源仓库；地图静态层按章节缓存，换章才重建。
+    章节等状态挂在类上而不是实例上，同一进程内多次建任务实例时共用；地图静态层按章节缓存，换章才重建。
     last_snapshot 保存章节确认时那一帧的观测结果，定位已经确认过时不必再配准一次。
     run_state 是跨帧累积的运行状态，按每次任务重建：上一次任务见过的敌人与封锁不能直接拿来用。
     """
@@ -68,7 +63,6 @@ class Campaign(ModuleBase):
     RESOLUTION = CLIENT_SIZE
     current_chapter = None
     current_difficulty = None
-    resources_checked_at = 0.0
     chart = None
     chart_chapter = None
     last_snapshot = None
@@ -96,52 +90,13 @@ class Campaign(ModuleBase):
         return CampaignObserver()
 
     def ensure_resources(self):
-        """运行前确认章节地图资源存在且为最新；缺失或过期时在任务内同步，本地没有资源又同步不了则交给人工。"""
-        if time.time() - Campaign.resources_checked_at < RESOURCE_RECHECK_SECONDS:
-            return
+        """运行前确认章节地图资源存在；只使用本地副本，缺失时提示通过界面按钮手动同步。"""
         logger.hr('检查地图资源', level=2)
-        status = resource_manager.status(check=True)
-        condition, local = status['condition'], status['local']
-        if condition == 'latest':
-            logger.info(f"地图资源已是最新：版本 {local.get('version')}")
-        elif condition in ('missing', 'outdated'):
-            logger.info('本地没有地图资源，开始同步…' if condition == 'missing' else '地图资源有新版本，开始同步…')
-            self.wait_resource_sync()
-        elif local['exists']:
-            logger.warning(f"无法检查地图资源更新，继续使用本地版本：{status['remote'].get('error')}")
-        else:
-            logger.error(f"无法访问资源仓库，且本地没有地图资源：{status['remote'].get('error')}")
-            raise RequestHumanTakeover
-        Campaign.resources_checked_at = time.time()
-
-    def wait_resource_sync(self):
-        """阻塞等待后台同步线程结束，把进度转发到任务日志；停止请求和超时都会放弃等待。"""
-        if not resource_manager.start_sync():
-            logger.info('资源同步已在进行，等待完成…')
-        timeout = Timer(RESOURCE_SYNC_TIMEOUT).start()
-        last = None
-        while resource_manager.state == 'syncing':
-            if self.config.stop_event is not None and self.config.stop_event.is_set():
-                raise TaskEnd
-            line = resource_manager.log[-1] if resource_manager.log else None
-            if line and line != last:
-                logger.info(line)
-                last = line
-            if timeout.reached():
-                logger.error('地图资源同步超时。')
-                break
-            time.sleep(1)
-        status = resource_manager.status(check=False)
-        line = status['log'][-1] if status['log'] else None
-        if line and line != last:
-            logger.info(line)
-        if status['state'] == 'finish':
-            logger.info(f"地图资源同步完成：版本 {status['local'].get('version')}")
+        local = resource_manager.local()
+        if local['exists']:
+            logger.info(f"使用本地地图资源：版本 {local.get('version')}")
             return
-        if status['local']['exists']:
-            logger.warning(f"地图资源同步未完成，继续使用本地版本：{status['error'] or '超时'}")
-            return
-        logger.error(f"地图资源同步失败，且本地没有地图资源：{status['error'] or '超时'}")
+        logger.error('本地没有地图资源，请在推图设置中点击“同步资源”后再启动任务。')
         raise RequestHumanTakeover
 
     def reopen_minimap_if_closed(self, image=None, check=None, pause=None, input_sent=None):
