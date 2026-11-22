@@ -1,4 +1,5 @@
 import os
+import posixpath
 import re
 import subprocess
 import threading
@@ -132,8 +133,9 @@ class VirtualDisplayBridge(Screenshot):
             if not (len(fields) >= 2 and fields[0].isdigit() and self._virtual_socket_name in fields
                     and 'com.nkas.virtualdisplay.Server' in fields):
                 continue
-            # PID ARGS... → fields[1] 为可执行文件路径或名
-            if os.path.basename(fields[1]) not in ('app_process', 'app_process32', 'app_process64'):
+            # PID ARGS... → fields[1] 为可执行文件路径或名（Android 可能给出 /system/bin/app_process）
+            # 用 posixpath：控制器在 Windows 上时 os.path.basename 不会按 / 拆分
+            if posixpath.basename(fields[1]) not in ('app_process', 'app_process32', 'app_process64'):
                 continue
             result.append(int(fields[0]))
         return result
