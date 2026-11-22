@@ -98,7 +98,10 @@ class GitManager(DeployConfig):
         if self._is_up_to_date(source, branch):
             logger.info('Local HEAD matches remote branch, skip fetch and reset')
             return
-        self.execute(f'"{self.git}" fetch --depth=20 {source} {branch}', capture_error=True)
+        # 保留提交历史，过滤历史文件内容；reset 时按需获取当前版本所需 blob
+        self.execute(f'"{self.git}" config --local remote.{source}.promisor true')
+        self.execute(f'"{self.git}" config --local remote.{source}.partialclonefilter blob:none')
+        self.execute(f'"{self.git}" fetch --depth=20 --filter=blob:none {source} {branch}', capture_error=True)
 
         # Remove git lock
         lock_file = './.git/index.lock'
