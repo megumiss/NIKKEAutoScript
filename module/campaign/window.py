@@ -71,16 +71,22 @@ class CampaignWindow:
         return self.origin is not None
 
     def ensure_foreground(self, hwnd):
-        """失焦时暂停当前动作并循环恢复前台，成功后返回，不再因此终止主线。
+        """失焦或最小化时暂停输入，恢复前台并等待客户区尺寸稳定后继续。
 
         等待期间不发送场景输入，每 2 秒重试一次系统激活；停止回调每轮都会执行，
-        因此任务取消不必等前台恢复。窗口消失或句柄更换仍属于不可恢复错误。
+        因此任务取消不必等前台恢复。系统还原窗口后可能短暂报告 144×0 等折叠尺寸，
+        必须连续两次读到目标客户区才能继续使用既有坐标；尺寸持续异常超过 3 秒、
+        窗口消失或句柄更换仍属于不可恢复错误。
         """
-        if not self.require_foreground or self.gui.GetForegroundWindow() == hwnd:
+        if not self.require_foreground:
+            return
+        if self.gui.GetForegroundWindow() == hwnd and not self.gui.IsIconic(hwnd):
             return
         logger.warning('游戏窗口不在前台，暂停输入并等待恢复前台。')
         retry_at = 0.
-        while self.gui.GetForegroundWindow() != hwnd:
+        size_deadline = None
+        stable_reads = 0
+        while True:
             stop_check = getattr(self, 'stop_check', None)
             if stop_check is not None:
                 stop_check()
@@ -90,14 +96,31 @@ class CampaignWindow:
             if current != hwnd:
                 raise WindowChanged('游戏窗口句柄已变化，旧会话不可复用。')
             now = time.monotonic()
-            if now >= retry_at:
-                try:
-                    self.device.set_foreground_window_with_retry(hwnd)
-                except Exception as exc:
-                    logger.warning(f'游戏窗口前台恢复失败，2 秒后重试：{exc}')
-                retry_at = time.monotonic() + 2.
-            if self.gui.GetForegroundWindow() != hwnd:
-                time.sleep(0.2)
+            restored = self.gui.GetForegroundWindow() == hwnd and not self.gui.IsIconic(hwnd)
+            if not restored:
+                size_deadline = None
+                stable_reads = 0
+                if now >= retry_at:
+                    try:
+                        self.device.set_foreground_window_with_retry(hwnd)
+                    except Exception as exc:
+                        logger.warning(f'游戏窗口前台恢复失败，2 秒后重试：{exc}')
+                    retry_at = time.monotonic() + 2.
+            else:
+                rect = self.gui.GetClientRect(hwnd)
+                if (rect[2], rect[3]) == CLIENT_SIZE:
+                    stable_reads += 1
+                    if stable_reads >= 2:
+                        break
+                else:
+                    stable_reads = 0
+                    if size_deadline is None:
+                        size_deadline = now + 3.
+                    elif now >= size_deadline:
+                        raise WindowChanged(
+                            f'游戏窗口恢复后画面尺寸未稳定：当前 {rect[2]}×{rect[3]}，要求 1776×999。'
+                        )
+            time.sleep(0.1)
         logger.info('游戏窗口已恢复前台，继续执行主线。')
 
     def check(self):
@@ -116,6 +139,7 @@ class CampaignWindow:
             self.handle = hwnd
         elif hwnd != self.handle:
             raise WindowChanged('游戏窗口句柄已变化，旧会话不可复用。')
+        self.ensure_foreground(hwnd)
         rect = self.gui.GetClientRect(hwnd)
         if (rect[2], rect[3]) != CLIENT_SIZE:
             raise WindowChanged(f'游戏画面尺寸变为 {rect[2]}×{rect[3]}（要求 1776×999），已算出的坐标失效。')
@@ -126,7 +150,6 @@ class CampaignWindow:
             self.origin = origin
         elif origin != self.origin:
             raise WindowChanged(f'窗口被移动（{self.origin} → {origin}），点击换算已失效。')
-        self.ensure_foreground(hwnd)
 
     def client(self):
         """最新一帧客户区 BGR 截图。"""
