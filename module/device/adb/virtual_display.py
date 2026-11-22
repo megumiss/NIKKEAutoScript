@@ -119,13 +119,23 @@ class VirtualDisplayBridge(Screenshot):
                     generation=self._virtual_socket_name)
 
     def server_pids(self):
+        """返回本虚拟屏服务进程 PID。
+
+        `adb shell ... app_process ... Server` 与中间 `sh -c` 的 ARGS 也会含同类名和 socket，
+        但它们属于 Termux/启动链，Android shell(UID 2000) 无法对其 kill。只匹配 basename 为
+        app_process/app_process32/app_process64 的进程，避免清理时 Operation not permitted。
+        """
         output = self.command(['shell', 'ps -A -o PID,ARGS'])
         result = []
         for line in output.splitlines():
             fields = line.split()
-            if fields and fields[0].isdigit() and self._virtual_socket_name in fields \
-                    and 'com.nkas.virtualdisplay.Server' in fields:
-                result.append(int(fields[0]))
+            if not (len(fields) >= 2 and fields[0].isdigit() and self._virtual_socket_name in fields
+                    and 'com.nkas.virtualdisplay.Server' in fields):
+                continue
+            # PID ARGS... → fields[1] 为可执行文件路径或名
+            if os.path.basename(fields[1]) not in ('app_process', 'app_process32', 'app_process64'):
+                continue
+            result.append(int(fields[0]))
         return result
 
     def close(self):
