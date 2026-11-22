@@ -300,8 +300,9 @@ class CampaignExecutor:
 
         中央光幕通过展开地图的两帧道路配准按距离排序，邻近候选再用 YOLO 双柱方向校验；
         不要求小队箭头或圆环可见，关联失败不记机关完成也不清除封锁。只解除该编号，
-        不使用历史 active/stale 集合或目标 block 批量
-        解锁。已确认的机关标注仅用于此阶段小队边缘回正，完成后必须取得新的实测小队定位。
+        不使用历史 active/stale 集合或目标 block 批量解锁。解除记录保留机关来源，
+        本次会话内的后续普通观测不得将其复活。已确认的机关标注仅用于此阶段小队边缘回正，
+        完成后必须取得新的实测小队定位。
         """
         annotation = self.session.centered_mechanism_barrier(goal)
         state = self.owner.state
@@ -311,7 +312,7 @@ class CampaignExecutor:
                                                      'point': list(annotation['position']),
                                                      'segment': annotation['segment'],
                                                      'first_seen': state.tick, 'last_seen': state.tick})
-        record.update(status='cleared', cleared_at=state.tick)
+        record.update(status='cleared', cleared_at=state.tick, cleared_by_mechanism=goal['id'])
         state.mechanisms[goal['id']]['tried_for'][identifier] = state.tick
         state.pending_reviews.pop(identifier, None)
         self.session.barrier_references[:] = [item for item in self.session.barrier_references

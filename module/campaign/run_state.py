@@ -343,8 +343,10 @@ class RunState:
 
         预标注光幕按 annotation_id 保持稳定身份；无标注光幕按距离配对到既有封锁，刷新为 active；
         既有封锁未被配对时保持原状态、几何和时间戳；漏检、截边或关联失败都不是状态变化证据。
-        只有 can_clear 为真且封锁点在本帧视野内（离边界有余量），才允许记为 cleared。
-        checked_ids 存在时只允许解除经过居中复核的指定编号，不能用一处光幕的证据清除整屏封锁。
+        机关确认解除的记录带有 cleared_by_mechanism，在本次会话内不再响应普通观测，防止误检重新封路；
+        其他来源的 cleared 仍允许被后续实际检出纠正。只有 can_clear 为真且封锁点在本帧视野内
+        （离边界有余量），才允许记为 cleared。checked_ids 存在时只允许解除经过居中复核的指定编号，
+        不能用一处光幕的证据清除整屏封锁。
         """
         added, refreshed, cleared = [], 0, []
         matched = set()
@@ -366,6 +368,9 @@ class RunState:
                 added.append(identifier)
             else:
                 record = self.blocks[identifier]
+                if record['status'] == 'cleared' and record.get('cleared_by_mechanism'):
+                    matched.add(identifier)
+                    continue
                 record.update(point=point.tolist(), segment=block.get('segment'),
                               status='active', last_seen=self.tick)
                 refreshed += 1

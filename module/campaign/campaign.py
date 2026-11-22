@@ -484,7 +484,8 @@ class Campaign(ModuleBase):
         收集品任务没有纯画面替代路径，启动时继续要求可信底图起点。
         场景切换中断章节会话时停止旧坐标输入；同章返回保留事实、EX 避让与路线失败历史，
         真正换章或地图版本变化才新建运行状态。各章通过循环接续，不递归调用任务入口。
-        业务异常最终终止时每次任务最多返回主页并重新进入一次，同章仍保留事实与失败历史。
+        业务异常最终终止时每次任务最多返回主页并重新进入一次；返回前清空本章运行状态，
+        主页重进同章也重新建立地图标记与失败历史，避免把失效事实带入新一轮扫描。
         战败重试耗尽的 BattleFailed 直接交人工，不返回主页重启；用户取消、窗口及驱动安全异常不追加输入。
         返回主页失败或重启后再次业务异常交人工。
         页面未知不盲点，资源与设备准备不重复，正常结束及收集品提示不会触发异常重启。
@@ -585,19 +586,14 @@ class Campaign(ModuleBase):
                         raise
                     home_restarts += 1
                     reason = str(exc) or type(exc).__name__
-                    if session is not None and executor is not None:
-                        suspended = dict(identity=identity, digest=self.cut.chart.image_sha256,
-                                         movement_progress=session.movement_progress, ex_bypass=session.ex_bypass,
-                                         ex_popup_count=session.ex_popup_count,
-                                         interrupted_goal=executor.interrupted_goal,
-                                         interrupted_inputs=executor.interrupted_inputs,
-                                         terminal_destination=executor.terminal_destination)
-                    self.last_snapshot = None
+                    suspended = None
+                    self.last_snapshot = self.state = self.cut = None
                     self.last_goal = self.last_routes = self.last_route_signature = None
                     page_session.record('campaign_home_restart', force=True, reason=reason, attempt=home_restarts,
                                         limit=CAMPAIGN_HOME_RESTART_LIMIT)
                     logger.warning(f'自动推图异常终止，执行返回主页重启 '
                                    f'{home_restarts}/{CAMPAIGN_HOME_RESTART_LIMIT}：{reason}')
+                    logger.info('主页重进后重新建立本章运行状态，既有地图标记已清空。')
                     self.scene_controller.return_home(reason)
         except (WindowChanged, OSError, ValueError, RuntimeError, cv2.error) as exc:
             logger.error(f'主线执行停止：{exc}（任务总耗时 {watch}）')
