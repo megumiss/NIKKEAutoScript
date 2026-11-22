@@ -453,7 +453,7 @@
     },
     "Screens": {
       "name": "Multi-Screen Mode",
-      "help": "When enabled, supports running the game window on secondary or virtual displays. You will also need to manually select the target screen for the game window. Enabling \"Enable VDD virtual screen\" turns this option on automatically."
+      "help": "When enabled, supports running the game window on a secondary display and requires manually selecting its target screen."
     },
     "ScreenNumber": {
       "name": "Game Window Target Screen",

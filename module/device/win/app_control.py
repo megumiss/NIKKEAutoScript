@@ -117,6 +117,10 @@ class AppControl(WinClient, Login):
         #     else None
         # )
 
+        # VDD 的多屏幕模式和屏幕序号只覆盖当前设备进程，不写回用户的手动屏幕配置。
+        if self.config.Vdd_VddScreen:
+            self.config.PCClient_Screens = True
+
         # VDD 虚拟屏：自动管理时启用并等待其出现
         # 开启 VddScreen 后不再使用手动选择的屏幕序号，改为运行时自动定位
         # （回填只作用于内存，不落盘）

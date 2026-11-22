@@ -518,12 +518,6 @@ class ConfigUpdater:
             # for arg in deep_get(self.args, keys='NAKS.DropRecord', default={}).keys():
             #     remove_drop_save(arg)
 
-        # 启用虚拟屏幕(VDD)时强制打开多屏幕模式：VDD 会额外挂一块屏，多屏幕模式关闭时
-        # pyautogui 截图与窗口坐标只按主屏计算，窗口落在虚拟屏上必然截不到。
-        # 只单向开启、不反向关闭，避免覆盖「多屏但不跑 VDD」场景下用户自己的设置。
-        if deep_get(data, keys='PCClient.Vdd.VddScreen', default=False):
-            deep_set(data, keys='PCClient.PCClient.Screens', value=True)
-
         # 港澳台客户端只有单区服，游戏区服固定为自动
         if deep_get(data, keys='PCClient.PCClientInfo.Client', default='intl') == 'hmt':
             deep_set(data, keys='PCClient.PCClientInfo.GameWorld', value='auto')
@@ -544,11 +538,6 @@ class ConfigUpdater:
             key = key.split(".")
             key[-1] = key[-1].replace("Value", "Record")
             yield ".".join(key), datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # 打开虚拟屏幕(VDD)的同时写入多屏幕模式，配置文件当场就是可用状态，
-        # 不用等下一次读取才被 _override 补上。
-        if key == "PCClient.Vdd.VddScreen" and value:
-            yield "PCClient.PCClient.Screens", True
 
         # 港澳台客户端只有单区服，切换客户端时把游戏区服拉回自动
         if key == "PCClient.PCClientInfo.Client" and value == 'hmt':
