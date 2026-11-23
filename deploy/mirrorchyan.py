@@ -13,6 +13,7 @@ from deploy.config import ExecutionError
 API_ROOT = 'https://mirrorchyan.com/api/resources'
 SOURCE_RID = 'NIKKEAutoScript-Source'
 DESKTOP_RID = 'NIKKEAutoScript'
+RESOURCE_RID = 'NIKKEAutoScriptResource'
 MAX_DOWNLOAD_SIZE = 512 * 1024 * 1024
 SECRET_MASK = '******'
 ERROR_MESSAGES = {

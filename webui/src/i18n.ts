@@ -44,7 +44,7 @@ export const staticLabels: Record<string, Record<string, string>> = {
   "章节地图": { 'en-US': "Chapter map", 'ja-JP': "チャプターマップ" },
   "推图设置": { 'en-US': "Campaign settings", 'ja-JP': "キャンペーン設定" },
   "自动主线与收集品任务共用的设置。章节地图等数据来自独立的资源仓库，按需同步，不随 NKAS 更新。": { 'en-US': "Settings shared by the main story and collectible tasks. Chapter maps and other data come from a separate resource repository, synced on demand and independent of NKAS updates.", 'ja-JP': "メインストーリーと収集品タスクで共用する設定。チャプターマップなどのデータは独立したリソースリポジトリから必要時に同期され、NKAS の更新には追従しません。" },
-  '资源暂不支持 Mirror酱下载，当前使用资源仓库同步。': { 'en-US': 'Resource downloads via MirrorChyan are not supported yet. Resources currently sync from the resource repository.', 'ja-JP': 'リソースの MirrorChyan ダウンロードは現在未対応です。リソースリポジトリから同期します。' },
+  '根据部署页的更新源，使用 Git 资源仓库或 Mirror酱同步。': { 'en-US': 'Resources sync from the Git repository or MirrorChyan according to the update source on the Deploy page.', 'ja-JP': 'デプロイページの更新ソースに応じて、Git リソースリポジトリまたは MirrorChyan から同期します。' },
   "地图资源": { 'en-US': "Map resources", 'ja-JP': "マップリソース" },
   "同步于": { 'en-US': "synced at", 'ja-JP': "同期日時" },
   "正在检查资源…": { 'en-US': "Checking resources…", 'ja-JP': "リソースを確認中…" },

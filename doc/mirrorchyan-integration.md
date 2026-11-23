@@ -2,8 +2,8 @@
 
 ## 范围
 
-接入现有安装的源码更新与 Windows x64 启动器 EXE 自更新。默认仍使用 Git 源码更新和原官方启动器 manifest，不强制用户使用 Mirror酱。
-完整运行包不进入这两条更新链；首次安装仍保留 Git 初始化流程，Python / toolkit 升级或不可恢复的安装需使用完整运行包。
+接入现有安装的源码更新、Windows x64 启动器 EXE 自更新与地图资源同步。默认仍使用 Git 源码更新和原官方启动器 manifest，不强制用户使用 Mirror酱。
+完整运行包不进入这些更新链；首次安装仍保留 Git 初始化流程，Python / toolkit 升级或不可恢复的安装需使用完整运行包。
 
 依据：[项目 PR #349](https://github.com/megumiss/NIKKEAutoScript/pull/349)、[Git Pack 文档 PR #13](https://github.com/MirrorChyan/docs/pull/13)、[客户端集成文档](https://github.com/MirrorChyan/docs/blob/main/Integration.md)。
 PR #349 提供服务端分发工作流；本分支实现客户端，不重复复制工作流。发版前仍需确认官方上传工作流和资源持续可用。
@@ -12,6 +12,7 @@ PR #349 提供服务端分发工作流；本分支实现客户端，不重复复
 | --- | --- | --- | --- |
 | 源码与仓库内资源，包括 SPA dist | `NIKKEAutoScript-Source` | `channel=stable`；不传 os / arch；传当前 UTC 版本 | HEAD committer 时间转 UTC，格式 `YYYYMMDDHHmmss`；与服务端版本不相等即有更新，允许官方分支回退 |
 | 启动器 EXE | `NIKKEAutoScript` | `os=win&arch=x64&channel=stable`；current_version 留空 | 去掉 v 前缀后比较 SemVer；只升级到更高版本 |
+| 地图与模型资源 | `NIKKEAutoScriptResource` | `channel=stable`；不传 os / arch；有本地版本时传带 v 的 current_version | 服务端选择增量或完整包；去掉 v 前缀后与 version.json 比较，安装前核对包内版本一致 |
 
 平台值使用项目交付的 `win / x64`，不是通用示例中的 `windows / amd64`。
 源码 pack 是 Git 对象 ZIP 容器，不直接覆盖工作区，也不使用 changes.json。
@@ -29,7 +30,7 @@ PR #349 提供服务端分发工作流；本分支实现客户端，不重复复
 - `MirrorChyan`：Mirror酱专属的 CDK。
 - `MirrorChyan.MirrorChyanCDK`：可留空；掩码输入，清空输入框并保存可删除 CDK。实际凭据保存在 `config/.security/mirrorchyan.cdk`，不写入部署 YAML。
 
-设置在下一次检查 / 应用时生效，不需要重启。两条链共用更新源选择与 CDK；包型、版本规则和恢复流程仍分别处理。
+设置在下一次检查 / 应用时生效，不需要重启。源码、启动器与地图资源共用更新源选择与 CDK；包型、版本规则和恢复流程仍分别处理。
 无 CDK 可以检查版本，有更新但无下载资格时显示提示，不会为尝试下载而先停止任务。
 Mirror 失败不静默切到其他来源；用户可以修正 CDK 或显式切回原来源。
 普通浏览器可更新源码；启动器更新仅在 Tauri 桌面壳中可用。
@@ -63,6 +64,15 @@ Mirror 返回的源码 / 启动器说明与可读取的 Git 历史统一显示�
 源码说明中的提交号用于去重，已在本地历史中的提交不重复显示。
 没有记录时显示空状态，不展示空卡片，也不为 Mirror 单独增加说明卡片或设置入口。
 API 的检查错误和应用错误分开返回，以便提供正确的重试操作。
+
+### 地图资源
+
+[资源管理器](../module/webui/resource.py) 在 `UpdateSource=mirrorchyan` 时查询并下载 `NIKKEAutoScriptResource`，
+不再要求本机存在 Git；手动同步携带本地版本，由服务端选择增量或完整 ZIP，共享 Mirror 客户端校验大小和 SHA-256。
+增量更新在旧资源的临时副本上按 changes.json 处理新增、修改、删除文件及目录，完整更新直接解压；
+两种路径都校验成员与变更路径、核对 API 和 version.json 的版本，再原子替换 `data/resources/`。
+已是最新时再次同步会请求完整包，保留修复资源的能力；服务端无增量时按完整包安装。
+本地状态只记录 Mirror RID、资源版本和同步时间，不保存 CDK 或签名 URL；失败时不静默回退 Git。
 
 ### 启动器
 

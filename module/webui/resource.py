@@ -1,8 +1,9 @@
 """资源仓库（章节地图等运行数据）的本地同步：独立于主项目更新，按需检查并拉取最新版本。
 
 本地副本固定在 data/resources，布局与远端仓库一致：version.json 记录整体版本与各类数据的版本，
-maps/ 存放章节地图，后续新增的数据以同级目录加入。有 git 时按分支浅克隆或快进到远端，
-没有 git 时退化为下载 GitHub 分支压缩包；同步在后台线程执行，界面轮询状态。
+maps/ 存放章节地图，后续新增的数据以同级目录加入。更新源为 Mirror酱时下载增量或完整资源包，
+否则有 git 时按分支浅克隆或快进到远端，没有 git 时退化为下载 GitHub 分支压缩包；
+同步在后台线程执行，界面轮询状态。
 """
 
 import json
@@ -16,8 +17,9 @@ import threading
 import time
 import urllib.request
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
+from deploy.mirrorchyan import RESOURCE_RID, MirrorError, download, latest, read_cdk
 from module.campaign.map.paths import RESOURCE_ROOT
 from module.logger import logger
 from module.webui.setting import State
@@ -54,6 +56,30 @@ class ResourceManager:
         配置项可能不存在或为 None，这里统一成去掉空白的字符串，调用方只需判断真假。
         """
         return str(getattr(State.deploy_config, 'ResourceRepository', '') or '').strip()
+
+    @property
+    def use_mirror(self):
+        """是否按部署页的统一更新源使用 Mirror酱同步资源。"""
+        return getattr(State.deploy_config, 'UpdateSource', 'git') == 'mirrorchyan'
+
+    @staticmethod
+    def _mirror_version(data):
+        """读取 Mirror酱版本并去掉发布标签的 `v` 前缀，与 version.json 保持同一格式。"""
+        version = data['version_name']
+        version = version[1:] if version.startswith('v') else version
+        if not version:
+            raise MirrorError('Mirror酱响应缺少有效的资源版本。')
+        return version
+
+    def _mirror_latest(self, current_version=None):
+        """按本地版本查询不分平台的资源包，由服务端选择增量包或完整包。
+
+        Mirror 发布标签带 `v`，本地 version.json 不带；查询时必须恢复原格式才能命中增量。
+        CDK 只用于本次请求，不写入远端缓存或同步状态。
+        """
+        if current_version and not current_version.startswith('v'):
+            current_version = f'v{current_version}'
+        return latest(RESOURCE_RID, current_version=current_version or '', cdk=read_cdk(State.deploy_config.file))
 
     def git_executable(self):
         """优先使用部署配置里的 git，不存在时退回 PATH 上的 git；都没有则返回 None。"""
@@ -136,20 +162,25 @@ class ResourceManager:
         return info
 
     def remote_info(self, force=False):
-        """远端最新提交与默认分支；优先 git ls-remote，没有 git 时读取 GitHub raw 的 version.json。"""
+        """按更新源查询 Mirror酱版本，或资源仓库的提交、分支与压缩包版本。"""
         repository = self.repository
+        mirror = self.use_mirror
+        source = RESOURCE_RID if mirror else repository
         with self.lock:
             cached = self.remote
-        if (cached and not force and cached.get('repository') == repository
+        if (cached and not force and cached.get('source') == source
                 and time.time() - cached['checked_at'] < CHECK_CACHE_SECONDS):
             return cached
-        result = dict(repository=repository, checked_at=time.time(), sha=None, branch=None, version=None,
+        result = dict(repository=repository, source=source, checked_at=time.time(), sha=None, branch=None, version=None,
                       error=None, method=None)
-        if not repository:
-            result['error'] = '未配置资源仓库地址。'
-        else:
-            git = self.git_executable()
-            try:
+        try:
+            if mirror:
+                result['method'] = 'mirrorchyan'
+                result['version'] = self._mirror_version(self._mirror_latest())
+            elif not repository:
+                result['error'] = '未配置资源仓库地址。'
+            else:
+                git = self.git_executable()
                 if git:
                     result['method'] = 'git'
                     output = self._run([git, *self.git_options(), 'ls-remote', '--symref', repository, 'HEAD',
@@ -159,8 +190,10 @@ class ResourceManager:
                     result['method'] = 'zip'
                     branch, data = self._fetch_remote_version(repository)
                     result.update(branch=branch, version=data.get('version'))
-            except SYNC_ERRORS as exc:
-                result['error'] = f'无法访问资源仓库：{exc}'
+        except MirrorError as exc:
+            result['error'] = str(exc)
+        except SYNC_ERRORS as exc:
+            result['error'] = f'无法访问资源仓库：{exc}'
         with self.lock:
             self.remote = result
         return result
@@ -275,32 +308,176 @@ class ResourceManager:
         return True
 
     def _sync(self):
-        """同步线程主体：按有无 git 选择克隆/快进或下载压缩包，最后落盘本地状态。
+        """同步线程主体：按更新源选择 Mirror酱完整包、Git 克隆/快进或 GitHub 压缩包。
 
-        强制刷新一次远端信息，不能用缓存——同步前必须确认分支与提交。完成后把 remote 缓存清掉，
+        强制刷新一次远端信息，不能用缓存——同步前必须确认远端版本。完成后把 remote 缓存清掉，
         让下一次 status 重新查询，否则界面会拿旧的远端信息和新的本地版本比较出「仍需更新」。
-        只捕获 SYNC_ERRORS 并记进 error 字段，线程不向外抛；状态终值是 finish 或 failed。
+        预期错误记进 error 字段，线程不向外抛；Mirror 异常不打印可能含凭据的请求帧。
         """
         try:
-            self._log('开始同步资源仓库…')
+            self._log('开始同步资源…')
             remote = self.remote_info(force=True)
             if remote.get('error'):
                 raise ValueError(remote['error'])
-            branch = remote.get('branch') or DEFAULT_BRANCHES[0]
-            git = self.git_executable()
             RESOURCE_ROOT.parent.mkdir(parents=True, exist_ok=True)
-            if git:
-                sha = self._sync_with_git(git, remote['repository'], branch)
+            if remote['method'] == 'mirrorchyan':
+                self._sync_with_mirror()
+                self._write_state(f'mirrorchyan:{RESOURCE_RID}', None, None)
             else:
-                sha = self._sync_with_zip(remote['repository'], branch)
-            self._write_state(remote['repository'], branch, sha)
+                branch = remote.get('branch') or DEFAULT_BRANCHES[0]
+                git = self.git_executable()
+                if git:
+                    sha = self._sync_with_git(git, remote['repository'], branch)
+                else:
+                    sha = self._sync_with_zip(remote['repository'], branch)
+                self._write_state(remote['repository'], branch, sha)
             self._log('资源同步完成。')
             with self.lock:
                 self.state, self.remote = 'finish', None
-        except SYNC_ERRORS as exc:
-            logger.exception(exc)
+        except MirrorError as exc:
+            logger.warning(f'[Resource] Mirror酱同步失败：{exc}')
             with self.lock:
                 self.state, self.error = 'failed', str(exc)
+        except SYNC_ERRORS as exc:
+            if self.use_mirror:
+                logger.warning(f'[Resource] Mirror酱同步失败：{exc}')
+            else:
+                logger.exception(exc)
+            with self.lock:
+                self.state, self.error = 'failed', str(exc)
+
+    @staticmethod
+    def _resource_path(name):
+        """校验资源 ZIP 与 changes.json 使用的 POSIX 相对路径并返回路径对象。
+
+        拒绝绝对路径、盘符、反斜杠、空段和 `..`，同时禁止包修改 Git 元数据与本地同步状态；
+        所有路径先经过这里，再映射到本次新建的临时目录，防止写出资源目录。
+        """
+        if not isinstance(name, str) or not name or '\x00' in name:
+            raise ValueError(f'资源包含非法路径：{name}')
+        parts = name.split('/')
+        path = PurePosixPath(name)
+        if (path.is_absolute() or '\\' in name or ':' in name
+                or any(part in ('', '.', '..') for part in parts)
+                or parts[0].lower() == '.git' or name == STATE_FILE):
+            raise ValueError(f'资源包含非法路径：{name}')
+        return path
+
+    @classmethod
+    def _extract_resource_bundle(cls, archive, target):
+        """校验 ZIP 条目与符号链接后解压到新建临时目录，空包和越界路径直接失败。"""
+        target.mkdir()
+        with zipfile.ZipFile(archive) as bundle:
+            entries = bundle.infolist()
+            if not entries:
+                raise ValueError('下载的资源包为空。')
+            for entry in entries:
+                cls._resource_path(entry.filename.rstrip('/'))
+                if (entry.external_attr >> 16) & 0o170000 == 0o120000:
+                    raise ValueError(f'资源包包含符号链接：{entry.filename}')
+            bundle.extractall(target)
+
+    @staticmethod
+    def _validate_resource_version(directory, version):
+        """要求安装结果存在 version.json，且版本与本次 Mirror API 响应完全一致。"""
+        version_file = directory / VERSION_FILE
+        if not version_file.is_file():
+            raise ValueError('下载的资源包缺少 version.json。')
+        package_version = json.loads(version_file.read_text(encoding='utf-8')).get('version')
+        if package_version != version:
+            raise ValueError(f'资源包版本不一致：Mirror酱为 {version}，包内为 {package_version}。')
+
+    @classmethod
+    def _apply_incremental(cls, archive, temporary):
+        """在旧资源副本上应用 changes.json，返回可原子替换的新目录。
+
+        删除文件和目录后再写入新增、修改文件，未变更文件从旧副本保留。所有操作只发生在
+        临时目录；复制时排除 .git 与同步状态，使 Mirror 更新和后续状态写入保持独立。
+        """
+        extracted = temporary / 'incremental'
+        cls._extract_resource_bundle(archive, extracted)
+        changes_file = extracted / 'changes.json'
+        if not changes_file.is_file():
+            raise ValueError('增量资源包缺少 changes.json。')
+        changes = json.loads(changes_file.read_text(encoding='utf-8'))
+        if not isinstance(changes, dict):
+            raise ValueError('增量资源包 changes.json 格式无效。')
+        keys = ('added', 'modified', 'deleted', 'added_dir', 'deleted_dir')
+        for key in keys:
+            values = changes.get(key, [])
+            if not isinstance(values, list):
+                raise ValueError(f'增量资源包 {key} 必须是数组。')
+            paths = []
+            for value in values:
+                path = cls._resource_path(value)
+                if path == PurePosixPath('changes.json'):
+                    raise ValueError('增量资源包不能把 changes.json 作为安装文件。')
+                paths.append(path)
+            changes[key] = paths
+
+        if not RESOURCE_ROOT.is_dir():
+            raise ValueError('本地资源不存在，不能安装增量包。')
+        updated = temporary / 'updated'
+        shutil.copytree(RESOURCE_ROOT, updated, ignore=shutil.ignore_patterns('.git', STATE_FILE))
+        for path in changes['deleted']:
+            target = updated / path
+            if target.is_dir() and not target.is_symlink():
+                raise ValueError(f'增量删除项不是文件：{path}')
+            target.unlink(missing_ok=True)
+        for path in sorted(changes['deleted_dir'], key=lambda value: len(value.parts), reverse=True):
+            target = updated / path
+            if target.is_symlink():
+                target.unlink()
+            elif target.exists():
+                shutil.rmtree(target)
+        for path in changes['added_dir']:
+            (updated / path).mkdir(parents=True, exist_ok=True)
+        for path in [*changes['added'], *changes['modified']]:
+            source = extracted / path
+            if not source.is_file():
+                raise ValueError(f'增量资源包缺少文件：{path}')
+            target = updated / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, target)
+        return updated
+
+    def _sync_with_mirror(self):
+        """从 Mirror酱下载并安装本次响应指定的增量包或完整包。
+
+        有本地版本时按 Mirror 的 `v` 标签格式查询增量；已是最新但用户仍点击同步时，重新
+        请求完整包以保留修复资源的能力。安装前核对包内版本，最终原子替换资源目录，CDK
+        和签名 URL 仅存在于共享 Mirror 客户端的调用内，不进入界面状态或日志。
+        """
+        local = self.local()
+        current_version = local.get('version') if local['exists'] else None
+        if not isinstance(current_version, str):
+            current_version = None
+        data = self._mirror_latest(current_version)
+        version = self._mirror_version(data)
+        if current_version == version and not data.get('url'):
+            data = self._mirror_latest()
+            version = self._mirror_version(data)
+        update_type = data.get('update_type')
+        if data.get('url') and update_type not in ('full', 'incremental'):
+            raise MirrorError('Mirror酱返回了不支持的资源包型。')
+        package_kind = '增量' if update_type == 'incremental' else '完整'
+        self._log(f'从 Mirror酱下载{package_kind}资源 {version}…')
+        with tempfile.TemporaryDirectory(prefix='resources-', dir=RESOURCE_ROOT.parent) as temporary:
+            temporary = Path(temporary)
+            archive = temporary / 'resource.zip'
+            download(data, archive, expected_type=update_type)
+            if update_type == 'incremental':
+                if not current_version:
+                    raise ValueError('没有可应用的本地版本，不能安装增量包。')
+                updated = self._apply_incremental(archive, temporary)
+            else:
+                updated = temporary / 'full'
+                self._extract_resource_bundle(archive, updated)
+            self._validate_resource_version(updated, version)
+            staged = RESOURCE_ROOT.with_name(RESOURCE_ROOT.name + '.part')
+            shutil.rmtree(staged, ignore_errors=True)
+            shutil.move(str(updated), str(staged))
+        self._replace_root(staged)
 
     def _sync_with_git(self, git, repository, branch):
         """用 git 同步并返回同步后的提交号：已有仓库就快进，否则浅克隆。

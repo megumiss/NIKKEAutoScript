@@ -75,7 +75,7 @@ onBeforeUnmount(() => window.clearTimeout(timer))
       <div class="field">
         <div class="field-label">
           <div class="fname">{{ t('地图资源') }}<span v-if="stateText" class="resource-state" :class="stateClass">{{ stateText }}</span></div>
-          <div class="fhelp">{{ summary }}<br>{{ t('资源暂不支持 Mirror酱下载，当前使用资源仓库同步。') }}</div>
+          <div class="fhelp">{{ summary }}<br>{{ t('根据部署页的更新源，使用 Git 资源仓库或 Mirror酱同步。') }}</div>
         </div>
         <div class="field-control resource-control">
           <button class="btn primary" :disabled="!resource || resource.syncing" @click="sync">{{ resource?.syncing ? t('同步中…') : t('同步资源') }}</button>
