@@ -43,7 +43,10 @@ def available_annotations(state, chart):
 
 
 def elevator_goal(state, chart, cut, squad, targets):
-    """跨分量目标有可用电梯时返回第一段；走完出口后按新快照重选最终目标。"""
+    """跨分量目标有可用电梯时返回第一段；走完出口后按新快照重选最终目标。
+
+    全部候选都可能提供中转目的地，不能让较近的同区域点耗尽候选预算后漏掉真正的跨区目标。
+    """
     if not chart.transfers:
         return None
     annotations = available_annotations(state, chart)
@@ -51,7 +54,7 @@ def elevator_goal(state, chart, cut, squad, targets):
         return None
     localizer = RoadView(cut)
     ordered = sorted(targets, key=lambda item: np.linalg.norm(np.asarray(item['position']) - squad))
-    for target in ordered[:4]:
+    for target in ordered:
         try:
             legs = plan_elevators(localizer, annotations, squad, np.asarray(target['position']))
         except NoConnectedRoad:

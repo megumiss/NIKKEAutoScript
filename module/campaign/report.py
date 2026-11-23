@@ -30,6 +30,7 @@ GOAL_REASONS = {
     'verify_mechanism_curtain': '机关触发后复核光幕状态',
     'try_mechanism_for_curtain': '尝试用机关解除挡路光幕',
     'transfer_to_pending_target': '经电梯前往当前不可达的目标',
+    'explore_by_elevator': '当前区域无可执行目标，乘电梯探索其他区域',
     'localization_unavailable': '章节地图定位不可用，坐标不可信',
     'coordinate_model_unsupported': '本章地图的坐标模型不支持规划',
     'curtain_review_unavailable': '无可用光幕复核位置',

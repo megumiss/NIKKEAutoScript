@@ -5,7 +5,8 @@
 可达性与行走距离一律走切开图，所以规划不会把小队送去撞光幕；原图只用来判断「这个目标是不是
 只被光幕挡住」——是的话就该去复核封锁或踩机关，而不是当成走不通换目标。
 优先处理机关关联的道路复核；剧情按机关、主线目的地逐段推进，无目的地才找全分量最近敌人。
-机关解封先到点、再回封锁口复核；电梯按有向航段和累计失败上限过滤。
+机关解封先到点、再回封锁口复核；电梯按有向航段和累计失败上限过滤。当前目标耗尽后，
+先用历史敌人位置规划跨区中转，没有历史目的地时直接乘电梯前往仍有未观测道路的分量。
 """
 
 import numpy as np
@@ -124,9 +125,10 @@ def blocked_candidate(state, chart, cut, squad, rejected):
 
 
 def unobserved_component_cells(state, cut, squad):
-    """返回小队当前连通分量内尚未可信覆盖的粗网格数，坐标无效时返回 None。
+    """返回指定位置所在连通分量内尚未可信覆盖的粗网格数，坐标无效时返回 None。
 
-    该计数不排除失败到上限的区域，用于 Boss 前的遗漏检查；不可检查不代表已覆盖。
+    该计数不排除失败到上限的区域，用于 Boss 前遗漏检查和电梯出口区域探索判断；
+    不可检查不代表已覆盖。参数沿用 squad 命名，也可以传入电梯出口等道路位置。
     """
     try:
         mask = cut.component_mask(squad)
@@ -176,6 +178,37 @@ def frontier_point(state, cut, squad, distance_limit=FRONTIER_LIMIT):
         return {'kind': 'explore', 'id': identifier, 'position': nearest.tolist(),
                 'distance': round(distance, 1), 'unseen_cells': int(unseen.sum())}
     return None
+
+
+def direct_elevator_goal(state, chart, cut, squad):
+    """当前区域没有目标时，选择通往未观测分量的最近可达电梯。
+
+    只使用入口在小队当前分量、出口在另一分量且出口仍有未观测道路的航段，避免在已经
+    探索完毕的区域之间往返。失败方向沿用 transfer_available 上限；距离是到入口的道路
+    距离，传送后由执行层扫描并重新规划，不要求事先知道另一区域的敌人位置。
+    """
+    home = cut.component(squad)
+    if not home:
+        return None
+    best = None
+    for link in chart.transfers:
+        directions = [(link['entry'], link['exit'])]
+        if not link['directed']:
+            directions.append((link['exit'], link['entry']))
+        for entry, exit_point in directions:
+            leg = dict(connection=link['id'], entry=entry, exit=exit_point)
+            if not state.transfer_available(leg):
+                continue
+            if cut.component(entry) != home or cut.component(exit_point) == home:
+                continue
+            if not unobserved_component_cells(state, cut, exit_point):
+                continue
+            distance = walking_distance(cut.road, cut.regions, squad, entry)
+            if not np.isfinite(distance) or (best is not None and distance >= best['distance']):
+                continue
+            best = dict(kind='elevator', id=link['id'], position=entry, leg=leg,
+                        distance=round(distance, 1), reason='explore_by_elevator')
+    return best
 
 
 def choose_goal(state, chart, snapshot, cut, purpose='story'):
@@ -253,11 +286,17 @@ def choose_goal(state, chart, snapshot, cut, purpose='story'):
     if goal is None and purpose == 'story' and state.route_goal is not None:
         goal, rejected = nearest_enemy(state, cut, squad)
     if goal is None:
-        goal = elevator_goal(state, chart, cut, squad, candidates)
+        transfer_candidates = list(candidates)
+        if purpose == 'story':
+            transfer_candidates.extend(item for item in state.enemy_hints()
+                                       if item['kind'] in COMBAT_ENEMY_KINDS)
+        goal = elevator_goal(state, chart, cut, squad, transfer_candidates)
     if goal is None and purpose == 'story' and state.route_goal is not None:
         goal = {'kind': 'none', 'reason': 'route_unreachable', 'for_target': state.route_goal['id']}
     if goal is None and purpose == 'story':
         goal = enemy_hint_goal(state, cut, squad)
+    if goal is None and purpose == 'story':
+        goal = direct_elevator_goal(state, chart, cut, squad)
     if goal is None:
         goal = frontier_point(state, cut, squad)
     if goal is None:

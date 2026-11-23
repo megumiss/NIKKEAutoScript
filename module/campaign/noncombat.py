@@ -51,6 +51,7 @@ TEMPLATES = {
     'gift_check': ((740, 860, 1030, 980), .85),
     'gift_confirm': ((630, 390, 1150, 510), .85),
     'main_check': ((0, 130, 100, 240), .9),
+    'main_campaign_entry': ((700, 730, 1200, 999), .9),
     'ark_check': ((0, 0, 150, 90), .9),
     'guide_arrow': ((1680, 60, 1776, 150), .9),
     'ark_notice': ((800, 300, 1040, 550), .7),
@@ -370,6 +371,7 @@ class CampaignSceneController:
         返回模式关闭已识别弹窗／章节列表并点击返回主页，不点击作战入口或进入战斗；
         正在战斗时沿用结算处理，未知页没有返回按钮就等待，不猜固定坐标。
         必须确认主界面才返回；窗口、取消、驱动异常或超时直接传播，调用方不再次重启。
+        困难模式确认主界面后建立原章恢复目标，重进时从作战入口进入章节列表，不能依赖普通主线引导箭头。
         """
         self.session.check()
         if getattr(self.session.raw_handler, '_failures', 0):
@@ -390,6 +392,8 @@ class CampaignSceneController:
                 self.ark_arrow_at = None
                 self.last_page = None
                 self.session.record('campaign_return_home_complete', field=result['field'], force=True, reason=reason)
+                if self.chapter is not None and self.preferred_difficulty == 'hard':
+                    self.difficulty_target = self.transition_expected or (self.chapter, self.preferred_difficulty)
                 logger.info('异常恢复已确认主界面，重新开始主线入口流程。')
                 return
         finally:
@@ -538,6 +542,7 @@ class CampaignSceneController:
         前哨基地优先处理指挥中心弹窗进入，再按电梯、指挥中心卡片、右上引导的顺序处理。
         电梯及进入按钮只在各自范围匹配感叹号并偏移点击中央；异常恢复模式不进入建筑或电梯。
         不识别加载动画或遍历所有菜单；章节 OCR 只在章节列表或野外已确认时调用。
+        主页存在章节恢复目标时优先使用作战入口；普通主线引导箭头不能代替指定难度与章节恢复。
         未知画面正常等待，仅异常恢复模式尝试返回主页；不补固定坐标点击。
         等待超过五分钟抛出专用换章超时异常，绕过旧章节自动恢复并安全停止。
         """
@@ -657,9 +662,19 @@ class CampaignSceneController:
             if self.returning_home:
                 return {'state': 'scene_home', 'field': field}
             self.ark_arrow_at = None
-            point = arrow_point or self.ui_point(field, MAIN_GOTO_CAMPAIGN_SELECT, (700, 730, 1200, 999))
+            entry_score, entry_point = locate(field, self.templates, 'main_campaign_entry')
+            scores['main_campaign_entry'] = round(entry_score, 3)
+            restore_entry = self.difficulty_target is not None
+            if restore_entry:
+                point = entry_point
+            else:
+                point = arrow_point or self.ui_point(field, MAIN_GOTO_CAMPAIGN_SELECT, (700, 730, 1200, 999))
             if point is not None:
-                self.tap(point, '主页右上角引导箭头' if arrow_point is not None else '主页作战入口')
+                if restore_entry:
+                    label = '主页作战入口恢复指定章节'
+                else:
+                    label = '主页右上角引导箭头' if arrow_point is not None else '主页作战入口'
+                self.tap(point, label)
             return self.wait('main', scores, field)
         if ark_point is not None and not self.returning_home:
             if self.ark_arrow_at is None and arrow_point is None:
