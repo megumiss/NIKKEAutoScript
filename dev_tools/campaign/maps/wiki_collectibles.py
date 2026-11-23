@@ -308,8 +308,33 @@ def find_package(roots, chapter):
     return None
 
 
+def build_wiki_annotation(article, item, position=None, reviewed=False):
+    """构造使用稳定 Wiki ID 的收集品标注，人工复核模板允许暂不填写坐标。
+
+    配准证据只保留在 Wiki 缓存，运行标注仅保留攻略与图片地址。position 使用地图原图像素坐标；
+    reviewed 仅用于区分备注，不改变自动匹配的通过状态。
+    """
+    image_url = item.get('image_url', '')
+    images = item.get('images', [])
+    if not image_url and images:
+        image_url = next((image['url'] for image in images if image.get('role') == 'map'), images[0]['url'])
+    source = {'url': article['url'], 'image_url': image_url}
+    if reviewed:
+        note = f"{item['name']}\n按 Wiki 图片人工复核标注。\n{article['url']}"
+    else:
+        note = f"{item['name']}\n按 Wiki 小队圆环中心配准。\n{article['url']}"
+    obj = {'id': f"wiki_{article['article_id']}_{item['number']:02d}", 'type': 'point',
+           'difficulty': article['difficulty'],
+           'label': f"{'普通' if article['difficulty'] == 'normal' else '困难'}收集物 {item['number']:02d}",
+           'points': [] if position is None else [[round(v, 1) for v in position]],
+           'color': '#ffd166' if article['difficulty'] == 'normal' else '#c792ea', 'note': note, 'source': source}
+    if item.get('surface_id') is not None:
+        obj['surface_id'] = item['surface_id']
+    return obj
+
+
 def save_annotations(package, article, matches, update=False):
-    """用稳定来源 ID 增量合并标注；默认保留已有坐标，写入前复核底图哈希与版本。"""
+    """用稳定 Wiki ID 增量合并标注；默认保留已有坐标，写入前复核底图哈希与版本。"""
     store = AnnotationStore(package.parent)
     loaded = store.load(package.name)
     document = copy.deepcopy(loaded['annotations'])
@@ -318,10 +343,9 @@ def save_annotations(package, article, matches, update=False):
     for item in matches:
         identifier = f"wiki_{article['article_id']}_{item['number']:02d}"
         difficulty = article['difficulty']
-        if identifier in by_id and by_id[identifier].get('source', {}).get('url') == article['url']:
+        if identifier in by_id:
             old = by_id[identifier]
             old.setdefault('difficulty', difficulty)
-            old['source'].setdefault('difficulty', difficulty)
             if old.get('label') == f"收集物 {item['number']:02d}":
                 old['label'] = f"{'普通' if difficulty == 'normal' else '困难'}收集物 {item['number']:02d}"
         if item.get('status') != 'accepted':
@@ -334,27 +358,9 @@ def save_annotations(package, article, matches, update=False):
             edits_digest = hashlib.sha256(edits_raw).hexdigest()
             if item['edits_sha256'] != edits_digest:
                 raise ValueError('Road edits changed after matching; recompute positions.')
-        source = {key: item[key] for key in ('number', 'road_iou', 'roi', 'roi_to_map', 'player_center')}
-        source.update(url=article['url'], article_id=article['article_id'], difficulty=difficulty,
-                      author=article.get('author', ''), article_updated=article.get('updated_at'),
-                      image_url=item['image_url'], item_name=item['name'], importer='wiki_collectibles',
-                      position_basis='squad_marker_center', normalized_size=item['normalized_size'])
-        for key in ('coordinate_model', 'reference_frame', 'local_surface', 'edits_sha256', 'edited_road_iou',
-                    'screenshot_layout'):
-            if key in item:
-                source[key] = item[key]
-        obj = {'id': identifier, 'type': 'point', 'difficulty': difficulty,
-               'label': f"{'普通' if difficulty == 'normal' else '困难'}收集物 {item['number']:02d}",
-               'points': [[round(v, 1) for v in item['position']]],
-               'color': '#ffd166' if difficulty == 'normal' else '#c792ea',
-               'note': f"{item['name']}\n按 Wiki 小队圆环中心配准。\n{article['url']}", 'source': source}
-        if item.get('surface_id') is not None:
-            obj['surface_id'] = item['surface_id']
-            source['surface_id'] = item['surface_id']
+        obj = build_wiki_annotation(article, item, item['position'])
         if identifier in by_id:
             old = by_id[identifier]
-            if old.get('source', {}).get('url') != article['url']:
-                raise ValueError(f'Annotation ID collision with another source: {identifier}')
             if update:
                 old.clear()
                 old.update(obj)

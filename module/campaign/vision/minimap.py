@@ -43,7 +43,8 @@ def cropped_ring(panel, road):
             continue
         disk = np.zeros(white.shape, np.uint8)
         cv2.circle(disk, tuple(np.rint(center).astype(int)), max(3, round(radius * .7)), 255, -1)
-        if np.mean(road[disk > 0] > 0) < .4:
+        # 小队可能停在道路边缘，圆环中心包含背景；道路支持只用于排除完全脱离道路的控件。
+        if np.mean(road[disk > 0] > 0) < .25:
             continue
         candidates.append((len(q), center, float(radius)))
     if not candidates:

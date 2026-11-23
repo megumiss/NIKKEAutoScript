@@ -177,8 +177,18 @@ button.small { min-height: 30px; padding: 4px 8px; font-size: 12px; }
 .calibration-settings h3 { font-size: 13px; }
 .result-counts { display: grid; gap: 6px; color: var(--muted); font-size: 12px; }
 .result-counts:not(:empty) { margin-top: 12px; }
-.wiki-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.wiki-review { max-height: 240px; overflow-y: auto; border-bottom: 1px solid var(--border); scrollbar-width: thin; }
+.wiki-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; width: 100%; min-height: 0; padding: 10px 6px; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; text-align: left; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.wiki-item:hover, .wiki-item.selected { background: var(--accent-soft); }
 .wiki-item .accepted { color: var(--success); }
+.wiki-item small { grid-column: 1 / -1; color: var(--muted); }
+.wiki-images { display: grid; gap: 8px; margin: 10px 0 14px; }
+.wiki-image { margin: 0; }
+.wiki-image img { display: block; width: 100%; max-height: 320px; object-fit: contain; border: 1px solid var(--border); border-radius: 7px; background: var(--soft); }
+.wiki-image figcaption { margin-top: 4px; color: var(--muted); font-size: 11px; }
+.wiki-position { display: block; margin: 10px 0; padding: 8px 10px; border-radius: 7px; background: var(--soft); font: 11px/1.7 var(--font-mono); }
+#wiki-detail .movement-actions { margin-top: 8px; }
+#wiki-candidates { margin-bottom: 0; }
 .task-details { margin-top: 12px; }
 .task-details summary { cursor: pointer; color: var(--muted); font-size: 12px; min-height: 30px; }
 .task-details > p { margin: 8px 0; }

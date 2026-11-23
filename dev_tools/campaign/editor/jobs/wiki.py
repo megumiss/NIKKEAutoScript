@@ -1,6 +1,7 @@
 """编辑器的 Wiki 配准任务；先预览，再按冻结版本增量导入。"""
 
 import json
+import math
 import os
 from pathlib import Path
 import secrets
@@ -104,26 +105,130 @@ class WikiJobs:
             return dict(self.job, state=state, running=running, ready=ready, message=message,
                         accepted=accepted, total=total, records=records, log_path=str(folder / 'worker.log'))
 
-    def review(self):
-        """列出本次匹配的逐条结果，供界面预览与人工复核。
+    def _review_cache(self, map_id, difficulty):
+        """选择与当前地图和难度相符的只读缓存，优先使用本次匹配的任务副本。"""
+        if (self.job is not None and self.job['map_id'] == map_id and self.process.poll() is not None
+                and self.job['difficulty'] in ('both', difficulty)):
+            return self.output / self.job['id'] / 'cache', self.job['id']
+        return self.cache, ''
 
-        按难度分别读 matches.json；difficulty 为 both 时两份都读。
-        没有任务时返回空列表而不是报错——界面在任意时刻都可能来拉一次预览。
+    def review(self, map_id, difficulty='both'):
+        """读取当前地图的 Wiki 补录队列，合并已有标注、跳过状态与全部候选坐标。
+
+        队列以 items.json 为基准，因此缺少 matches.json 的条目仍可手工点选。候选只有绑定当前
+        底图哈希时才返回；标注模板不带坐标，由编辑器确认后加入正常标注文档。
         """
+        from dev_tools.campaign.maps.wiki_collectibles import build_wiki_annotation
+        if difficulty not in ('normal', 'hard', 'both'):
+            raise ValueError('请选择普通、困难或两种难度。')
         with self.lock:
-            if self.job is None:
-                return []
+            loaded = self.store.load(map_id)
+            image_hash = loaded['annotations']['image_sha256']
+            cache, job = self._review_cache(map_id, difficulty)
+            chapter = f"chapter_{loaded['chapter']:02d}"
+            folder = cache / chapter
+            state_path = self.cache / chapter / 'review.json'
+            state = json.loads(state_path.read_text(encoding='utf-8')) if state_path.exists() else {}
+            skipped = set(state.get('skipped', [])) if state.get('image_sha256') == image_hash else set()
+            imported = {obj['id'] for obj in loaded['annotations']['objects']}
+            modes = ('normal', 'hard') if difficulty == 'both' else (difficulty,)
             items = []
-            folder = self.output / self.job['id'] / 'cache' / f"chapter_{self.job['chapter']:02d}"
-            modes = ('normal', 'hard') if self.job['difficulty'] == 'both' else (self.job['difficulty'],)
             for mode in modes:
-                path = folder / mode / 'matches.json'
-                if path.exists():
-                    matches = json.loads(path.read_text(encoding='utf-8'))['matches']
-                    items.extend(dict(number=m['number'], name=m.get('name', ''), difficulty=mode,
-                                      status=m['status'], reason=m.get('reason', ''), position=m.get('position'))
-                                 for m in matches)
-            return items
+                manifest_path = folder / mode / 'items.json'
+                if not manifest_path.exists():
+                    continue
+                manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+                matches_path = folder / mode / 'matches.json'
+                matches_document = json.loads(matches_path.read_text(encoding='utf-8')) if matches_path.exists() else {}
+                matches_valid = matches_document.get('image_sha256') == image_hash
+                matches = {item['number']: item for item in matches_document.get('matches', [])}
+                downloaded = manifest.get('downloaded', {})
+                for source_item in manifest.get('items', []):
+                    match = matches.get(source_item['number'], {})
+                    candidates = []
+                    seen = set()
+                    for candidate in [match, *match.get('errors', [])]:
+                        position = candidate.get('position')
+                        if not matches_valid or not isinstance(position, list) or len(position) != 2:
+                            continue
+                        if any(isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value)
+                               or not 0 <= value <= loaded['size'][axis] - 1 for axis, value in enumerate(position)):
+                            continue
+                        key = (candidate.get('image_url', ''), tuple(round(value, 4) for value in position))
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        candidates.append({key: candidate[key] for key in
+                                           ('position', 'road_iou', 'coarse_margin', 'parameter_spread_px',
+                                            'image_url', 'status') if key in candidate})
+                    candidates.sort(key=lambda candidate: candidate.get('road_iou', 0), reverse=True)
+                    best = candidates[0] if candidates else {}
+                    original_status = match.get('status', 'not_matched')
+                    annotation_item = {**match, **best, 'status': original_status,
+                                       'number': source_item['number'], 'name': source_item['name'],
+                                       'images': source_item.get('images', [])}
+                    annotation = build_wiki_annotation(manifest, annotation_item, reviewed=True)
+                    identifier = annotation['id']
+                    is_imported = identifier in imported
+                    is_skipped = not is_imported and identifier in skipped
+                    items.append(dict(id=identifier, number=source_item['number'], name=source_item['name'],
+                                      difficulty=mode, status=original_status, reason=match.get('reason', ''),
+                                      imported=is_imported, skipped=is_skipped, match_stale=bool(
+                                          matches_document and not matches_valid),
+                                      images=[dict(url=image['url'], role=image.get('role', 'unclassified'),
+                                                   available=image['url'] in downloaded)
+                                              for image in source_item.get('images', [])],
+                                      candidates=candidates, annotation=annotation))
+            counts = {'total': len(items),
+                      'imported': sum(item['imported'] for item in items),
+                      'skipped': sum(item['skipped'] for item in items)}
+            counts['pending'] = counts['total'] - counts['imported'] - counts['skipped']
+            return dict(job=job, map_id=map_id, chapter=loaded['chapter'], revision=loaded['revision'],
+                        image_sha256=image_hash, difficulty=difficulty, items=items, counts=counts)
+
+    def image(self, map_id, difficulty, url):
+        """读取清单中明确记录的 Wiki 缓存图片，拒绝未登记 URL 和越出图片目录的路径。"""
+        if difficulty not in ('normal', 'hard'):
+            raise ValueError('Wiki 图片难度无效。')
+        with self.lock:
+            loaded = self.store.load(map_id)
+            cache, _ = self._review_cache(map_id, difficulty)
+            folder = cache / f"chapter_{loaded['chapter']:02d}" / difficulty
+            manifest = json.loads((folder / 'items.json').read_text(encoding='utf-8'))
+            relative = manifest.get('downloaded', {}).get(url)
+            if not relative:
+                raise ValueError('Wiki 图片未下载或不在当前清单中。')
+            image_root = (folder / 'images').resolve()
+            path = (folder / relative).resolve()
+            if not path.is_relative_to(image_root) or not path.is_file():
+                raise ValueError('Wiki 图片路径无效。')
+            content = path.read_bytes()
+            mime = 'image/png' if content.startswith(b'\x89PNG\r\n\x1a\n') else 'image/jpeg'
+            return content, mime
+
+    def skip(self, payload):
+        """保存当前底图下的跳过状态，支持恢复；已导入条目不允许再标记为跳过。"""
+        with self.lock:
+            review = self.review(payload['id'], 'both')
+            identifier = payload['item']
+            item = next((item for item in review['items'] if item['id'] == identifier), None)
+            if item is None:
+                raise ValueError('收集品不在当前章节的 Wiki 清单中。')
+            if item['imported']:
+                raise ValueError('已导入的收集品不能标记为跳过。')
+            skipped = bool(payload.get('skipped', True))
+            path = self.cache / f"chapter_{review['chapter']:02d}" / 'review.json'
+            state = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
+            values = set(state.get('skipped', [])) if state.get('image_sha256') == review['image_sha256'] else set()
+            if skipped:
+                values.add(identifier)
+            else:
+                values.discard(identifier)
+            temporary = path.with_suffix('.tmp')
+            temporary.write_text(json.dumps({'image_sha256': review['image_sha256'], 'skipped': sorted(values)},
+                                            ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+            temporary.replace(path)
+            return {'item': identifier, 'skipped': skipped}
 
     def apply(self, payload):
         """把匹配通过的条目增量写入标注，返回导入后的状态。

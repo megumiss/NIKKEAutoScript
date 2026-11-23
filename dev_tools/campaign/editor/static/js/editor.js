@@ -26,7 +26,8 @@ const scan = createScanController({ api, token: () => token, moving: () => movem
   refresh: refreshMaps, open: openMap });
 const wiki = createWikiController({ api, token: () => token, map: () => current, save, dirty,
   busy: () => busy || saving || movement.running || Boolean(draft.length || gesture),
-  sync: syncState, reload: () => openMap(current.id) });
+  sync: syncState, reload: () => openMap(current.id), redraw: renderGeometry,
+  preparePlacement, showPosition, add: addWikiAnnotation, has: identifier => Boolean(itemById(identifier)) });
 const connectivity = createConnectivityController({ api, token: () => token, map: () => current, doc: () => doc,
   change, busy: () => busy || saving || movement.running });
 
@@ -149,6 +150,7 @@ async function openMap(id) {
     connectivity.opened(data.connectivity);
     history = []; future = []; draft = []; selected = null; connectFrom = null; gesture = null;
     movement.reset();
+    wiki.opened();
     scan.mapOpened(data);
     $('map-select').value = id; $('layer').value = 'map.png';
     $('layer').querySelector('[value="reference.png"]').disabled = !data.reference;
@@ -280,6 +282,28 @@ function setDifficulty(next) {
   }
   syncCategory(); render();
 }
+function preparePlacement(mode) {
+  if (['normal', 'hard'].includes(mode) && difficulty !== 'all' && difficulty !== mode) setDifficulty(mode);
+  hiddenCategories.delete(`${mode}_collectible`); syncAnnotationFilters();
+  $('show-annotations').checked = true;
+}
+function showPosition(position, mode) {
+  if (!current || !inside(position)) return;
+  preparePlacement(mode);
+  const rect = svg.getBoundingClientRect();
+  view.x = rect.width / 2 - position[0] * view.scale;
+  view.y = rect.height / 2 - position[1] * view.scale;
+  renderGeometry();
+}
+function addWikiAnnotation(annotation, position) {
+  if (!doc || !annotation?.id || itemById(annotation.id) || !inside(position)) return false;
+  const category = `${annotation.difficulty}_collectible`;
+  const item = { ...annotation, type: 'point', category, points: [bounded(position)] };
+  hiddenCategories.delete(category); syncAnnotationFilters();
+  change(() => { doc.objects.push(item); selected = item.id; draft = []; });
+  message(`已加入「${item.label}」，保存后写入地图。可继续补录下一条。`);
+  return true;
+}
 
 /** 同步类型开关；筛选仅保存在当前页面，不写入标注文件，并跨章节保留。 */
 function syncAnnotationFilters() {
@@ -408,6 +432,7 @@ function renderGeometry() {
   renderTerrain();
   connectivity.draw(view.scale);
   movement.draw(view.scale);
+  wiki.draw(view.scale);
   if (!doc || !$('show-annotations').checked) return;
   const z = view.scale;
   for (const item of doc.connections) {
@@ -585,6 +610,7 @@ svg.addEventListener('pointercancel', cancelDraft);
 svg.addEventListener('click', event => {
   if (!doc || busy || movement.running || space || event.button !== 0 || event.detail > 1) return;
   const p = localPoint(event);
+  if (inside(p) && wiki.click(bounded(p))) { event.preventDefault(); return; }
   if (tool === 'move-target') { if (inside(p)) movement.select(bounded(p)); return; }
   if (tool.startsWith('connectivity-') && inside(p)) {
     const point = bounded(p);
@@ -637,7 +663,7 @@ async function save() {
     const stored = JSON.parse(content);
     const bakedText = result.baked ? `${result.baked} 笔道路修订已写入地图原图。` : '';
     message(`已保存 ${stored.objects.length} 个对象、${stored.connections.length} 条连接。${bakedText}${result.backup ? '原文件已备份。' : ''}`, 'success');
-    refreshBackups();
+    refreshBackups(); wiki.saved();
     return true;
   } catch (error) { message(`保存失败：${error.message}`, 'error'); return false; }
   finally { saving = false; syncState(); }
@@ -761,7 +787,7 @@ $('download').addEventListener('click', () => {
   link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 document.addEventListener('keydown', event => {
-  if (movement.running) return;
+  if (movement.running || wiki.keydown(event)) return;
   const editing = event.target.closest('input, textarea, select, [contenteditable]');
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); save(); return; }
   if (editing) return;

@@ -116,7 +116,7 @@
         <svg id="canvas" xmlns="http://www.w3.org/2000/svg" tabindex="0" aria-label="地图画布，使用左侧工具绘制，滚轮缩放">
           <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d6dce5"/></marker></defs>
           <defs><clipPath id="terrain-clip"><rect id="terrain-bounds" x="0" y="0"/></clipPath></defs>
-          <g id="scene"><image id="base-image" x="0" y="0"/><g id="terrain" clip-path="url(#terrain-clip)" pointer-events="none"></g><g id="connectivity-regions" clip-path="url(#terrain-clip)" pointer-events="none"></g><g id="connectivity-corrections" pointer-events="none"></g><g id="connections"></g><g id="objects"></g><g id="handles"></g><g id="draft"></g><g id="terrain-preview" pointer-events="none"></g><g id="movement-markers" pointer-events="none"></g></g>
+          <g id="scene"><image id="base-image" x="0" y="0"/><g id="terrain" clip-path="url(#terrain-clip)" pointer-events="none"></g><g id="connectivity-regions" clip-path="url(#terrain-clip)" pointer-events="none"></g><g id="connectivity-corrections" pointer-events="none"></g><g id="connections"></g><g id="objects"></g><g id="handles"></g><g id="draft"></g><g id="terrain-preview" pointer-events="none"></g><g id="movement-markers" pointer-events="none"></g><g id="wiki-markers" pointer-events="none"></g></g>
         </svg>
         <div id="empty-state" class="empty-state"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="m6 12 12-6 12 6 12-6v30l-12 6-12-6-12 6V12Zm12-6v30m12-24v30"/></svg><h2>打开一张地图，开始标注</h2><p>从「地图与工具」选择地图包。使用 --root 可指定其他地图目录。</p></div>
         <div id="drawing-hint" class="drawing-hint" hidden></div>
@@ -158,13 +158,11 @@
       </section>
       <section id="panel-wiki" class="task-workspace" role="tabpanel" aria-labelledby="tab-wiki" hidden>
         <div class="task-scroll">
-          <div class="task-intro"><span class="eyebrow">COLLECTIBLE MATCHING</span><h3>Wiki 收集品标注</h3><p class="hint">匹配当前地图和道路修订，复核通过后导入。</p></div>
-          <section class="task-section"><div class="section-title"><h3>匹配范围</h3></div><label>攻略难度<select id="wiki-difficulty"><option value="both">普通与困难</option><option value="normal">普通</option><option value="hard">困难</option></select></label></section>
-          <section class="task-section"><div class="section-title"><h3>匹配结果</h3></div><p id="wiki-status" class="status-note" role="status" aria-live="polite">选择地图后开始匹配。</p><div id="wiki-counts" class="result-counts"></div><div id="wiki-review" class="wiki-review" aria-label="收集品匹配结果"></div></section>
-          <div class="inline-note"><strong>导入规则</strong><p>保留已有标注坐标。修改道路或标注后，需重新匹配再导入。</p></div>
-          <details class="task-details"><summary>日志与复核文件</summary><p id="wiki-log" class="muted"></p></details>
+          <div class="task-intro"><span class="eyebrow">COLLECTIBLE MATCHING</span><h3>Wiki 收集品标注</h3><p class="hint">直接补录缓存中的剩余收集品，或重新自动匹配。</p></div>
+          <section class="task-section"><div class="section-title"><h3>缓存补录</h3><span id="wiki-review-summary" class="badge">0</span></div><label>显示范围<select id="wiki-filter"><option value="pending">待处理</option><option value="skipped">已跳过</option><option value="imported">已导入</option><option value="all">全部</option></select></label><div id="wiki-review" class="wiki-review" aria-label="收集品补录队列"></div></section>
+          <section id="wiki-detail" class="task-section" hidden><div class="section-title"><h3 id="wiki-item-title">收集品</h3></div><p id="wiki-item-meta" class="hint"></p><div id="wiki-images" class="wiki-images"></div><label id="wiki-candidate-label">候选位置<select id="wiki-candidates"></select></label><output id="wiki-position" class="wiki-position">尚未选择位置</output><p id="wiki-placement-hint" class="hint"></p><div class="movement-actions"><button id="wiki-accept" class="primary">采用并下一条 <kbd>Enter</kbd></button><button id="wiki-place">地图点选</button></div><div class="movement-actions"><button id="wiki-skip">跳过 <kbd>S</kbd></button><button id="wiki-next">下一条 <kbd>↓</kbd></button></div></section>
+          <details class="task-details"><summary>自动匹配</summary><section class="task-section"><div class="section-title"><h3>匹配范围</h3></div><label>攻略难度<select id="wiki-difficulty"><option value="both">普通与困难</option><option value="normal">普通</option><option value="hard">困难</option></select></label><p id="wiki-status" class="status-note" role="status" aria-live="polite">选择地图后开始匹配。</p><div id="wiki-counts" class="result-counts"></div><div class="movement-actions"><button id="wiki-start" class="primary" disabled>匹配 Wiki 标注</button><button id="wiki-stop" disabled>停止</button><button id="wiki-apply" disabled>导入通过的标注</button></div></section><div class="inline-note"><strong>导入规则</strong><p>自动导入保留已有标注坐标。人工补录先加入当前修改，按 Ctrl+S 保存；跳过状态保存在本地缓存。</p></div><details class="task-details"><summary>日志与复核文件</summary><p id="wiki-log" class="muted"></p></details></details>
         </div>
-        <div class="task-actions"><div class="movement-actions"><button id="wiki-start" class="primary" disabled>匹配 Wiki 标注</button><button id="wiki-stop" disabled>停止</button></div><button id="wiki-apply" disabled>导入通过的标注</button></div>
       </section>
       <section id="panel-movement" class="task-workspace" role="tabpanel" aria-labelledby="tab-movement" hidden>
         <div class="task-scroll">

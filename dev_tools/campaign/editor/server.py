@@ -81,7 +81,12 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
                 if request.path == '/api/wiki':
                     return self.send(wiki.status())
                 if request.path == '/api/wiki/review':
-                    return self.send(wiki.review())
+                    return self.send(wiki.review(params.get('map', [''])[0],
+                                                 params.get('difficulty', ['both'])[0]))
+                if request.path == '/api/wiki/image':
+                    content, mime = wiki.image(params.get('map', [''])[0], params.get('difficulty', [''])[0],
+                                               params.get('url', [''])[0])
+                    return self.send(content, mime)
                 if request.path == '/api/movement/preview':
                     return self.send(movement.preview(params.get('job', [''])[0]), 'image/jpeg')
                 identifier = params.get('map', [''])[0]
@@ -109,7 +114,7 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
             endpoint = urlsplit(self.path).path
             if endpoint not in ('/api/save', '/api/backup/restore', '/api/movement/start', '/api/movement/stop',
                                 '/api/scan/start', '/api/scan/stop', '/api/scan/adopt', '/api/wiki/start',
-                                '/api/wiki/stop', '/api/wiki/apply', '/api/connectivity/preview'):
+                                '/api/wiki/stop', '/api/wiki/apply', '/api/wiki/skip', '/api/connectivity/preview'):
                 return self.send({'error': '未找到资源。'}, status=404)
             try:
                 length = int(self.headers.get('Content-Length', '0'))
@@ -143,6 +148,8 @@ def make_server(store, port=8766, initial=None, movement=None, scans=None, wiki=
                     result = wiki.start(payload)
                 elif endpoint == '/api/wiki/stop':
                     result = wiki.stop(payload['job'])
+                elif endpoint == '/api/wiki/skip':
+                    result = wiki.skip(payload)
                 elif endpoint == '/api/wiki/apply':
                     with device_lock:
                         if movement.status().get('running'):
