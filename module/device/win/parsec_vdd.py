@@ -269,7 +269,15 @@ def start_app():
         _restore_snapshot_restore()
         raise ParsecVddError(f'Failed to start ParsecDisplay: {e}')
     if not _wait_app_ready(process):
-        raise ParsecVddError('Timed out waiting for ParsecDisplay to initialize')
+        exit_code = process.poll()
+        if exit_code is not None:
+            raise ParsecVddError(
+                f'ParsecDisplay exited before initialization (pid={process.pid}, exit_code={exit_code})'
+            )
+        raise ParsecVddError(
+            'Timed out waiting for ParsecDisplay to initialize after 10s: '
+            f'process is still running but no window was detected (pid={process.pid})'
+        )
 
 
 def stop_app(timeout=10):
