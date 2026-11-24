@@ -9,6 +9,8 @@ const props = defineProps<{
   modelValue: any
   options: any[]
   disabled?: boolean
+  inputId?: string
+  label?: string
   placeholder?: string
   loading?: boolean
   loadingText?: string
@@ -54,15 +56,15 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); docum
 
 <template>
   <div ref="root" class="app-select app-combo" :class="{ open, disabled }">
-    <input class="app-combo-input" type="text" :value="currentValue" :disabled="disabled" :placeholder="placeholder" spellcheck="false" @input="onInput" @change="onChange">
-    <button type="button" class="app-combo-toggle" :disabled="disabled" @click="toggle">
+    <input :id="inputId" class="app-combo-input" type="text" :aria-label="label" :value="currentValue" :disabled="disabled" :placeholder="placeholder" spellcheck="false" @input="onInput" @change="onChange">
+    <button type="button" class="app-combo-toggle" :aria-label="label" :aria-expanded="open" :disabled="disabled" @mousedown.prevent @click="toggle">
       <span class="app-select-arrow">›</span>
     </button>
     <Teleport to="body">
       <div v-if="open" ref="pop" class="app-select-pop" :style="popStyle">
         <div v-if="loading" class="app-select-empty">{{ loadingText || '…' }}</div>
         <template v-else>
-          <button v-for="(option, index) in options" :key="index" type="button" class="app-select-option" :class="{ active: valueOf(option) === modelValue }" @click="choose(option)">
+          <button v-for="(option, index) in options" :key="index" type="button" class="app-select-option" :class="{ active: valueOf(option) === modelValue }" @mousedown.prevent @click="choose(option)">
             <span class="app-select-option-label">{{ labelOf(option) }}</span>
             <span v-if="valueOf(option) === modelValue" class="app-select-check"><AppIcon name="check" :size="14" /></span>
           </button>

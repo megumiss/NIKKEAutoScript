@@ -44,7 +44,7 @@ def _field(instance_name, task, group, arg, spec, value):
         display = 'disabled'
     options = [
         {'value': _json_value(option), 'label': _label(f'{group}.{arg}.{option}', str(option))}
-        for option in spec.get('option', [])
+        for option in spec.get('suggestions', spec.get('option', []))
     ]
     data_endpoint = {
         'item_table': f'/api/{{name}}/warehouse',

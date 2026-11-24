@@ -106,7 +106,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   function taskEnabled(task: string) { return schema.value.tasks[task]?.groups?.some((group: any) => group.fields.some((field: Field) => field.key.endsWith('.Scheduler.Enable') && field.value)) }
   function allFields() { return Object.values(schema.value.tasks).flatMap((task: any) => task.groups.flatMap((group: any) => group.fields)) as Field[] }
-  function isWideField(field: Field) { return Boolean(field.path_picker) || ['item_table', 'interception_stone_charts', 'interception_stone_import', 'textarea', 'priority'].includes(field.widget) }
+  function isWideField(field: Field) { return Boolean(field.path_picker) || ['item_table', 'interception_stone_charts', 'interception_stone_import', 'textarea', 'priority', 'combobox'].includes(field.widget) }
 
   async function refreshSpecial(field: Field) { if (field.data_endpoint && field.widget !== 'interception_stone_import') field.special_data = await api.get(field.data_endpoint) }
   // Screen options always keep the stored value as a fallback entry when its

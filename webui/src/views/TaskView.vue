@@ -141,6 +141,7 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
                         <button v-if="field.display === 'show'" type="button" class="dt-clear" :title="t('清空')" @mousedown.prevent @click="clearField(field)"><AppIcon name="x" :size="12" /></button>
                       </div>
                     </template>
+                    <AppComboSelect v-else-if="field.widget === 'combobox'" :input-id="`input-${field.key}`" :label="field.title" :model-value="field.value" :options="field.options" :disabled="field.display !== 'show'" @update:model-value="(value: string) => field.value = value" @change="(value: string) => saveValue(field, value).catch(() => {})"/>
                     <AppComboSelect v-else-if="field.key.endsWith('.Serial')" :model-value="field.value" :options="serialDeviceOptions" :loading="serialDevicesBusy" :loading-text="t('查询中…')" :empty-text="t('未检测到设备')" :disabled="field.display !== 'show'" @update:model-value="(v: string) => field.value = v" @change="(v: string) => saveValue(field, v).catch(() => {})" @dropdown="loadSerialDevices"/>
                     <input v-else :type="field.key.endsWith('.Password') ? 'password' : 'text'" :value="field.value" :readonly="field.display !== 'show'" @input="onTextInput(field, $event)" @change="save(field, $event)">
                   </div>

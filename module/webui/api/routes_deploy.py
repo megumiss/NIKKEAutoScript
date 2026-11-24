@@ -29,6 +29,17 @@ EXCLUDED_KEYS = {'ReadNoticeIds', 'StartupNoticeDismissedId'}
 # narrow control.
 WIDE_KEYS = {'Repository', 'GitExecutable', 'AdbExecutable', 'DesktopUpdateManifest', 'PypiMirror', 'GitProxy',
              'SerialGroup', 'ConsoleAllowHosts', 'ResourceRepository'}
+COMBO_OPTIONS = {
+    'DesktopUpdateManifest': [
+        'https://nkas.megumiss.top/releases/latest/nkas-desktop.json',
+        'https://github.com/megumiss/NIKKEAutoScript/releases/latest/download/nkas-desktop.json',
+    ],
+    'Repository': [
+        'https://git.megumiss.top/megumiss/NIKKEAutoScript',
+        'https://gitee.com/megumiss/NIKKEAutoScript',
+        'https://github.com/megumiss/NIKKEAutoScript',
+    ],
+}
 SELECT_OPTIONS = {
     'UpdateSource': ['git', 'mirrorchyan'],
     'Language': ['zh-CN', 'en-US', 'ja-JP'],
@@ -534,6 +545,9 @@ async def deploy_schema(_: Request):
                 field['default'] = default
                 if field['widget'] == 'select':
                     field['options'] = _select_options(key)
+            if key in COMBO_OPTIONS:
+                field['widget'] = 'combobox'
+                field['options'] = [{'value': value, 'label': value} for value in COMBO_OPTIONS[key]]
             _localize(field)
     return JSONResponse({'groups': groups}, headers={'Cache-Control': 'no-store'})
 

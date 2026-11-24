@@ -131,6 +131,7 @@ table { width:100%; border-collapse:collapse; } th,td { padding:14px 18px; borde
 .field.field-wide { flex-direction:column; align-items:stretch; }
 .field.field-wide .field-label { width:auto; }
 .field.field-wide .field-control { display:block; }
+.field.field-wide .app-combo { width:100%; }
 .log-frag pre { margin:0; white-space:pre-wrap; word-break:break-word; }
 .backend-down { position:fixed; z-index:99; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.45); }
 .backend-down-card { padding:18px 28px; border:1px solid var(--border-light); border-radius:12px; background:var(--card); box-shadow:var(--shadow-hover); font-size:15px; }

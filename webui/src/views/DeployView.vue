@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import AppComboSelect from '../components/AppComboSelect.vue'
 import AppIcon from '../components/AppIcon.vue'
 import AppSelect from '../components/AppSelect.vue'
 import LinkifiedText from '../components/LinkifiedText.vue'
@@ -32,6 +33,7 @@ const { openResetDeployModal } = useModalStore()
               <div class="field-label"><label class="fname" :for="`deploy-${field.key}`">{{ field.title }}</label><div v-if="field.help" class="fhelp"><LinkifiedText :text="field.help" /></div><div v-for="hint in field.hints || []" :key="hint.tag" class="deploy-hint"><span class="deploy-hint-tag">{{ hint.tag }}</span><span>{{ hint.text }}</span></div></div>
               <div class="field-control">
                 <label v-if="field.widget === 'checkbox'" class="switch"><input :id="`deploy-${field.key}`" type="checkbox" :checked="field.value" :disabled="field.saving || field.entryBusy" @change="saveDeployField(field, $event)"><span class="slider"></span></label>
+                <AppComboSelect v-else-if="field.widget === 'combobox'" :input-id="`deploy-${field.key}`" :label="field.title" :model-value="field.value" :options="field.options" :disabled="field.saving" @update:model-value="(value: string) => field.value = value" @change="(value: string) => saveDeployValue(field, value)"/>
                 <AppSelect v-else-if="field.widget === 'select'" :disabled="field.saving" :model-value="field.value" :options="field.options" @change="(value: any) => saveDeployValue(field, value)"/>
                 <div v-else-if="field.widget === 'multiselect'" class="deploy-multisel">
                   <label v-for="opt in field.options" :key="opt.value" class="deploy-multi-opt" :class="{ on: (field.value || []).includes(opt.value) }"><input type="checkbox" hidden :checked="(field.value || []).includes(opt.value)" @change="toggleDeployMulti(field, opt.value)">{{ opt.label }}</label>
