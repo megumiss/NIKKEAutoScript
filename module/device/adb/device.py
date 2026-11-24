@@ -124,6 +124,33 @@ class Device(Screenshot, Control, AppControl, ScreenUnlock):
             'package': self.package,
         }
         self._apply_virtual_display(acquire_display(self._virtual_display_target))
+        self.focus_virtual_display()
+
+    def recover_virtual_display_focus(self, reason='unknown', repin=True) -> bool:
+        """恢复被主屏解锁或桌面操作夺走的虚拟屏焦点。
+
+        仅在虚拟屏就绪后调用；若主屏已锁屏先解锁，再按需通过桥接 REPIN 任务并发送边缘轻触。
+        调用链路绕过 click_record 与 stuck_record_clear，保留超时上限兜底。
+        """
+        if getattr(self, '_virtual_display_id', None) is None:
+            return False
+        logger.warning(f'Virtual display {self._virtual_display_id} focus recovery: {reason}')
+        if (
+            self.config.PhysicalDevice_Enable
+            and self.config.PhysicalDevice_AutoUnlock
+            and self._screen_is_locked()
+        ):
+            self.screen_unlock()
+        if repin:
+            try:
+                self._virtual_display_command(
+                    f'REPIN {self.package}\n'.encode('utf-8'), timeout=3
+                )
+            except RequestHumanTakeover:
+                raise
+            except Exception as e:
+                logger.debug(f'Virtual display repin failed: {e}')
+        return self.focus_virtual_display()
 
     def _apply_virtual_display(self, target):
         self._virtual_display_id = target['display_id']

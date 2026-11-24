@@ -271,19 +271,19 @@ def clearup():
     """
     logger.info("Start clearup")
     from module.webui.serial_orchestrator import serial_orchestrator
-    serial_orchestrator.stop()
-    RemoteAccess.kill_ssh_process()
-    # close_discord_rpc()
-    # stop_ocr_server_process()
-    errors = []
-    for nkas in list(ProcessManager._processes.values()):
-        try:
-            nkas.stop()
-        except Exception as exc:
-            errors.append(str(exc))
-            logger.exception(exc)
     from module.device.adb.virtual_display_session import close_sessions
+    errors = []
     try:
+        serial_orchestrator.stop()
+        RemoteAccess.kill_ssh_process()
+        # close_discord_rpc()
+        # stop_ocr_server_process()
+        for nkas in list(ProcessManager._processes.values()):
+            try:
+                nkas.stop()
+            except Exception as exc:
+                errors.append(str(exc))
+                logger.exception(exc)
         close_sessions()
     finally:
         State.clearup()

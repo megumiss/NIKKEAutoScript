@@ -23,6 +23,22 @@ KEYGUARD_HIDDEN_PATTERNS = [
     re.compile(r'\bmShowingLockscreen=false'),
     re.compile(r'\bisStatusBarKeyguard=false'),
 ]
+SCREEN_AWAKE_FALSE_PATTERNS = [
+    re.compile(r'\bmInteractive=false\b', re.IGNORECASE),
+    re.compile(r'\bmAwake=false\b', re.IGNORECASE),
+    re.compile(r'\bmScreenOnFully=false\b', re.IGNORECASE),
+    re.compile(r'\bmScreenOnEarly=false\b', re.IGNORECASE),
+    re.compile(r'\bmAodShowing=true\b', re.IGNORECASE),
+    re.compile(r'\binteractiveState=INTERACTIVE_STATE_(?:SLEEP|GOING_TO_SLEEP)\b', re.IGNORECASE),
+    re.compile(r'\bscreenState=SCREEN_STATE_(?:OFF|DOZE(?:_SUSPEND)?|ON_SUSPEND)\b', re.IGNORECASE),
+]
+SCREEN_AWAKE_TRUE_PATTERNS = [
+    re.compile(r'\bmInteractive=true\b', re.IGNORECASE),
+    re.compile(r'\bmAwake=true\b', re.IGNORECASE),
+    re.compile(r'\bmScreenOnFully=true\b', re.IGNORECASE),
+    re.compile(r'\binteractiveState=INTERACTIVE_STATE_AWAKE\b', re.IGNORECASE),
+    re.compile(r'\bscreenState=SCREEN_STATE_ON\b', re.IGNORECASE),
+]
 # 仅在以上字段都缺失时使用：未锁屏下拉通知栏时焦点同样是 NotificationShade，不能优先于明确字段。
 # 锁屏时焦点在系统锁屏窗口，Android 12+ 为 NotificationShade，更早为 StatusBar
 FOCUS_PATTERN = re.compile(r'mCurrentFocus=Window\{[^}]*\}')
@@ -52,6 +68,15 @@ class ScreenUnlock(Connection):
         focus = FOCUS_PATTERN.search(output)
         if focus:
             return bool(FOCUS_KEYGUARD_PATTERN.search(focus.group(0)))
+        return None
+
+    @staticmethod
+    def parse_screen_awake(output: str):
+        """解析主屏亮屏交互状态；仅显式确认亮屏且非熄屏/AOD时返回 True。"""
+        if any(pattern.search(output) for pattern in SCREEN_AWAKE_FALSE_PATTERNS):
+            return False
+        if any(pattern.search(output) for pattern in SCREEN_AWAKE_TRUE_PATTERNS):
+            return True
         return None
 
     def _screen_is_locked(self) -> bool:
@@ -113,7 +138,16 @@ class ScreenUnlock(Connection):
             return
         logger.hr('Screen unlock', level=2)
 
-        # WAKEUP 对已亮屏无副作用，无条件发送，不依赖各 ROM 不一致的亮屏字段（如三星 AOD）
+        # 已明确处于亮屏交互态且未锁屏时跳过 KEYCODE_WAKEUP，避免无谓抢走虚拟屏焦点。
+        state_output = self.adb_shell(KEYGUARD_STATE_COMMAND)
+        if (
+            self.parse_screen_awake(state_output) is True
+            and self.parse_keyguard_showing(state_output) is False
+        ):
+            logger.info('Screen is not locked')
+            return
+
+        # 未知或非亮屏状态保持无条件 WAKEUP，兼容不输出明确字段的 ROM（如三星 AOD）
         self._unlock_keyevent('KEYCODE_WAKEUP')
         time.sleep(1)
         if not self._screen_is_locked():

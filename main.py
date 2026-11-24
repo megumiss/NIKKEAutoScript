@@ -69,8 +69,8 @@ class NikkeAutoScript:
         try:
             config = NikkeConfig(config_name=self.config_name)
             return config
-        except RequestHumanTakeover:
-            logger.critical('Request human takeover')
+        except RequestHumanTakeover as e:
+            logger.critical(f'Request human takeover: {e}' if str(e) else 'Request human takeover')
             exit(1)
         except Exception as e:
             logger.exception(e)
@@ -94,9 +94,9 @@ class NikkeAutoScript:
                 device = Device(config=self.config)
 
             return device
-        except RequestHumanTakeover:
+        except RequestHumanTakeover as e:
             self._post_action()
-            logger.critical('Request human takeover')
+            logger.critical(f'Request human takeover: {e}' if str(e) else 'Request human takeover')
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     config=self.config,
@@ -241,8 +241,8 @@ class NikkeAutoScript:
                 )
             self._post_action()
             exit(1)
-        except RequestHumanTakeover:
-            logger.critical('Request human takeover')
+        except RequestHumanTakeover as e:
+            logger.critical(f'Request human takeover: {e}' if str(e) else 'Request human takeover')
             if self.config.Notification_WhenDailyTaskCrashed:
                 handle_notify(
                     config=self.config,

@@ -132,6 +132,18 @@ class UI(InfoHandler):
     def ui_is_loading(self):
         return self.appear_any(UI_LOADING_BUTTONS, offset=(30, 30))
 
+    def _is_virtual_display_active(self) -> bool:
+        """当前设备是否处于已就绪的虚拟屏上下文，供画面异常自恢复逻辑复用。"""
+        return (
+            getattr(self.device, '_virtual_display_id', None) is not None
+            and callable(getattr(self.device, 'recover_virtual_display_focus', None))
+        )
+
+    def _is_black_frame(self, threshold: int = 20) -> bool:
+        """当前最近一帧截图是否为纯黑/全暗无效帧。"""
+        image = getattr(self.device, 'image', None)
+        return image is not None and image.size > 0 and int(image.max()) <= threshold
+
     def ui_get_current_page(self, skip_first_screenshot=True):
         logger.info('UI get current page')
 
@@ -145,6 +157,10 @@ class UI(InfoHandler):
             self.device.get_orientation()
 
         timeout = Timer(30, count=20).start()
+        vd_enabled = self._is_virtual_display_active()
+        vd_recovered = False
+        vd_recover_timer = Timer(5, count=4).start()
+        black_streak = 0
 
         while 1:
             if skip_first_screenshot:
@@ -168,6 +184,7 @@ class UI(InfoHandler):
                     return page
 
             if self.ui_is_loading():
+                black_streak = 0
                 timeout.reset()
                 continue
 
@@ -175,14 +192,32 @@ class UI(InfoHandler):
             logger.info('Unknown ui page')
             # 加载画面
             if self.appear_then_click(GOTO_MAIN, offset=(30, 30), interval=2):
+                black_streak = 0
                 timeout.reset()
                 continue
             if self.ui_additional():
+                black_streak = 0
                 timeout.reset()
                 continue
 
+            if vd_enabled:
+                is_black = self._is_black_frame()
+                black_streak = black_streak + 1 if is_black else 0
+                if not vd_recovered and (black_streak >= 2 or vd_recover_timer.reached()):
+                    self.device.recover_virtual_display_focus(
+                        reason='black frame' if is_black else 'unknown page',
+                        repin=True,
+                    )
+                    vd_recovered = True
+                    timeout.reset()
+                    continue
+
             app_check()
             rotation_check()
+
+        if vd_enabled and self._is_black_frame() and black_streak >= 3:
+            logger.warning('Virtual display remained black during page detection; trigger Restart')
+            raise GameNotRunningError('Virtual display frame remained black')
 
         # Unknown page, need manual switching
         logger.warning('Unknown ui page')

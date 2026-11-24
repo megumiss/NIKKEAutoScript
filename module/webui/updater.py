@@ -469,8 +469,13 @@ class Updater(DeployConfig, GitManager, PipManager):
                     f.writelines(names)
                 from module.webui.app import clearup
 
-                clearup()
-                self._trigger_reload(0)
+                try:
+                    clearup()
+                except Exception as exc:
+                    logger.exception(exc)
+                    logger.warning('Clearup finished with errors; continuing reload')
+                finally:
+                    self._trigger_reload(0)
             else:
                 self.state = "finish"
         else:
