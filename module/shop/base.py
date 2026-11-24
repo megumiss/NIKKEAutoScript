@@ -100,17 +100,23 @@ class ShopBase(UI):
             # 处理奖励领取
             if click_timer.reached() and self.handle_reward(1):
                 _confirm_timer.reset()
+                reward_timeout = Timer(10, count=10).start()
                 while 1:
                     self.device.screenshot()
                     if self.handle_reward(1):
                         _confirm_timer.reset()
+                        reward_timeout.reset()
                         continue
-                    if (
-                        not self.appear(REWARD, offset=(30, 30), static=False)
-                        and self.appear(SHOP_CHECK, offset=(5, 5))
-                        and _confirm_timer.reached()
-                    ):
-                        return
+                    if not self.appear(REWARD, offset=(30, 30), static=False):
+                        if self.appear(SHOP_CHECK, offset=(5, 5)) and _confirm_timer.reached():
+                            return
+                        if reward_timeout.reached():
+                            logger.warning(
+                                'Reward loop timed out without SHOP_CHECK, returning to purchase loop'
+                            )
+                            shop_return_timer.reset()
+                            click_timer.reset()
+                            break
 
             # 点击 BUY 后抑制 MAX 防止误关奖励窗；仅当仍在确认框且未点过 MAX 时允许重试。
             can_retry_max = (

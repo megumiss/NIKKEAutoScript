@@ -463,14 +463,19 @@ class InfoHandler(ModuleBase):
                         offset=(30, 30),
                     ):
                         break
-                    if self.appear(LIPASS_PASSWORD_CHECK, offset=(30, 30)) and self.appear_then_click(
-                        LIPASS_NEXT, threshold=20, interval=3
+                    next_wait_ready = (
+                        next_clicked_at is None or time.monotonic() - next_clicked_at >= 5
+                    )
+                    if (
+                        next_wait_ready
+                        and self.appear(LIPASS_PASSWORD_CHECK, offset=(30, 30))
+                        and self.appear_then_click(LIPASS_NEXT, threshold=20, interval=3)
                     ):
                         next_clicked_at = time.monotonic()
                         continue
                     # 仅在 LIPASS_NEXT 尚未就绪且非刚提交后的 5s 等待期时收起软键盘，避免交替连点。
                     if (
-                        (next_clicked_at is None or time.monotonic() - next_clicked_at >= 5)
+                        next_wait_ready
                         and not self.appear(LIPASS_PASSWORD_INPUT, offset=(30, 30))
                         and not self.appear(LIPASS_NEXT, threshold=20)
                         and self.appear_then_click(LIPASS_PASSWORD_CHECK, offset=(30, 30), interval=3)
