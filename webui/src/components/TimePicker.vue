@@ -96,7 +96,7 @@ onBeforeUnmount(() => { document.removeEventListener('click', onDocClick); docum
 .tp-btn:disabled { cursor: not-allowed; }
 .tp-value { flex: 1; overflow: hidden; text-align: left; white-space: nowrap; }
 .tp-value.empty { color: var(--text-3); }
-.tp-arrow { color: var(--text-3); font-size: 13px; transform: rotate(90deg); transition: transform .15s; }
+.tp-arrow { flex: none; color: var(--text-3); font-size: 28px; line-height: 1; transform: rotate(90deg); transition: transform .15s; }
 .tp.open .tp-arrow { transform: rotate(-90deg); }
 .tp-pop { position: fixed; z-index: 1000; display: flex; gap: 4px; align-items: stretch; padding: 6px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); box-shadow: var(--shadow-hover); animation: rise .15s ease both; }
 .tp-col { width: 58px; max-height: 216px; overflow-y: auto; }
