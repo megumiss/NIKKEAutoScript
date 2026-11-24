@@ -161,6 +161,31 @@ class Updater(DeployConfig, GitManager, PipManager):
         logger.info('[ success ]')
         return True
 
+    def _git_remote_tip(self, source, timeout=20) -> str:
+        """查询远端分支的提交号，不下载提交、目录或文件对象。
+
+        用于定时更新检查的快速路径；超时、命令执行失败或远端未返回目标分支时
+        返回空字符串，由调用方回退到带深度和 blob 过滤的 fetch。
+        """
+        command = [self.git, 'ls-remote', source, f'refs/heads/{self.Branch}']
+        logger.info(subprocess.list2cmdline(command))
+        try:
+            result = subprocess.run(
+                command, cwd=self.root_filepath, capture_output=True, text=True,
+                encoding='utf-8', errors='replace', timeout=timeout,
+            )
+        except subprocess.TimeoutExpired:
+            logger.warning(f'Git remote check timed out after {timeout}s')
+            return ''
+        except OSError as error:
+            logger.warning(f'Unable to check Git remote ({type(error).__name__})')
+            return ''
+        if result.returncode:
+            logger.info(f'[ allowed failure ], error_code: {result.returncode}')
+            return ''
+        output = result.stdout.strip()
+        return output.split()[0] if output else ''
+
     def _check_update(self) -> bool:
         self.state = "checking"
         self.check_error = ''
@@ -215,12 +240,18 @@ class Updater(DeployConfig, GitManager, PipManager):
                 logger.info(f"New update available")
                 return True
             else:
-                # failed, should fallback to `git pull`
+                # failed, fall back to ls-remote and filtered fetch
                 pass
 
-        source = "origin"
+        source = 'origin'
+        local_sha, _, _, _ = self.get_commit()
+        remote_sha = self._git_remote_tip(source)
+        if remote_sha and local_sha == remote_sha:
+            logger.info('No update')
+            return False
+
         for _ in range(3):
-            if self._git_fetch(source):
+            if self._git_fetch(source, depth=20, filter_spec='blob:none'):
                 break
         else:
             logger.warning("Git fetch failed")
@@ -229,7 +260,6 @@ class Updater(DeployConfig, GitManager, PipManager):
                 "Check the network connection or the repository address."
             )
 
-        local_sha, _, _, _ = self.get_commit()
         sha1, _, _, message = self.get_commit(f"{source}/{self.Branch}")
 
         if sha1 and local_sha != sha1:
