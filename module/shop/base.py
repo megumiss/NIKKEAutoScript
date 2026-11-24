@@ -1,9 +1,11 @@
+import time
 from functools import cached_property
 
 from module.base.button import Button
 from module.base.timer import Timer
 from module.base.utils import exec_file, mask_area
 from module.event.assets import SHOP_MONEY_LACK
+from module.handler.assets import REWARD
 from module.logger import logger
 from module.map.map_grids import SelectedGrids
 from module.shop.assets import BUY, CANCEL, MAX, NO_MONEY, PURCHASE_CHECK, SHIFTY_SHOP_CHECK
@@ -76,8 +78,11 @@ class ShopBase(UI):
         """
         self.device.click_record_clear()
         _confirm_timer = Timer(1, 2).start()
+        shop_return_timer = Timer(4, count=6).start()
         click_timer = Timer(0.3)
         max_clicks = 0
+        purchased = False
+        buy_clicked_at = None
         while 1:
             if skip_first_screenshot:
                 skip_first_screenshot = False
@@ -92,10 +97,32 @@ class ShopBase(UI):
             if self.appear(SHOP_MONEY_LACK, offset=30, static=False):
                 raise NotEnoughMoneyError
 
-            # 检查是否达到最大购买数量
+            # 处理奖励领取
+            if click_timer.reached() and self.handle_reward(1):
+                _confirm_timer.reset()
+                while 1:
+                    self.device.screenshot()
+                    if self.handle_reward(1):
+                        _confirm_timer.reset()
+                        continue
+                    if (
+                        not self.appear(REWARD, offset=(30, 30), static=False)
+                        and self.appear(SHOP_CHECK, offset=(5, 5))
+                        and _confirm_timer.reached()
+                    ):
+                        return
+
+            # 点击 BUY 后抑制 MAX 防止误关奖励窗；仅当仍在确认框且未点过 MAX 时允许重试。
+            can_retry_max = (
+                max_clicks == 0
+                and buy_clicked_at is not None
+                and time.monotonic() - buy_clicked_at >= 2.8
+                and self.appear(PURCHASE_CHECK, offset=(5, 5), static=False)
+            )
             if (
                 click_timer.reached()
                 and max_clicks < 3
+                and (not purchased or can_retry_max)
                 and self.appear_then_click(MAX, offset=30, threshold=0.9, interval=1)
             ):
                 max_clicks += 1
@@ -105,21 +132,24 @@ class ShopBase(UI):
 
             # 点击确认购买按钮
             if click_timer.reached() and self.appear_then_click(BUY, offset=(30, 30), interval=3, static=False):
+                purchased = True
+                buy_clicked_at = time.monotonic()
+                shop_return_timer.reset()
                 click_timer.reset()
                 continue
 
-            # 处理奖励领取
-            if click_timer.reached() and self.handle_reward(1):
-                skip_first_screenshot = True
-                while 1:
-                    if skip_first_screenshot:
-                        skip_first_screenshot = False
-                    else:
-                        self.device.screenshot()
-                    self.handle_reward(1)
-                    if self.appear(SHOP_CHECK, offset=(5, 5)) and _confirm_timer.reached():
-                        max_clicks = 0
-                        return
+            if (
+                purchased
+                and not self.appear(PURCHASE_CHECK, offset=(5, 5), static=False)
+                and not self.appear(BUY, offset=(30, 30), static=False)
+                and self.appear(SHOP_CHECK, offset=(5, 5))
+                and SHOP_CHECK.appear_on(self.device.image, 25)
+            ):
+                if shop_return_timer.reached():
+                    logger.warning('Purchase returned to shop page without reward confirmation')
+                    return
+            else:
+                shop_return_timer.reset()
 
     def process_purchase(self, products: SelectedGrids, check_price=False, refresh=False, skip_first_screenshot=True):
         """
