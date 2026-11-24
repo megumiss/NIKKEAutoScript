@@ -87,11 +87,14 @@
 
 ## 推图设置
 
+- `AutoMainStory.CampaignSettings.ResourceRepository`：当前实例的地图资源同步仓库，支持预设选择和自定义地址；
+  地址保存到 `config/<实例名>.json`，不使用部署配置。同步后的 `data/resources/` 仍由所有实例共用，
+  同时只允许一个资源同步任务；Mirror酱继续使用部署页的更新源与 CDK，不使用仓库地址。
 - `CampaignSettings.MissedEnemyScan`：Boss 前遗漏补扫，默认关闭；不影响开局／恢复扫描、
   普通敌人处理、按需侦察和安全检查。开启后检查章节敌人进度并补扫遗漏区域。
 - `CampaignSettings.DebugMode`：调试留档，默认关闭；实时预览和正常任务不依赖该开关。
 
-设置按任务保存，并在下次启动生效。
+设置按任务保存；仓库地址在下次手动同步或版本检查时生效，其余设置在下次启动任务时生效。
 
 ## 运行证据与离线回放
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { api } from '../api/client'
+import AppComboSelect from './AppComboSelect.vue'
 import { t } from '../i18n'
 import { useWorkspaceStore } from '../stores/workspace'
 import type { Field } from '../types'
@@ -13,6 +14,9 @@ type Resource = {
   remote: { sha?: string | null; branch?: string | null; version?: string | null; error?: string | null }
 }
 const workspace = useWorkspaceStore()
+const repositoryField = computed<Field>(() => workspace.taskSchema?.groups
+  .find((group: any) => group.key === 'CampaignSettings')?.fields
+  .find((field: Field) => field.key.endsWith('.ResourceRepository')))
 const checkboxFields = computed<Field[]>(() => workspace.taskSchema?.groups
   .find((group: any) => group.key === 'CampaignSettings')?.fields
   .filter((field: Field) => field.widget === 'checkbox') ?? [])
@@ -24,16 +28,22 @@ let timer: number | undefined
 // 打开页面时只检查资源目录与版本；下载仅由同步按钮触发。
 async function load(check = true) {
   window.clearTimeout(timer)
+  const name = workspace.selectedName
   try {
-    const result: Resource = await api.get(check ? '/api/resource' : '/api/resource?check=0')
+    const endpoint = `/api/${encodeURIComponent(name)}/resource`
+    const result: Resource = await api.get(check ? endpoint : `${endpoint}?check=0`)
+    if (name !== workspace.selectedName) return
     resource.value = result
     error.value = ''
     if (result.syncing) { timer = window.setTimeout(() => load(false), 2000); return }
     if (!check) { timer = window.setTimeout(() => load(true), 300); return }
-  } catch (reason) { error.value = String(reason) }
+  } catch (reason) { if (name === workspace.selectedName) error.value = String(reason) }
 }
 async function sync() {
-  try { await api.post('/api/resource/sync'); error.value = '' } catch (reason) { error.value = String(reason); return }
+  try {
+    await api.post(`/api/${encodeURIComponent(workspace.selectedName)}/resource/sync`)
+    error.value = ''
+  } catch (reason) { error.value = String(reason); return }
   timer = window.setTimeout(() => load(false), 1500)
 }
 const summary = computed(() => {
@@ -58,7 +68,7 @@ const stateText = computed(() => {
 })
 const stateClass = computed(() => [resource.value?.condition, { syncing: resource.value?.syncing, failed: resource.value?.state === 'failed' }])
 const message = computed(() => error.value || resource.value?.error || resource.value?.remote?.error || '')
-load()
+watch(() => workspace.selectedName, () => { resource.value = null; error.value = ''; void load() }, { immediate: true })
 onBeforeUnmount(() => window.clearTimeout(timer))
 </script>
 
@@ -67,7 +77,6 @@ onBeforeUnmount(() => window.clearTimeout(timer))
     <button class="group-head" @click="collapsed = !collapsed">
       <div class="group-title">
         <h4>{{ t('推图设置') }}</h4>
-        <div class="group-help">{{ t('自动主线与收集品任务共用的设置。章节地图等数据来自独立的资源仓库，按需同步，不随 NKAS 更新。') }}</div>
       </div>
       <span class="group-summary">›</span>
     </button>
@@ -75,10 +84,19 @@ onBeforeUnmount(() => window.clearTimeout(timer))
       <div class="field">
         <div class="field-label">
           <div class="fname">{{ t('地图资源') }}<span v-if="stateText" class="resource-state" :class="stateClass">{{ stateText }}</span></div>
-          <div class="fhelp">{{ summary }}<br>{{ t('根据部署页的更新源，使用 Git 资源仓库或 Mirror酱同步。') }}</div>
+          <div class="fhelp">{{ summary }}</div>
         </div>
         <div class="field-control resource-control">
           <button class="btn primary" :disabled="!resource || resource.syncing" @click="sync">{{ resource?.syncing ? t('同步中…') : t('同步资源') }}</button>
+        </div>
+      </div>
+      <div v-if="repositoryField" :id="`field-${repositoryField.key}`" class="field field-wide">
+        <div class="field-label">
+          <label class="fname" for="campaign-ResourceRepository">{{ repositoryField.title }}</label>
+          <div class="fhelp">{{ repositoryField.help }}</div>
+        </div>
+        <div class="field-control">
+          <AppComboSelect input-id="campaign-ResourceRepository" :label="repositoryField.title" :model-value="repositoryField.value" :options="repositoryField.options" :disabled="resource?.syncing || repositoryField.display !== 'show'" @update:model-value="(value: string) => repositoryField.value = value" @change="(value: string) => workspace.saveValue(repositoryField, value).then(() => load()).catch(() => {})"/>
         </div>
       </div>
       <div v-for="field in checkboxFields" :id="`field-${field.key}`" :key="field.key" class="field">

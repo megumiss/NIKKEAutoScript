@@ -482,6 +482,14 @@ Overclock:
     type: textarea
     mode: lines
 CampaignSettings:
+  ResourceRepository:
+    value: 'https://github.com/megumiss/NIKKEAutoScriptResource'
+    type: input
+    widget: combobox
+    suggestions:
+      - 'https://git.megumiss.top/megumiss/NIKKEAutoScriptResource'
+      - 'https://gitee.com/megumiss/NIKKEAutoScriptResource'
+      - 'https://github.com/megumiss/NIKKEAutoScriptResource'
   DebugMode: false
   MissedEnemyScan: false
 AutoTower:

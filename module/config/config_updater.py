@@ -340,7 +340,6 @@ class ConfigGenerator:
         template = poor_yaml_read(DEPLOY_TEMPLATE)
         cn = {
             'Repository': 'https://git.megumiss.top/megumiss/NIKKEAutoScript',
-            'ResourceRepository': 'https://git.megumiss.top/megumiss/NIKKEAutoScriptResource',
             'PypiMirror': 'https://mirrors.aliyun.com/pypi/simple',
             'Language': 'zh-CN',
         }

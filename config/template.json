@@ -983,6 +983,7 @@
   },
   "AutoMainStory": {
     "CampaignSettings": {
+      "ResourceRepository": "https://github.com/megumiss/NIKKEAutoScriptResource",
       "DebugMode": false,
       "MissedEnemyScan": false
     },
@@ -992,6 +993,7 @@
   },
   "AutoMainCollectible": {
     "CampaignSettings": {
+      "ResourceRepository": "https://github.com/megumiss/NIKKEAutoScriptResource",
       "DebugMode": false,
       "MissedEnemyScan": false
     },

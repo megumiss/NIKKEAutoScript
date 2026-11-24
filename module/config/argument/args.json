@@ -4095,6 +4095,16 @@
   },
   "AutoMainStory": {
     "CampaignSettings": {
+      "ResourceRepository": {
+        "type": "input",
+        "value": "https://github.com/megumiss/NIKKEAutoScriptResource",
+        "widget": "combobox",
+        "suggestions": [
+          "https://git.megumiss.top/megumiss/NIKKEAutoScriptResource",
+          "https://gitee.com/megumiss/NIKKEAutoScriptResource",
+          "https://github.com/megumiss/NIKKEAutoScriptResource"
+        ]
+      },
       "DebugMode": {
         "type": "checkbox",
         "value": false
@@ -4115,6 +4125,16 @@
   },
   "AutoMainCollectible": {
     "CampaignSettings": {
+      "ResourceRepository": {
+        "type": "input",
+        "value": "https://github.com/megumiss/NIKKEAutoScriptResource",
+        "widget": "combobox",
+        "suggestions": [
+          "https://git.megumiss.top/megumiss/NIKKEAutoScriptResource",
+          "https://gitee.com/megumiss/NIKKEAutoScriptResource",
+          "https://github.com/megumiss/NIKKEAutoScriptResource"
+        ]
+      },
       "DebugMode": {
         "type": "checkbox",
         "value": false

@@ -21,6 +21,7 @@ from pathlib import Path, PurePosixPath
 
 from deploy.mirrorchyan import RESOURCE_RID, MirrorError, download, latest, read_cdk
 from module.campaign.map.paths import RESOURCE_ROOT
+from module.config.config_generated import GeneratedConfig
 from module.logger import logger
 from module.webui.setting import State
 
@@ -48,14 +49,6 @@ class ResourceManager:
         self.log = []
         self.remote = None
         self.thread = None
-
-    @property
-    def repository(self):
-        """部署配置里的资源仓库地址，未配置时为空串。
-
-        配置项可能不存在或为 None，这里统一成去掉空白的字符串，调用方只需判断真假。
-        """
-        return str(getattr(State.deploy_config, 'ResourceRepository', '') or '').strip()
 
     @property
     def use_mirror(self):
@@ -161,9 +154,13 @@ class ResourceManager:
                 pass
         return info
 
-    def remote_info(self, force=False):
-        """按更新源查询 Mirror酱版本，或资源仓库的提交、分支与压缩包版本。"""
-        repository = self.repository
+    def remote_info(self, force=False, repository=None):
+        """按更新源查询指定任务仓库或 Mirror酱的版本；未指定仓库时使用任务默认值。
+
+        仓库地址由调用方从实例配置读取，缓存按资源源区分，不读取部署配置中的旧仓库地址。
+        """
+        repository = str(repository if repository is not None
+                         else GeneratedConfig.CampaignSettings_ResourceRepository).strip()
         mirror = self.use_mirror
         source = RESOURCE_RID if mirror else repository
         with self.lock:
@@ -266,15 +263,25 @@ class ResourceManager:
                 last = exc
         raise ValueError(f'读取远端 version.json 失败：{last}')
 
-    def status(self, check=True):
+    def status(self, check=True, repository=None):
         """汇总本地、远端与同步状态，供界面展示。
 
         condition 是给调用方的结论：missing（本地没有）、outdated（有新版本）、latest（最新）、
         unknown（无法比较）。比较优先用提交号，只有 zip 路径没有提交号时才退回 version 字段；
         任一端缺少可比字段就是 unknown。check=False 只读缓存的远端信息，用于同步过程中的高频轮询。
+        repository 由实例推图设置传入；未指定时使用任务默认值，不复用其他实例的远端缓存。
         """
+        repository = str(repository if repository is not None
+                         else GeneratedConfig.CampaignSettings_ResourceRepository).strip()
         local = self.local()
-        remote = self.remote_info() if check else (self.remote or {})
+        if check:
+            remote = self.remote_info(repository=repository)
+        else:
+            with self.lock:
+                remote = self.remote or {}
+            source = RESOURCE_RID if self.use_mirror else repository
+            if remote.get('source') != source:
+                remote = {}
         up_to_date = None
         if local['exists'] and remote and not remote.get('error'):
             if remote.get('sha') and local.get('sha'):
@@ -289,25 +296,26 @@ class ResourceManager:
             condition = 'latest' if up_to_date else 'outdated'
         with self.lock:
             return dict(state=self.state, syncing=self.state == 'syncing', condition=condition, local=local,
-                        remote=remote, error=self.error, log=list(self.log[-20:]), repository=self.repository,
+                        remote=remote, error=self.error, log=list(self.log[-20:]), repository=repository,
                         git=bool(self.git_executable()))
 
     # ---- 同步 ----
-    def start_sync(self):
+    def start_sync(self, repository=None):
         """启动后台同步线程；已有同步在跑时返回 False 而不排队。
 
         状态切换和起线程必须在同一把锁内完成，否则多个调用方可能同时判断为空闲、起两个线程
         去写同一个资源目录。返回 False 的调用方应改为等待当前同步结束。
+        仓库地址在启动线程时冻结，之后切换实例或编辑配置不会改变本次同步目标。
         """
         with self.lock:
             if self.state == 'syncing':
                 return False
             self.state, self.error, self.log = 'syncing', '', []
-            self.thread = threading.Thread(target=self._sync, name='resource-sync', daemon=True)
+            self.thread = threading.Thread(target=self._sync, args=(repository,), name='resource-sync', daemon=True)
             self.thread.start()
         return True
 
-    def _sync(self):
+    def _sync(self, repository=None):
         """同步线程主体：按更新源选择 Mirror酱完整包、Git 克隆/快进或 GitHub 压缩包。
 
         强制刷新一次远端信息，不能用缓存——同步前必须确认远端版本。完成后把 remote 缓存清掉，
@@ -316,7 +324,7 @@ class ResourceManager:
         """
         try:
             self._log('开始同步资源…')
-            remote = self.remote_info(force=True)
+            remote = self.remote_info(force=True, repository=repository)
             if remote.get('error'):
                 raise ValueError(remote['error'])
             RESOURCE_ROOT.parent.mkdir(parents=True, exist_ok=True)

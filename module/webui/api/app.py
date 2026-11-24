@@ -119,6 +119,8 @@ def mount_api(app):
         Route('/api/{name:str}/bla/login/cancel', routes_bla.login_cancel, methods=['POST']),
         Route('/api/{name:str}/bla/bind', routes_bla.bind_to_bot, methods=['POST']),
         Route('/api/{name:str}/screenshot', routes_preview.screenshot, methods=['GET']),
+        Route('/api/{name:str}/resource', routes_resource.status, methods=['GET']),
+        Route('/api/{name:str}/resource/sync', routes_resource.sync, methods=['POST']),
         Route('/api/{name:str}/campaign', routes_campaign.campaign, methods=['GET']),
         Route('/api/{name:str}/campaign/map/{chapter:int}', routes_campaign.map_image, methods=['GET']),
         Route('/api/{name:str}/scrcpy', routes_preview.scrcpy, methods=['GET']),

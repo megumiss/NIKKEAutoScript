@@ -1419,6 +1419,10 @@
       "name": "Campaign settings",
       "help": ""
     },
+    "ResourceRepository": {
+      "name": "Sync URL",
+      "help": "Used only when syncing from Git."
+    },
     "DebugMode": {
       "name": "Debug mode",
       "help": "Off by default. Save screenshots, events and offline replays for each campaign run to help diagnose issues.\nSave location: log/campaign/<difficulty>_<chapter>/runs/<timestamp>_<random-suffix>/\nAfter the task ends, open index.html in that folder to view the replay."
