@@ -95,23 +95,31 @@ class LoginHandler(UI):
                 continue
 
             # 仅虚拟屏模式：周期检测纯黑或像素完全冻结，防止 Android <=13 失焦冻死等到 8 分钟超时。
-            if vd_enabled and vd_focus_timer.reached():
+            if vd_enabled:
                 image = getattr(self.device, 'image', None)
-                if self._is_black_frame():
-                    self.device.recover_virtual_display_focus(reason='black frame', repin=True)
-                    vd_prev_sample = None
-                elif image is not None and image.size > 0:
-                    sample = image[::16, ::16]
-                    if (
-                        vd_prev_sample is not None
-                        and sample.shape == vd_prev_sample.shape
-                        and np.array_equal(sample, vd_prev_sample)
-                    ):
-                        self.device.recover_virtual_display_focus(reason='frozen frame', repin=True)
+                if vd_focus_timer.reached():
+                    if self._is_black_frame():
+                        self.device.recover_virtual_display_focus(reason='black frame', repin=True)
                         vd_prev_sample = None
-                    else:
-                        vd_prev_sample = sample.copy()
-                vd_focus_timer.reset()
+                    elif image is not None and image.size > 0:
+                        sample = image[::16, ::16]
+                        if (
+                            vd_prev_sample is not None
+                            and sample.shape == vd_prev_sample.shape
+                            and np.array_equal(sample, vd_prev_sample)
+                        ):
+                            self.device.recover_virtual_display_focus(reason='frozen frame', repin=True)
+                            vd_prev_sample = None
+                        else:
+                            vd_prev_sample = sample.copy()
+                    vd_focus_timer.reset()
+                elif (
+                    vd_prev_sample is None
+                    and image is not None
+                    and image.size > 0
+                    and not self._is_black_frame()
+                ):
+                    vd_prev_sample = image[::16, ::16].copy()
 
     def handle_app_login(self) -> bool:
         """
