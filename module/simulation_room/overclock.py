@@ -90,6 +90,12 @@ class Overclock(UI):
             logger.error(f"Button asset '{button_name}' not found for option '{option}'")
             raise
 
+    def _fight_enemy(self, button):
+        """执行超频敌人事件，限制同一准备面板内反复尝试开战。"""
+        from module.simulation_room.event import EnemyEvent
+
+        EnemyEvent(button=button, config=self.config, device=self.device).run(max_start_attempts=3)
+
     def _resume_battle(self):
         """接续重登后已打开的超频战斗准备弹窗，避免把它当作事件选择界面。"""
         if not self.appear(OVERCLOCK_RESET_TIME_IN, offset=(30, 30), threshold=0.85):
@@ -97,10 +103,8 @@ class Overclock(UI):
         if not self.appear(FIGHT, offset=(30, 30), threshold=0.85):
             return False
 
-        from module.simulation_room.event import EnemyEvent
-
         logger.info('Resume prepared overclock battle')
-        EnemyEvent(button=None, config=self.config, device=self.device).run()
+        self._fight_enemy(button=None)
         return True
 
     def get_next_event(self):
@@ -119,9 +123,7 @@ class Overclock(UI):
                 SPECIAL_CHECK._button_offset = area
 
         if NORMAL_CHECK._button_offset:
-            from module.simulation_room.event import EnemyEvent
-
-            EnemyEvent(button=NORMAL_CHECK.location, config=self.config, device=self.device).run()
+            self._fight_enemy(button=NORMAL_CHECK.location)
             NORMAL_CHECK._button_offset = None
             return
 
@@ -144,23 +146,17 @@ class Overclock(UI):
             return
 
         if self.appear(BOSS_EVENT_CHECK, offset=(30, 30), static=False):
-            from module.simulation_room.event import EnemyEvent
-
             logger.hr('Start the boss event', 2)
-            EnemyEvent(button=BOSS_EVENT_CHECK.location, config=self.config, device=self.device).run()
+            self._fight_enemy(button=BOSS_EVENT_CHECK.location)
             return
 
         if HARD_CHECK._button_offset:
-            from module.simulation_room.event import EnemyEvent
-
-            EnemyEvent(button=HARD_CHECK.location, config=self.config, device=self.device).run()
+            self._fight_enemy(button=HARD_CHECK.location)
             HARD_CHECK._button_offset = None
             return
 
         if SPECIAL_CHECK._button_offset:
-            from module.simulation_room.event import EnemyEvent
-
-            EnemyEvent(button=SPECIAL_CHECK.location, config=self.config, device=self.device).run()
+            self._fight_enemy(button=SPECIAL_CHECK.location)
             SPECIAL_CHECK._button_offset = None
             return
 

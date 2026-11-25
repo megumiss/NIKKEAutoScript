@@ -33,11 +33,13 @@ class EventBase(UI):
 
 
 class EnemyEvent(EventBase):
-    def run(self, skip_first_screenshot=True):
+    def run(self, skip_first_screenshot=True, max_start_attempts=None):
+        """执行战斗。超频可限制准备页重复点击，未能开战时交由任务处理退场。"""
         logger.hr('Start a hostile event', 3)
         click_timer = Timer(0.3)
 
         skip = False
+        start_attempts = 0
 
         while 1:
             if skip_first_screenshot:
@@ -68,7 +70,12 @@ class EnemyEvent(EventBase):
                 click_timer.reset()
                 continue
 
-            elif not skip and click_timer.reached() and self.appear_then_click(FIGHT, offset=(30, 30), interval=5):
+            elif not skip and click_timer.reached() and self.appear(FIGHT, offset=(30, 30), interval=5):
+                if max_start_attempts is not None and start_attempts >= max_start_attempts:
+                    logger.warning('Battle did not start after %s attempts', start_attempts)
+                    raise OperationFailed
+                self.device.click(FIGHT)
+                start_attempts += 1
                 click_timer.reset()
                 continue
 
@@ -107,6 +114,7 @@ class EnemyEvent(EventBase):
                 break
 
             if click_timer.reached() and self.appear(PAUSE, offset=(30, 30)):
+                start_attempts = 0
                 click_timer.reset()
                 self.device.sleep(5)
                 continue
