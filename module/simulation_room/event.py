@@ -111,6 +111,8 @@ class EnemyEvent(EventBase):
                 self.device.sleep(5)
                 continue
 
+        # 只在确认战斗已结算后重置卡死检测，避免多场正常战斗累计超时。
+        self.device.stuck_record_clear()
         logger.info('The hostile event ended')
 
 
