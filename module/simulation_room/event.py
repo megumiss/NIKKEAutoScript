@@ -45,7 +45,7 @@ class EnemyEvent(EventBase):
             else:
                 self.device.screenshot()
 
-            if click_timer.reached():
+            if self.button is not None and click_timer.reached():
                 if not self.appear(TARGET_HP_CHECK, offset=(30, 30)) and (
                     self.appear(ENEMY_CHECK, offset=(30, 30), static=False)
                     or self.appear(BOSS_EVENT_CHECK, offset=(30, 30), static=False)

@@ -90,8 +90,23 @@ class Overclock(UI):
             logger.error(f"Button asset '{button_name}' not found for option '{option}'")
             raise
 
+    def _resume_battle(self):
+        """接续重登后已打开的超频战斗准备弹窗，避免把它当作事件选择界面。"""
+        if not self.appear(OVERCLOCK_RESET_TIME_IN, offset=(30, 30), threshold=0.85):
+            return False
+        if not self.appear(FIGHT, offset=(30, 30), threshold=0.85):
+            return False
+
+        from module.simulation_room.event import EnemyEvent
+
+        logger.info('Resume prepared overclock battle')
+        EnemyEvent(button=None, config=self.config, device=self.device).run()
+        return True
+
     def get_next_event(self):
         self.device.screenshot()
+        if self._resume_battle():
+            return
 
         for i in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=5, threshold=0.85, static=False)[:3]:
             area = _area_offset(i.get('area'), (-45, -100, -14, -90))
@@ -528,8 +543,6 @@ class Overclock(UI):
                 break
 
     def _run(self):
-        self.bios_setting()
-
         while 1:
             self.get_next_event()
             if self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(5, 5), interval=5, static=False):
@@ -540,9 +553,11 @@ class Overclock(UI):
 
     def run(self):
         try:
-            if not self.appear(SIMULATION_ROOM_CHECK, offset=(30, 30)):
-                self.ui_ensure(page_ark)
-            self.ensure_into_overclock()
+            if not self._resume_battle():
+                if not self.appear(SIMULATION_ROOM_CHECK, offset=(30, 30)):
+                    self.ui_ensure(page_ark)
+                self.ensure_into_overclock()
+                self.bios_setting()
             self._run()
         except GamePageUnknownError:
             logger.error('The simulation has already been started')
