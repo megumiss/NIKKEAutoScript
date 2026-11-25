@@ -275,7 +275,7 @@ class SimulationRoom(UI):
 
     def run(self):
         try:
-            if not self.appear(SIMULATION_ROOM_CHECK, offset=(30, 30)):
+            if not self.appear_any([SIMULATION_ROOM_CHECK, DIFFICULTY_AREA_CHECK], offset=(30, 30)):
                 self.ui_ensure(page_ark)
             self.ensure_into_simulation()
             self._run()
@@ -322,6 +322,9 @@ class SimulationRoom(UI):
                 skip_first_screenshot = False
             else:
                 self.device.screenshot()
+
+            if self.appear(DIFFICULTY_AREA_CHECK, offset=(30, 30)):
+                break
 
             if click_timer.reached() and self.appear_then_click(ARK_GOTO_SIMULATION_ROOM, offset=(30, 30), interval=2):
                 click_timer.reset()
@@ -407,19 +410,8 @@ class SimulationRoom(UI):
                 click_timer.reset()
                 continue
 
-            if self.config.SimulationRoom_QuickSimulation:
-                if (
-                    click_timer.reached()
-                    and not self.appear(END_SIMULATION, offset=(30, 30), static=False)
-                    and self.appear_then_click(QUICK_SIMULATION, offset=(5, 5), static=False)
-                ):
-                    confirm_timer.reset()
-                    click_timer.reset()
-                    continue
-            else:
-                if click_timer.reached() and self.appear_then_click(
-                    START_SIMULATION_CONFIRM, offset=(5, 5), static=False
-                ):
+            if selected and click_timer.reached() and self.appear(DIFFICULTY_AREA_CHECK, offset=(30, 30)):
+                if self._confirm_simulation_start():
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
@@ -433,6 +425,16 @@ class SimulationRoom(UI):
             if self.appear(SIMULATION_CHECK, offset=(30, 30), threshold=0.86) and confirm_timer.reached():
                 logger.hr(f'Area {self.region_label.get(self.current_region)}', 2)
                 break
+
+    def _confirm_simulation_start(self):
+        """在难度弹窗内优先走快速模拟，未解锁时使用可识别的普通开始按钮。"""
+        if self.config.SimulationRoom_QuickSimulation and self.appear(QUICK_SIMULATION, offset=(5, 20), static=False):
+            return self.appear_then_click(QUICK_SIMULATION, offset=(5, 20), interval=1, static=False)
+        if not self.appear_then_click(START_SIMULATION_CONFIRM, offset=(5, 20), interval=1, static=False):
+            return False
+        if self.config.SimulationRoom_QuickSimulation:
+            logger.info('快速模拟按钮不可用，开始普通模拟')
+        return True
 
     def ensure_into_next_region(self, skip_first_screenshot=True):
         self.current_region += 1
