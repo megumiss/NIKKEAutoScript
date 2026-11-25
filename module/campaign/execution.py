@@ -8,7 +8,7 @@ from module.campaign.run_state import MAX_FAILURES, RunState, located, panel_qua
 from module.campaign.goals import describe, frontier_point, nearest_enemy, unobserved_component_cells
 from module.campaign.report import (BATTLE_OUTCOMES, BATTLE_STATES, EVIDENCE_KINDS, GOAL_KINDS, GOAL_REASONS,
                                     RESULT_STATES, label, points_text)
-from module.campaign.route_planning import planning_routes, route_path
+from module.campaign.route_planning import planning_routes, route_path, same_screen_mechanism
 from module.campaign.scouting import scout_focus
 from module.campaign.session import DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, SETTLE_TAP_INTERVAL
 from module.campaign.navigation.controls import GAZE
@@ -387,12 +387,20 @@ class CampaignExecutor:
                 if visible is not None:
                     raise VisibleEnemyFound(visible)
 
+            def check_move_interrupt(observation):
+                """探索或分段推进后若新观测发现可达机关或普通敌人，提前结束步行回决策层。"""
+                return self.move_interrupt_reason(goal, observation)
+
             previous_check = getattr(self.session, 'camera_enemy_check', None)
+            previous_interrupt = getattr(self.session, 'move_interrupt_check', None)
             self.session.camera_enemy_check = check_camera_enemy
+            if kind in ('explore', 'advance'):
+                self.session.move_interrupt_check = check_move_interrupt
             try:
                 result = navigate(self.session, target, progress, **kwargs)
             finally:
                 self.session.camera_enemy_check = previous_check
+                self.session.move_interrupt_check = previous_interrupt
         except TargetTriggered:
             raise
         except (SceneRequired, WindowChanged, NavigationStalled, ClickUnconfirmed, ExBypassUnavailable):
@@ -418,6 +426,14 @@ class CampaignExecutor:
                 raise
             return
         self.owner.state.execution_target = None
+        if result.get('state') == 'interrupted':
+            self.session.complete_move_target(goal)
+            if result.get('movement_clicks', 0) > 0:
+                self.recoveries = 0
+                self.owner.state.target_failures.pop('story-location', None)
+            logger.info(f"{goal_brief(goal)} 提前中断：{result.get('reason')}，"
+                        f"返回决策层重选目标；本目标操作 {self.session.target_inputs} 次，耗时 {watch}")
+            return
         if result.get('state') != 'arrived':
             self.owner.state.record_failure(goal['for_target'] if kind == 'advance' else goal['id'])
             logger.warning(f"{goal_brief(goal)} 未确认触发：{describe_result(result)}；"
@@ -722,6 +738,40 @@ class CampaignExecutor:
             if goal['kind'] == 'none' and goal.get('reason') != 'no_reachable_target':
                 return False
         return True
+
+    def move_interrupt_reason(self, goal, observation):
+        """步行期间发现同屏可达未开启机关，或探索途中新确认可达普通敌人时返回中断原因。"""
+        if self.purpose != 'story' or goal is None:
+            return None
+        kind = goal.get('kind')
+        if kind not in ('explore', 'advance'):
+            return None
+        squad = observation.get('position')
+        cut = self.owner.cut
+        if squad is None or cut is None or cut.road is None:
+            return None
+        state = self.owner.state
+        snapshot = self.owner.last_snapshot or {}
+        allow_mechanism = (kind == 'explore'
+                           or state.route_goal is None or state.route_goal.get('kind') != 'mechanism')
+        if allow_mechanism and not state.pending_reviews:
+            annotated = [item for item in cut.chart.points if item['category'] == 'ground_mechanism']
+            candidates = annotated or [item for item in state.mechanisms.values() if item.get('position') is not None]
+            for item in candidates:
+                record = state.mechanisms.get(item['id'], {})
+                if (record.get('state') == 'on' or state.is_unavailable(item['id'])
+                        or not same_screen_mechanism(snapshot, item)):
+                    continue
+                if route_path(cut, squad, item['position']) is not None:
+                    return f"发现同屏可达未开启机关 {item['id']}"
+        if (kind == 'explore' and not state.pending_reviews and not self.session.ex_bypass.obstacles
+                and state.route_goal is None and self.interrupted_goal is None
+                and self.terminal_destination is None and self.terminal_continuation is None):
+            enemy, _ = nearest_enemy(state, cut, squad)
+            if (enemy is not None and enemy.get('enemy_kind') == 'normal'
+                    and state.enemies.get(enemy['id'], {}).get('confirmed_at') == state.tick):
+                return f"发现可达普通敌人 {enemy['id']}"
+        return None
 
     def execute_visible_enemy(self, goal, snapshot, target=None):
         """执行两帧确认且已验证步行道路的普通近敌，不将视觉可见视为跨区可达。

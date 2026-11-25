@@ -15,6 +15,8 @@ from module.campaign.run_state import OBSERVED_CELL
 
 # 一个已观测粗格每边包含的 8 像素路网格数。
 CELLS = OBSERVED_CELL // GRID
+# 纯探索前沿（非历史线索复核）开步前只核查近段道路，避免长距离探索原地拖屏数轮。
+EXPLORE_SCOUT_LIMIT = 450.0
 
 
 def walking_field(cut, squad):
@@ -128,10 +130,15 @@ def route_scout_focus(state, cut, squad, target, include_unavailable=False):
                           source='route_enemy', check_enemies=True)
         break
     home = cut.component(squad)
+    road_limit = (EXPLORE_SCOUT_LIMIT
+                  if target.get('kind') == 'explore' and target.get('reason') != 'review_enemy_hint'
+                  else None)
     seen = set()
     for point, distance in zip(path, distances):
         if hint_focus is not None and distance >= hint_focus['distance']:
             return hint_focus
+        if road_limit is not None and distance > road_limit:
+            break
         for offset in ((0, 0), (OBSERVED_CELL, 0), (-OBSERVED_CELL, 0),
                        (0, OBSERVED_CELL), (0, -OBSERVED_CELL)):
             candidate = point + offset

@@ -4,13 +4,16 @@ import numpy as np
 
 from module.campaign.run_state import COMBAT_ENEMY_KINDS
 
+from module.campaign.navigation.controls import SQUAD_REACH_WIDE
 from module.campaign.navigation.ex_bypass import segment_clear
 from module.campaign.navigation.pathfinding import NoConnectedRoad
 from module.campaign.navigation.targets import ROAD_TOLERANCE, walking_distance
 from module.campaign.subgoals import RoadView
 
-# 路段推进距离使用章节底图像素；沿途敌人范围由当前道路截面决定，不设固定半径。
+# 路段推进距离使用章节底图像素；沿途敌人允许的绕行上限按两倍圆环长轴计，
+# 保留宽路横向偏差与贴近起点的拦路敌，排除沿直道反方向长距离回溯的敌人。
 ADVANCE_DISTANCE = 200.
+ROUTE_DETOUR_LIMIT = 2 * SQUAD_REACH_WIDE
 
 
 def route_path(cut, squad, target):
@@ -158,12 +161,13 @@ def route_road_section(cut, point, path):
 def route_enemy_candidates(cut, squad, target, path, distances, enemies):
     """按道路距离排列实际路径上的敌人记录，不赋予历史记录可战斗状态。
 
-    仅接受敌人所在道路截面与 A* 路径相交、且到敌人与目的地都有可行道路的记录。
-    道路边界决定截面范围，实际路程只排序，不使用固定走廊半径或额外绕行门限。
-    执行目标和历史线索复核共用此几何条件；调用方负责类型、确认状态与失败上限检查。
+    仅接受敌人所在道路截面与 A* 路径相交、到敌人与目的地都有可行道路，且不比
+    目的地更远、绕行增程不超过 ROUTE_DETOUR_LIMIT 的记录，避免起点后方直道上的
+    远距敌人抢占更近的目标或机关。执行目标和历史线索复核共用此几何条件。
     """
     candidates = []
     home = cut.component(squad)
+    direct = float(distances[-1])
     for enemy in enemies:
         point = np.asarray(enemy['position'], float)
         if route_road_section(cut, point, path) is None:
@@ -174,6 +178,8 @@ def route_enemy_candidates(cut, squad, target, path, distances, enemies):
         last = walking_distance(cut.road, cut.regions, point, target)
         if not np.isfinite(first + last):
             continue
+        if first > direct or (first + last) - direct > ROUTE_DETOUR_LIMIT:
+            continue
         candidates.append((first, enemy))
     return sorted(candidates, key=lambda pair: pair[0])
 
@@ -181,7 +187,7 @@ def route_enemy_candidates(cut, squad, target, path, distances, enemies):
 def route_enemy(state, cut, squad, target, path, distances):
     """选路程前方的第一个普通敌人或 Boss，忽略别条支路上的全局最近敌人。
 
-    候选所在连续道路截面必须与实际路径相交；不因道路较宽或敌人在路径起点后方就按距离排除。
+    候选所在连续道路截面必须与实际路径相交，且绕行增程与路程不超过路线目标本身；
     截面遇到背景、墙或光幕立即停止，小队分量为零时仍以 A* 复核。失败到上限的敌人返回明确暂停目标。
     仍有可处理普通敌人时 Boss 被跳过，主线路径不能绕过 boss_ready 门禁。
     """

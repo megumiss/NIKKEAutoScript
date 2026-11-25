@@ -131,6 +131,19 @@ def navigate(
         review_progress = getattr(session, 'review_move_progress', None)
         if review_progress is not None:
             review_progress(observation)
+        interrupt_check = getattr(session, 'move_interrupt_check', None)
+        if clicks > 0 and callable(interrupt_check):
+            interrupt_reason = interrupt_check(observation)
+            if interrupt_reason:
+                session.finish_view()
+                return {
+                    'state': 'interrupted',
+                    'reason': interrupt_reason,
+                    'message': interrupt_reason,
+                    'movement_clicks': clicks,
+                    'position': position.tolist(),
+                    'distance': float(np.linalg.norm(target - position)),
+                }
         transferring = bool(legs)
         approach = target
         if transferring:
