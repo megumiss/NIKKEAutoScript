@@ -17,7 +17,7 @@ from module.campaign.navigation.session import NavigationSession
 from module.campaign.report import (ANCHOR_METHODS, ANCHOR_RESULTS, BATTLE_STATES, CAMERA_TRACKING,
                                     CORRECTION_REASONS, LOCALIZATION, MINIMAP_MODES, MOVE_STATES,
                                     NAVIGATION_METHODS, POSITION_KINDS, label, points_text)
-from module.campaign.run_state import MAX_FAILURES, describe_changes, located
+from module.campaign.run_state import MAX_FAILURES, OBSERVED_CELL, describe_changes, located
 from module.campaign.timing import Stopwatch
 from module.campaign.trace import CampaignTrace
 from module.campaign.navigation.ex_bypass import ExBypass, ExBypassUnavailable
@@ -49,10 +49,17 @@ FRONTIER_BLUE_MAX = 18.
 # 直接平移会白白丢掉一个本来能用的视野。
 STABLE_RESAMPLES = 2
 STABLE_RESAMPLE_SECONDS = 0.6
-# 开局扫描：中心一屏加四向各两站。步进是面板尺寸的倍数（内容跟手，与章节缩放无关），
-# 每臂两站把覆盖扩到小队周围约两个面板步距，主线剧情提示一般都在这个范围内。
+# 周围扫描：中心一屏加沿静态道路选出的有路方向（最多四臂、每臂最多两站）。
+# 步进是面板尺寸的倍数（内容跟手，与章节缩放无关）；预估下一站落点时按展开拖动实测响应折算，
+# 道路像素占比低于阈值或过半落出地图范围即跳过，避免拖进全黑界外导致失配与复位。
 SCAN_ARM_STEP = 0.6
 SCAN_ARM_STOPS = 2
+SCAN_ARM_LIMIT = 4
+SCAN_ARM_DIRECTIONS = ((1., 0.), (-1., 0.), (0., 1.), (0., -1.))
+SCAN_PAN_RESPONSE = 0.75
+SCAN_MIN_ROAD_RATIO = 0.085
+SCAN_MIN_IN_MAP = 0.45
+SCAN_MIN_NEW_CELLS = 4
 # 定位未被接受时最多再观测几轮：尚未展开时先展开回正，已展开则首轮只换新帧，
 # 之后每轮在面板内换一段视野。只用来救「配准差一点没过线」，连续失败仍按定位不可用处理。
 LOCALIZE_RETRIES = 3
@@ -173,6 +180,135 @@ def describe_snapshot(snapshot):
     detail.append(f"光幕 {len(snapshot.get('barriers') or [])} 处")
     detail.append(f"挡路光幕 {len(snapshot.get('blocks') or [])} 处")
     return '，'.join(detail)
+
+
+def _scan_panel_footprint(panel_shape, matrix):
+    """计算当前展开面板的视口中心、中心局部雅可比及有效采样点相对中心的地图偏移。
+
+    使用中心局部线性化近似平移，避免向上拖图时直接外推单应矩阵跨越透视地平线。
+    矩阵奇异、数值无效或有效采样点过少时返回 None。
+    """
+    height, width = panel_shape[:2]
+    center = np.array([width / 2., height / 2.], float)
+    matrix = np.asarray(matrix, float)
+    if matrix.shape != (3, 3) or not np.isfinite(matrix).all():
+        return None
+    origin = project(matrix, center)
+    if not np.isfinite(origin).all():
+        return None
+    jacobian = np.column_stack([
+        project(matrix, center + [1., 0.]) - origin,
+        project(matrix, center + [0., 1.]) - origin,
+    ])
+    if not np.isfinite(jacobian).all():
+        return None
+    u = np.linspace(0., max(1., width - 1.), 17)
+    v = np.linspace(0., max(1., height - 1.), 17)
+    uu, vv = np.meshgrid(u, v)
+    homogeneous = np.column_stack([uu.ravel(), vv.ravel(), np.ones(uu.size)]) @ matrix.T
+    valid = np.isfinite(homogeneous[:, 2]) & (homogeneous[:, 2] > 1e-6)
+    if int(np.count_nonzero(valid)) < 16:
+        return None
+    points = homogeneous[valid, :2] / homogeneous[valid, 2:3]
+    offsets = points - origin
+    if not np.isfinite(offsets).all():
+        return None
+    return origin, jacobian, offsets
+
+
+def _evaluate_scan_view(road, offsets, center_map):
+    """按平移后的视口中心评估面板内地图占比、静态道路占比及命中的粗网格集合。"""
+    xs = np.rint(offsets[:, 0] + center_map[0]).astype(int)
+    ys = np.rint(offsets[:, 1] + center_map[1]).astype(int)
+    height, width = road.shape
+    inside = (xs >= 0) & (xs < width) & (ys >= 0) & (ys < height)
+    in_ratio = float(np.mean(inside))
+    on_road = np.zeros(len(xs), dtype=bool)
+    on_road[inside] = road[ys[inside], xs[inside]] > 0
+    road_ratio = float(np.mean(on_road))
+    cells = set(zip((ys[on_road] // OBSERVED_CELL).tolist(), (xs[on_road] // OBSERVED_CELL).tolist()))
+    return in_ratio, road_ratio, cells
+
+
+def _scan_step_on_road(road, panel_shape, matrix, vector):
+    """判断按面板向量拖动一站后，预估视口是否仍留在静态地图道路有效范围内。
+
+    缺少可靠矩阵或透视采样无效时不阻断原有扫描流程（返回 True）。
+    """
+    footprint = _scan_panel_footprint(panel_shape, matrix)
+    if footprint is None:
+        return True
+    origin, jacobian, offsets = footprint
+    delta_map = -(jacobian @ np.asarray(vector, float)) * SCAN_PAN_RESPONSE
+    in_ratio, road_ratio, _ = _evaluate_scan_view(road, offsets, origin + delta_map)
+    return in_ratio >= SCAN_MIN_IN_MAP and road_ratio >= SCAN_MIN_ROAD_RATIO
+
+
+def plan_scan_arms(road, observed, matrix, panel_shape):
+    """结合静态道路与中心帧视野从八方向中贪心挑选最多四条有效扫描臂与站数。
+
+    对每个方向按 SCAN_PAN_RESPONSE 折算站位中心，在首个低于 SCAN_MIN_IN_MAP 或
+    SCAN_MIN_ROAD_RATIO 的站位前截断，跳过全黑界外方向；优先覆盖中心屏尚未覆盖且
+    尚未观测的道路粗格，末尾冗余站位自动裁剪。若矩阵无法解析则退回正交四向全量扫描。
+    """
+    footprint = _scan_panel_footprint(panel_shape, matrix)
+    if footprint is None:
+        return [(np.asarray(direction, float), SCAN_ARM_STOPS) for direction in SCAN_ARM_DIRECTIONS]
+    origin, jacobian, offsets = footprint
+    _, _, covered = _evaluate_scan_view(road, offsets, origin)
+    step = np.array([panel_shape[1], panel_shape[0]], float) * SCAN_ARM_STEP
+    raw_directions = (*SCAN_ARM_DIRECTIONS, (1., 1.), (1., -1.), (-1., 1.), (-1., -1.))
+    candidates = []
+    for dx, dy in raw_directions:
+        direction = np.array([dx, dy], float)
+        direction /= np.linalg.norm(direction)
+        delta_map = -(jacobian @ (step * direction)) * SCAN_PAN_RESPONSE
+        stop_cells = []
+        for stop in range(1, SCAN_ARM_STOPS + 1):
+            in_ratio, road_ratio, cells = _evaluate_scan_view(road, offsets, origin + stop * delta_map)
+            if in_ratio < SCAN_MIN_IN_MAP or road_ratio < SCAN_MIN_ROAD_RATIO:
+                break
+            stop_cells.append((road_ratio, cells))
+        if stop_cells:
+            candidates.append((direction, stop_cells))
+
+    chosen = []
+    obs_h, obs_w = observed.shape if observed is not None else (0, 0)
+    while candidates and len(chosen) < SCAN_ARM_LIMIT:
+        best = None
+        for index, (direction, stop_cells) in enumerate(candidates):
+            effective = len(stop_cells)
+            while effective > 1:
+                prev_union = set().union(*(item[1] for item in stop_cells[:effective - 1]))
+                if len(stop_cells[effective - 1][1] - covered - prev_union) >= 2:
+                    break
+                effective -= 1
+            union_cells = set().union(*(item[1] for item in stop_cells[:effective]))
+            new_cells = union_cells - covered
+            if len(new_cells) < SCAN_MIN_NEW_CELLS:
+                continue
+            score = sum(2 if (observed is None or (0 <= cy < obs_h and 0 <= cx < obs_w
+                        and observed[cy, cx] == 0)) else 1 for cy, cx in new_cells)
+            ortho_bonus = 0.5 if (abs(direction[0]) < 1e-6 or abs(direction[1]) < 1e-6) else 0.0
+            key = (score + ortho_bonus, sum(item[0] for item in stop_cells[:effective]))
+            if best is None or key > best[0]:
+                best = (key, index, direction, effective, union_cells)
+        if best is None:
+            break
+        _, index, direction, effective, union_cells = best
+        chosen.append((direction, effective))
+        covered |= union_cells
+        candidates.pop(index)
+    return chosen
+
+
+def _scan_road_source(owner):
+    """提取静态道路二值掩码及已观测粗网格，缺失静态层时返回 (None, None)。"""
+    cut = getattr(owner, 'cut', None)
+    chart = getattr(cut, 'chart', None)
+    road = getattr(chart, 'road', None)
+    observed = getattr(getattr(owner, 'state', None), 'observed', None)
+    return road, observed
 
 
 class CampaignLocalizer:
@@ -1474,9 +1610,10 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         return recorded
 
     def scan_explored(self, stop_when=None):
-        """开局扫描小队周围：中心一屏加四向各 SCAN_ARM_STOPS 站，返回成功配准的屏数。
+        """开局或恢复扫描小队周围：中心一屏加沿静态道路的有路方向（最多四臂），返回成功配准的屏数。
 
-        向外拖动用固定面板向量（面板尺寸的 SCAN_ARM_STEP 倍），每臂逐站配准吸收，失败就不再深入。
+        先参考 StaticMap.road 从八方向中选出不落入全黑界外的有效扫描臂，每臂逐站按
+        SCAN_ARM_STEP 拖动并在发拖前动态复核下一站仍在道路范围内；配准失败就不再深入。
         拖回以未移动的小队底图坐标为目标，每帧按实测配准计算相对偏移，最多拖 SCOUT_DRAGS 次；
         地图边缘造成斜向位移时仍按实际视口回到小队附近，不使用失败拖动前的矩阵。
         开局可在首次确认可达普通敌人时转入前置道路侦察。拖回失去配准时重开面板取得新中心；
@@ -1489,17 +1626,30 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         located = self.scout_locate('scan_00', scan_origin=True)
         if located is None:
             return 0
-        panel = located[0]
+        panel, report = located
         step = np.array([panel.shape[1], panel.shape[0]], float) * SCAN_ARM_STEP
         self.absorb_view(*located)
         scanned = 1
         if stop_when and stop_when(squad):
             return scanned
-        directions = ((1., 0.), (-1., 0.), (0., 1.), (0., -1.))
-        for index, direction in enumerate(directions, 1):
+        road, observed = _scan_road_source(self.owner)
+        if road is not None and report.get('roi_to_map') is not None:
+            plan = plan_scan_arms(road, observed, np.asarray(report['roi_to_map'], float), panel.shape)
+            if plan:
+                logger.info(f'周围扫描规划：{len(plan)} 个有路方向（共 {sum(stops for _, stops in plan)} 站）。')
+            else:
+                logger.info('周围扫描跳过外扩：中心视野已覆盖周边静态道路。')
+        else:
+            plan = [(np.asarray(direction, float), SCAN_ARM_STOPS) for direction in SCAN_ARM_DIRECTIONS]
+        for index, (direction, stops) in enumerate(plan, 1):
             vector = step * np.asarray(direction, float)
             sent = 0
-            for stop in range(SCAN_ARM_STOPS):
+            for stop in range(stops):
+                if road is not None and located is not None and located[1].get('roi_to_map') is not None:
+                    if not _scan_step_on_road(road, located[0].shape,
+                                              np.asarray(located[1]['roi_to_map'], float), vector):
+                        logger.info(f'周围扫描第 {index} 臂第 {stop + 1} 站预计超出道路区域，提前结束本方向。')
+                        break
                 if self.drag_expanded_offset(vector) is None:
                     break
                 sent += 1
@@ -1510,7 +1660,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
                 scanned += 1
                 if stop_when and stop_when(squad):
                     return scanned
-            if not sent or index == len(directions):
+            if not sent or index == len(plan):
                 continue
             returned = False
             for attempt in range(SCOUT_DRAGS + 1):
