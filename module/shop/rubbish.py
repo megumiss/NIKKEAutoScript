@@ -140,7 +140,12 @@ class RubbishShop(ShopBase):
                 # 检查是否在购买确认页面
                 if self.appear(PURCHASE_CHECK, offset=10, static=False):
                     img = self.device.image
-                    self.handle_purchase(product.button, skip_first_screenshot=False)
+                    try:
+                        self.handle_purchase(product.button, skip_first_screenshot=False)
+                    except PurchaseTimeTooLong as error:
+                        logger.warning(f'{product.name}：{error}，跳过本次购买')
+                        pending_products.pop(0)
+                        break
                     self.device.image = img
                     logger.info(f'[Purchased] {product.name}')
                     click_timer.reset()

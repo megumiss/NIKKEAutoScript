@@ -1,7 +1,7 @@
 from functools import cached_property
 
 from module.base.timer import Timer
-from module.base.utils import _area_offset, crop, point2str
+from module.base.utils import _area_offset, crop, find_center, point2str
 from module.exception import GamePageUnknownError, GameStuckError, OperationFailed
 from module.handler.assets import CONFIRM_B
 from module.logger import logger
@@ -112,25 +112,29 @@ class Overclock(UI):
         if self._resume_battle():
             return
 
-        for i in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=5, threshold=0.85, static=False)[:3]:
-            area = _area_offset(i.get('area'), (-45, -100, -14, -90))
-            img = crop(self.device.image, area)
-            if NORMAL_CHECK.match(img, threshold=0.75, static=False):
-                NORMAL_CHECK._button_offset = area
-            elif HARD_CHECK.match(img, threshold=0.75, static=False):
-                HARD_CHECK._button_offset = area
-            elif SPECIAL_CHECK.match(img, threshold=0.75, static=False):
-                SPECIAL_CHECK._button_offset = area
+        enemy_labels = (NORMAL_CHECK, HARD_CHECK, SPECIAL_CHECK)
+        enemy_positions = {}
+        try:
+            for match in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=5, threshold=0.85, static=False)[:3]:
+                area = _area_offset(match.get('area'), (-45, -100, -14, -90))
+                img = crop(self.device.image, area)
+                for label in enemy_labels:
+                    if label.match(img, threshold=0.75, static=False):
+                        enemy_positions[label] = find_center(area)
+                        break
+        finally:
+            # 模板匹配会记录裁剪图内的坐标，下一轮选敌应重新读取当前画面。
+            for label in enemy_labels:
+                label._button_offset = None
 
-        if NORMAL_CHECK._button_offset:
-            self._fight_enemy(button=NORMAL_CHECK.location)
-            NORMAL_CHECK._button_offset = None
+        if NORMAL_CHECK in enemy_positions:
+            self._fight_enemy(button=enemy_positions[NORMAL_CHECK])
             return
 
         if self.appear(HEALING_EVENT_CHECK, offset=(30, 30), static=False):
             from module.simulation_room.event import HealingEvent
 
-            HealingEvent(button=NORMAL_CHECK.location, config=self.config, device=self.device).run()
+            HealingEvent(button=HEALING_EVENT_CHECK.location, config=self.config, device=self.device).run()
             return
 
         if self.appear(IMPROVEMENT_EVENT_CHECK, offset=(30, 30), static=False):
@@ -150,14 +154,12 @@ class Overclock(UI):
             self._fight_enemy(button=BOSS_EVENT_CHECK.location)
             return
 
-        if HARD_CHECK._button_offset:
-            self._fight_enemy(button=HARD_CHECK.location)
-            HARD_CHECK._button_offset = None
+        if HARD_CHECK in enemy_positions:
+            self._fight_enemy(button=enemy_positions[HARD_CHECK])
             return
 
-        if SPECIAL_CHECK._button_offset:
-            self._fight_enemy(button=SPECIAL_CHECK.location)
-            SPECIAL_CHECK._button_offset = None
+        if SPECIAL_CHECK in enemy_positions:
+            self._fight_enemy(button=enemy_positions[SPECIAL_CHECK])
             return
 
     def get_effect(self):
