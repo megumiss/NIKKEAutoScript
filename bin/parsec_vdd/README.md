@@ -47,12 +47,14 @@ ParsecDisplay.exe -silent                   # 常驻运行（托盘），按注�
 注意：`-cli` 的退出码不可靠 —— 例如 `list` 在「有屏幕」时返回 1、「无屏幕」时返回 0。
 调用方应解析 stdout，而不是判断退出码。输出文本使用系统 ANSI 代码页编码。
 
-`vdd add` 默认产生 1920x1080@60 横屏；竖屏由 NKAS 侧用 `ChangeDisplaySettingsEx`
-（`dmDisplayOrientation=1`，宽高互换为 1080x1920）设置，Parsec 驱动接受该模式。
+`vdd add` 默认产生 1920x1080@60 横屏。NKAS 根据任务客户区方向设置虚拟屏：
+普通竖向任务使用 1080x1920@60，自动推图等横向任务使用 1920x1080@60；
+竖屏通过 `ChangeDisplaySettingsEx`（`dmDisplayOrientation=1`，宽高互换）设置。
 
 NKAS 自动管理时会先按 Windows 显示目标识别 Parsec，将其从复制组单独拆为扩展桌面，
-保留其他屏幕的分辨率、方向和位置，再设置竖屏。拆分或定位失败会中止启动，不回退到实体屏。
-复制模式下 CLI 的 `Device` 和 `Orientation` 反映共享桌面，不能据此安全地旋转虚拟输出。
+保留其他屏幕的分辨率、方向和位置，再设置任务所需模式。拆分或定位失败会中止启动，
+不回退到实体屏。复制模式下 CLI 的 `Device` 和 `Orientation` 反映共享桌面，不能据此
+安全地旋转虚拟输出。
 
 NKAS 启动的常驻进程会暂时关闭 `HKCU\SOFTWARE\ParsecDisplay` 下的 `RestoreDisplays`，
 避免上游快照恢复在拆分前旋转共享桌面；原值备份在同一键的 `NKASRestoreDisplaysBackup`，

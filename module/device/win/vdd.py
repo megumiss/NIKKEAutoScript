@@ -132,6 +132,41 @@ def _mttvdd_auto_start():
     wait_vdd_monitor(baseline)
 
 
+def _mttvdd_ensure_orientation(screen_n, resolution):
+    """
+    将已启用的 MttVDD 屏幕切换为任务所需的横向或纵向，并回读确认。
+
+    分辨率沿用驱动当前模式，仅在横竖方向变化时交换宽高；目标固定为正向横屏
+    DMDO_DEFAULT 或 90 度竖屏 DMDO_90。屏幕序号失效、系统拒绝修改或回读方向
+    不符时抛出 VddError，由设备初始化流程停止并清理自动管理的虚拟屏。
+    """
+    import win32api
+    import win32con
+
+    monitors = win32api.EnumDisplayMonitors()
+    if screen_n is None or screen_n < 0 or screen_n >= len(monitors):
+        raise VddError(f'MttVDD screen index is invalid: {screen_n}')
+    device_name = str(win32api.GetMonitorInfo(monitors[screen_n][0])['Device'])
+    dm = win32api.EnumDisplaySettings(device_name, win32con.ENUM_CURRENT_SETTINGS)
+    orientation = 1 if resolution[0] < resolution[1] else 0
+    if dm.DisplayOrientation == orientation:
+        return
+    if (dm.DisplayOrientation + orientation) % 2 == 1:
+        dm.PelsWidth, dm.PelsHeight = dm.PelsHeight, dm.PelsWidth
+    dm.DisplayOrientation = orientation
+    result = win32api.ChangeDisplaySettingsEx(device_name, dm)
+    if result != win32con.DISP_CHANGE_SUCCESSFUL:
+        raise VddError(f'Failed to rotate MttVDD {device_name} to orientation {orientation}: code {result}')
+    applied = win32api.EnumDisplaySettings(device_name, win32con.ENUM_CURRENT_SETTINGS)
+    if applied.DisplayOrientation != orientation:
+        raise VddError(
+            f'MttVDD orientation did not stick: expected {orientation}, got {applied.DisplayOrientation}'
+        )
+    logger.info(
+        f'MttVDD mode applied: {applied.PelsWidth}x{applied.PelsHeight} orientation={applied.DisplayOrientation}'
+    )
+
+
 def _mttvdd_auto_stop():
     """任务结束后禁用 MttVDD 虚拟屏"""
     try:
@@ -209,15 +244,17 @@ def find_screen_n():
     return None
 
 
-def vdd_auto_start(config):
+def vdd_auto_start(config, resolution=(720, 1280)):
     """
-    任务启动时按 config.Vdd_VddType 分发到对应的虚拟屏实现。
+    按 config.Vdd_VddType 启用虚拟屏，并根据任务客户区设置横竖方向。
 
-    MttVDD 分支 = 内置脚本启用 + 解析屏幕序号；
-    ParsecVDD 分支 = 拉起内置 ParsecDisplay 并确保 1080p 竖屏。
+    MttVDD 分支 = 内置脚本启用、解析屏幕序号并按需旋转；
+    ParsecVDD 分支 = 拉起或接管 ParsecDisplay，竖向任务确保 1080x1920，
+    横向任务确保 1920x1080。缺省分辨率保持普通任务的竖屏行为。
 
     Args:
         config (NikkeConfig):
+        resolution (tuple): 当前任务所需的游戏客户区宽高，用于确定屏幕方向
 
     Returns:
         int | None: 屏幕在 EnumDisplayMonitors 中的下标，解析失败返回 None
@@ -225,10 +262,13 @@ def vdd_auto_start(config):
     if _vdd_type(config) == 'parsecvdd':
         from module.device.win import parsec_vdd
 
-        return parsec_vdd.ensure_screen_1080p_portrait()
+        return parsec_vdd.ensure_screen(resolution)
 
     _mttvdd_auto_start()
-    return find_screen_n()
+    screen_n = find_screen_n()
+    if screen_n is not None:
+        _mttvdd_ensure_orientation(screen_n, resolution)
+    return screen_n
 
 
 def vdd_auto_stop(config):

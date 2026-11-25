@@ -128,7 +128,7 @@ class AppControl(WinClient, Login):
         try:
             if self.config.Vdd_VddScreen:
                 if self.config.Vdd_VddAutoManage:
-                    screen_n = vdd_auto_start(self.config)
+                    screen_n = vdd_auto_start(self.config, self.target_resolution)
                     # From this point on, this device owns the auto-managed VDD
                     # lifecycle and must release it if initialization fails.
                     vdd_auto_started = True
@@ -142,9 +142,10 @@ class AppControl(WinClient, Login):
                     logger.error('Failed to locate an independent VDD screen; refusing to use the physical display')
                     raise RequestHumanTakeover
 
-            # 设置屏幕方向
-            if self.config.PCClient_ScreenRotate and self.target_resolution[0] < self.target_resolution[1]:
-                self.screen_rotate(self.config.PCClient_ScreenNumber, 1)
+            # 手动旋转按任务方向设置，横屏任务也需要从之前的竖屏状态恢复
+            if self.config.PCClient_ScreenRotate:
+                orientation = 1 if self.target_resolution[0] < self.target_resolution[1] else 0
+                self.screen_rotate(self.config.PCClient_ScreenNumber, orientation)
                 time.sleep(3)
 
             self.language = self.config.Client_Language

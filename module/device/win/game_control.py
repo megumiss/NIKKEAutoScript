@@ -1008,7 +1008,7 @@ class WinClient:
                     'and "Auto-Manage VDD Screen". NKAS will automatically locate the virtual display.'
                 )
                 logger.error(
-                    'Alternatively, enable "Rotate Screen" or set the display to portrait; '
+                    'Alternatively, enable "Rotate Screen" or set the display to the orientation required by the task; '
                     'or enable "Multi-Screen Mode" and select a "Game Window Target Screen" with a resolution '
                     f'of at least {target_width}x{target_height}.'
                 )
