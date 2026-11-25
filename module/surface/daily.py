@@ -5,7 +5,8 @@ from module.base.timer import Timer
 from module.base.utils import point2str
 from module.logger import logger
 from module.surface.assets import *
-from module.ui.page import page_surface
+from module.ui.assets import GOTO_MAIN
+from module.ui.page import page_campaign_select, page_main, page_surface
 from module.ui.ui import UI
 
 
@@ -585,8 +586,37 @@ class SurfaceDaily(UI):
         else:
             return 'unknown'
 
+    def enter_surface(self):
+        """从大厅经作战选择进入地面。入口下线时作战会直接进入主线，限时等待后返回。"""
+        current = self.ui_get_current_page()
+        if current == page_surface:
+            return True
+        if current != page_campaign_select:
+            if current != page_main:
+                self.ui_goto(page_main)
+            self.device.click(page_main.links[page_campaign_select])
+
+        entry_clicked = False
+        wait = Timer(20).start()
+        while not wait.reached():
+            self.device.screenshot()
+            if self.ui_page_appear(page_surface):
+                return True
+            if not entry_clicked and self.ui_page_appear(page_campaign_select):
+                self.device.click(page_campaign_select.links[page_surface])
+                entry_clicked = True
+
+        logger.warning('Surface daily: entry unavailable, skipping until the next scheduled run')
+        if self.ui_page_appear(page_campaign_select):
+            self.device.click(page_campaign_select.links[page_main])
+        elif not self.ui_page_appear(page_main):
+            self.appear_then_click(GOTO_MAIN, offset=(30, 30), threshold=0.9)
+        return False
+
     def run(self):
-        self.ui_ensure(page_surface)
+        if not self.enter_surface():
+            self.config.task_delay(schedule=True)
+            return
         self._run()
         self.close_mission_board()
         self.config.task_delay(schedule=True)
