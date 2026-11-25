@@ -1,11 +1,31 @@
 from module.base.timer import Timer
-from module.base.utils import point2str
+from module.base.utils import _area_offset, crop, find_center, point2str
 from module.exception import OperationFailed
 from module.handler.assets import CONFIRM_B
 from module.logger import logger
 from module.simulation_room.assets import *
 from module.tribe_tower.assets import OPERATION_FAILED
 from module.ui.ui import UI
+
+
+def find_enemy_positions(image, labels, threshold):
+    """从当前画面获取各难度的事件坐标，并清除标签模板存下的裁剪图偏移。
+
+    标签坐标只用于本次选敌，成功或异常后都由下一次截图重新识别。
+    """
+    positions = {}
+    try:
+        for match in ENEMY_EVENT_CHECK.match_several(image, offset=5, threshold=threshold, static=False)[:3]:
+            area = _area_offset(match['area'], (-45, -100, -14, -90))
+            label_image = crop(image, area)
+            for label in labels:
+                if label.match(label_image, threshold=0.75, static=False):
+                    positions[label] = find_center(area)
+                    break
+    finally:
+        for label in labels:
+            label._button_offset = None
+    return positions
 
 
 class EventBase(UI):

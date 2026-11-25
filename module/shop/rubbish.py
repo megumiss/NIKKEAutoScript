@@ -11,7 +11,7 @@ from module.map.map_grids import SelectedGrids
 from module.ocr.ocr import Digit
 from module.rubbish_shop.assets import *
 from module.shop.assets import BUY_ALL, END_LIST_CHECK, PURCHASE_CHECK
-from module.shop.base import NotEnoughMoneyError, Product, PurchaseTimeTooLong, ShopBase
+from module.shop.base import NotEnoughMoneyError, Product, PurchaseResultTimeout, PurchaseTimeTooLong, ShopBase
 from module.ui.page import page_shop
 
 
@@ -204,6 +204,9 @@ class RubbishShop(ShopBase):
                 #     self.ensure_back(check_btn)
                 #     continue
                 self.swipe_and_purchase(priority)
+            except PurchaseResultTimeout as error:
+                self._recover_purchase_timeout(error)
+                return False
             except NotEnoughMoneyError:
                 logger.error(f'Not enough money to buy products in {priority_attr}')
                 self.ensure_back(check_btn)

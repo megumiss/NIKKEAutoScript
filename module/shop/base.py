@@ -20,6 +20,10 @@ class PurchaseTimeTooLong(Exception):
     pass
 
 
+class PurchaseResultTimeout(GameStuckError):
+    """购买或领取结果持续不可确认，由商店任务安排下次运行并尝试恢复列表。"""
+
+
 class Refresh(Exception):
     pass
 
@@ -91,7 +95,7 @@ class ShopBase(UI):
                 continue
             returned_timer.reset()
             if timeout.reached():
-                raise GameStuckError('等待商店购买结果超时')
+                raise PurchaseResultTimeout('等待商店购买结果超时')
 
             # 检查是否余额不足
             if self.appear(NO_MONEY, offset=(5, 5), static=False) and NO_MONEY.match_appear_on(self.device.image):
@@ -122,7 +126,7 @@ class ShopBase(UI):
                 skip_first_screenshot = True
                 while 1:
                     if timeout.reached():
-                        raise GameStuckError('领取后未能返回商品列表')
+                        raise PurchaseResultTimeout('领取后未能返回商品列表')
                     if skip_first_screenshot:
                         skip_first_screenshot = False
                     else:
@@ -135,6 +139,26 @@ class ShopBase(UI):
     def _shop_list_visible(self):
         """用图标与颜色共同确认商品列表，避免把弹窗下的暗色背景识别为已返回。"""
         return self.appear(SHOP_CHECK, offset=(5, 5)) and SHOP_CHECK.appear_on(self.device.image, 25)
+
+    def _recover_purchase_timeout(self, error: PurchaseResultTimeout):
+        """先重新排期，再限时返回商品列表，页面仍不明时由调度器恢复游戏。
+
+        只处理已识别的领取和取消按钮，避免在订单结果未知时再次确认购买。
+        """
+        logger.warning(f'商店操作超时：{error}')
+        self.config.task_delay(schedule=True)
+
+        timeout = Timer(5).start()
+        while not timeout.reached():
+            self.device.screenshot()
+            if self._shop_list_visible():
+                return
+            if self.handle_reward(interval=1):
+                continue
+            if self.appear(PURCHASE_CHECK, offset=(5, 5), static=False):
+                self.appear_then_click(CANCEL, offset=(30, 30), interval=1, static=False)
+
+        raise error
 
     def process_purchase(self, products: SelectedGrids, check_price=False, refresh=False, skip_first_screenshot=True):
         """

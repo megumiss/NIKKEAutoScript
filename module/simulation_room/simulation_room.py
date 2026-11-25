@@ -2,7 +2,7 @@ import re
 from functools import cached_property
 
 from module.base.timer import Timer
-from module.base.utils import _area_offset, crop, point2str
+from module.base.utils import point2str
 from module.exception import GamePageUnknownError, GameStuckError, OperationFailed
 from module.handler.assets import CONFIRM_B
 from module.logger import logger
@@ -64,28 +64,20 @@ class SimulationRoom(UI):
         return self.config.Area_EndingArea.upper()
 
     def get_next_event(self):
+        from module.simulation_room.event import EnemyEvent, find_enemy_positions
+
         self.device.screenshot()
 
         # 数值区域受背景影响，继续用卡片左上角的难度标签二次确认。
-        for i in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=5, threshold=0.90, static=False)[:3]:
-            area = _area_offset(i.get('area'), (-45, -100, -14, -90))
-            img = crop(self.device.image, area)
-            if NORMAL_CHECK.match(img, threshold=0.75, static=False):
-                NORMAL_CHECK._button_offset = area
-            elif HARD_CHECK.match(img, threshold=0.75, static=False):
-                HARD_CHECK._button_offset = area
-
-        if NORMAL_CHECK._button_offset:
-            from module.simulation_room.event import EnemyEvent
-
-            EnemyEvent(button=NORMAL_CHECK.location, config=self.config, device=self.device).run()
-            NORMAL_CHECK._button_offset = None
+        enemy_positions = find_enemy_positions(self.device.image, (NORMAL_CHECK, HARD_CHECK), threshold=0.90)
+        if NORMAL_CHECK in enemy_positions:
+            EnemyEvent(button=enemy_positions[NORMAL_CHECK], config=self.config, device=self.device).run()
             return
 
         if self.appear(HEALING_EVENT_CHECK, offset=(30, 30), static=False):
             from module.simulation_room.event import HealingEvent
 
-            HealingEvent(button=NORMAL_CHECK.location, config=self.config, device=self.device).run()
+            HealingEvent(button=HEALING_EVENT_CHECK.location, config=self.config, device=self.device).run()
             return
 
         if self.appear(IMPROVEMENT_EVENT_CHECK, offset=(30, 30), static=False):
@@ -109,17 +101,13 @@ class SimulationRoom(UI):
             return
 
         if self.appear(BOSS_EVENT_CHECK, offset=(30, 30)):
-            from module.simulation_room.event import EnemyEvent
 
             logger.hr('Start the boss event', 2)
             EnemyEvent(button=BOSS_EVENT_CHECK.location, config=self.config, device=self.device).run()
             return
 
-        if HARD_CHECK._button_offset:
-            from module.simulation_room.event import EnemyEvent
-
-            EnemyEvent(button=HARD_CHECK.location, config=self.config, device=self.device).run()
-            HARD_CHECK._button_offset = None
+        if HARD_CHECK in enemy_positions:
+            EnemyEvent(button=enemy_positions[HARD_CHECK], config=self.config, device=self.device).run()
             return
 
         if self.appear(END_SIMULATION, offset=(30, 30), static=False):
@@ -278,6 +266,7 @@ class SimulationRoom(UI):
 
     def run(self):
         try:
+            self.device.screenshot()
             if not self._resume_simulation():
                 if not self.appear_any([SIMULATION_ROOM_CHECK, DIFFICULTY_AREA_CHECK], offset=(30, 30)):
                     self.ui_ensure(page_ark)

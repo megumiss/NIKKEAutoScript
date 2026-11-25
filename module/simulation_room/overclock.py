@@ -1,7 +1,7 @@
 from functools import cached_property
 
 from module.base.timer import Timer
-from module.base.utils import _area_offset, crop, find_center, point2str
+from module.base.utils import point2str
 from module.exception import GamePageUnknownError, GameStuckError, OperationFailed
 from module.handler.assets import CONFIRM_B
 from module.logger import logger
@@ -108,24 +108,15 @@ class Overclock(UI):
         return True
 
     def get_next_event(self):
+        from module.simulation_room.event import find_enemy_positions
+
         self.device.screenshot()
         if self._resume_battle():
             return
 
-        enemy_labels = (NORMAL_CHECK, HARD_CHECK, SPECIAL_CHECK)
-        enemy_positions = {}
-        try:
-            for match in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=5, threshold=0.85, static=False)[:3]:
-                area = _area_offset(match.get('area'), (-45, -100, -14, -90))
-                img = crop(self.device.image, area)
-                for label in enemy_labels:
-                    if label.match(img, threshold=0.75, static=False):
-                        enemy_positions[label] = find_center(area)
-                        break
-        finally:
-            # 模板匹配会记录裁剪图内的坐标，下一轮选敌应重新读取当前画面。
-            for label in enemy_labels:
-                label._button_offset = None
+        enemy_positions = find_enemy_positions(
+            self.device.image, (NORMAL_CHECK, HARD_CHECK, SPECIAL_CHECK), threshold=0.85
+        )
 
         if NORMAL_CHECK in enemy_positions:
             self._fight_enemy(button=enemy_positions[NORMAL_CHECK])
@@ -561,6 +552,7 @@ class Overclock(UI):
 
     def run(self):
         try:
+            self.device.screenshot()
             if not self._resume_battle():
                 if not self.appear(SIMULATION_ROOM_CHECK, offset=(30, 30)):
                     self.ui_ensure(page_ark)
