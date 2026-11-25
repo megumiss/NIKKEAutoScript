@@ -294,10 +294,12 @@ def choose_goal(state, chart, snapshot, cut, purpose='story'):
     if goal is None and purpose == 'story':
         hint_candidates = [item for item in state.enemy_hints() if item['kind'] in COMBAT_ENEMY_KINDS]
         goal = elevator_goal(state, chart, cut, squad, hint_candidates)
-    if goal is None and purpose == 'story':
-        goal = direct_elevator_goal(state, chart, cut, squad)
     if goal is None:
         goal = frontier_point(state, cut, squad)
+    if goal is None:
+        goal = frontier_point(state, cut, squad, distance_limit=None)
+    if goal is None and purpose == 'story':
+        goal = direct_elevator_goal(state, chart, cut, squad)
     if goal is None:
         goal = {'kind': 'none', 'reason': 'no_reachable_target'}
     goal.setdefault('reason', {'enemy': 'nearest_pending_enemy', 'explore': 'nearest_unobserved_cell',
