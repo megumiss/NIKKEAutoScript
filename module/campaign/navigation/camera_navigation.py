@@ -81,7 +81,7 @@ def pan_endpoints(region, drag, squad_ground=None):
     """生成场景拖动端点，并在按下点落在小队排除矩形内时整体平移手势到空地。
 
     region 是允许起终点出现的客户区矩形，drag 保持调用者计算的向量不变。squad_ground 必须是
-    当前场景箭头向下换算的脚下点；None 表示跳过小队避让，但仍检查端点边界。排除矩形以脚下点
+    当前帧中用于避让的小队脚下点；None 表示跳过小队避让，但仍检查端点边界。排除矩形以脚下点
     为中心，半宽 150、半高 180，边界也算占用；没有可行空地时抛 ValueError，禁止发成走位点击。
     """
     drag = np.asarray(drag, float)
@@ -164,11 +164,12 @@ def target_projection(chart, observation, target):
     return roi, project(chart, roi)
 
 
-def pan_scene(session, drag):
+def pan_scene(session, drag, *, require_arrow=False):
     """用当前场景箭头避让后发送一次镜头拖动，不发送小队移动点击。
 
-    每次拖动都在最新帧重新识别唯一箭头，并向下换算脚下点；箭头缺失时跳过小队避让，
-    离屏标记仅记录跳过原因，不再作为拖动前提。不用历史地图坐标估算小队画面位置，
+    每次拖动前重新识别箭头；普通导航也可用明确离屏标记或已配准紧凑视野避让。
+    圆环暂时消失时仅使用仍有效的小队底图坐标，投回本帧视野以避让按下点。
+    回正微调要求当前箭头仍然存在。缺少依据时在输入前终止，
     不修改已知小队底图坐标。端点越界、窗口异常或驱动失败仍立即抛错，成功后等待场景稳定。
     """
     from module.campaign.vision.offscreen import squad_offscreen
@@ -181,12 +182,36 @@ def pan_scene(session, drag):
     if arrow is not None:
         ground = np.asarray(arrow, float) + [0., goto.ARROW_GROUND_OFFSET]
         session.emit(squad_avoidance='arrow', squad_avoid_ground=ground.tolist())
+    elif require_arrow:
+        raise SquadOffscreen('回正前小队箭头已消失，转入地图定位。')
     elif squad_offscreen(field) is not None:
         ground = None
         session.emit(squad_avoidance='offscreen')
     else:
-        ground = None
-        session.emit(squad_avoidance='skipped', message='未检测到小队画面标记，跳过拖动起点的小队避让')
+        from module.campaign.vision.frame import frame_inputs
+
+        inputs = frame_inputs(field)
+        if inputs.mode != 'compact':
+            raise SquadOffscreen('缺少小队标记及紧凑面板，无法确认拖动起点。')
+        panel = inputs.compact
+        players, _ = perception.detect_markers(panel, np.eye(3), mode='compact')
+        matcher = getattr(session, 'compact_matcher', None)
+        stationary = getattr(session, 'stationary_squad', None)
+        position = stationary() if not players and stationary is not None else None
+        if matcher is None or len(players) > 1 or (not players and position is None):
+            raise SquadOffscreen('当前帧无法定位小队以避让拖动起点。')
+        panel, road, valid = perception.compact_road_masks(field)
+        view = compact_viewport(session, matcher, panel, road, valid)
+        if view['status'] != 'accepted':
+            raise SquadOffscreen('当前紧凑视野未通过配准，停止场景拖动。')
+        if players:
+            offset = panel_delta_to_client(view['a'], np.asarray(players[0], float) - goto.GAZE)
+        else:
+            offset = target_view_offset(view['matrix'], view['a'], 1., view['viewport'], position)
+            if offset is None or not np.isfinite(offset).all():
+                raise SquadOffscreen('当前视野无法投影已确认的小队位置，停止场景拖动。')
+        ground = np.asarray(goto.VIEWPORT_PIXEL) + offset
+        session.emit(squad_avoidance='ring' if players else 'stationary', squad_avoid_ground=ground.tolist())
     region, _ = pan_region(drag)
     start, end = pan_endpoints(region, drag, ground)
     session.check()
@@ -447,6 +472,26 @@ def anchor_viewport(session, matrix, reference, squad_position, limit=900., *, k
     return translation @ matrix
 
 
+def scout_camera_reference(session, observation, start):
+    """复核侦察开图前后的紧凑视野，返回同视野展开中心到当前注视点的底图偏移。
+
+    只使用首次平移之前稳定配准的展开中心。新紧凑帧须独立通过配准，注视点偏移不超过
+    12 地图像素，两轴局部投影变化均不超过 12%；任一条件不满足就走现场开图标定。
+    """
+    cached = observation.get('scout_reference')
+    if cached is None or cached['gestures'] != session.gestures or start['status'] != 'accepted':
+        return None
+    gaze = np.asarray(goto.GAZE)
+    previous = cached['compact']
+    if np.linalg.norm(project(previous, gaze) - start['viewport']) > 12:
+        return None
+    before = jacobian(previous, gaze)
+    after = jacobian(start['matrix'], gaze)
+    if np.any(np.linalg.norm(after - before, axis=0) > .12 * np.linalg.norm(before, axis=0)):
+        return None
+    return start['viewport'] - np.asarray(cached['center'])
+
+
 def prepare_compact_reference(session, matcher, start, squad_position, *, known_squad=False):
     """首次镜头拖动前建立同一视野的展开中心与紧凑注视点偏移，不用小队坐标代替镜头基准。
 
@@ -555,7 +600,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     证据只在本次规划内保留，允许跨过一帧不可信定位，但不使用该帧参与匹配；两参考帧最多
     相隔两次平移，累计镜头路程不超过 450 地图像素。重新锚定、缩放跳变或超限时丢弃证据；
     辅助失败继续原落点和拖动流程，不为等待可靠帧增加拖动。
-    来自紧凑快照的小队位置没有展开 ROI 基准；需要拖动时先开合地图建立同视野校正基准。
+    紧凑起点优先复核本次侦察的同视野展开基准；无有效基准时在实际拖动前开合地图标定。
     已知小队模式只定位视野，不回正或重找圆环；基准失败在拖动前停止，不留到跟踪丢失后处理。
     单次预计面板位移不超过短边四分之一，为帧间道路保留重叠；总平移次数不增加。
     脚圈已匹配时，点击前的新帧由 confirm_ring_click 独立复核，不将复核失败交给展开恢复。
@@ -601,12 +646,15 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     if observation.get('roi_to_map') is not None:
         reference = (np.asarray(start['viewport'], float)
                      - project(np.asarray(observation['roi_to_map'], float), goto.EXPANDED_CENTER))
-    elif (observation.get('minimap_mode') == 'compact'
-          and np.linalg.norm(target - start['viewport']) > goto.SQUAD_REACH):
-        field, panel, road, valid, start, reference = prepare_compact_reference(
-            session, matcher, start, squad_position, known_squad=viewport_only)
-        if callable(camera_enemy_check):
-            camera_enemy_check(field)
+    elif observation.get('minimap_mode') == 'compact':
+        reference = scout_camera_reference(session, observation, start)
+        if reference is not None:
+            session.emit(camera_reference='scout', camera_reference_offset=np.round(reference, 1).tolist())
+        elif np.linalg.norm(target - start['viewport']) > goto.SQUAD_REACH:
+            field, panel, road, valid, start, reference = prepare_compact_reference(
+                session, matcher, start, squad_position, known_squad=viewport_only)
+            if callable(camera_enemy_check):
+                camera_enemy_check(field)
     matrix, scale_a, road_prev = start['matrix'], start['a'], road
     ring_previous = None
     ring_pan, ring_scale, ring_path = 0, scale_a, 0.

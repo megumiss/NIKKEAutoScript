@@ -11,6 +11,7 @@ from module.campaign.report import (BATTLE_OUTCOMES, BATTLE_STATES, EVIDENCE_KIN
 from module.campaign.route_planning import planning_routes, route_path
 from module.campaign.scouting import scout_focus
 from module.campaign.session import DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, SETTLE_TAP_INTERVAL
+from module.campaign.navigation.controls import GAZE
 from module.campaign.navigation.progress import NavigationStalled
 from module.campaign.timing import Stopwatch
 from module.campaign.vision.battle import score_text, value_text
@@ -254,7 +255,11 @@ class CampaignExecutor:
             _, path = self.session.localizer.route(np.asarray(snapshot['squad']), np.asarray(goal['position']))
         except RuntimeError:
             return True
-        return any(not self.owner.state.is_observed(point) for point in path)
+        if all(self.owner.state.is_observed(point) for point in path):
+            return False
+        # 已有明确的道路复核位置，下一步侦察会展开并沿途记录，不先单独补一遍视野。
+        return not (self.purpose == 'story' and goal['kind'] == 'enemy' and located(snapshot)
+                    and scout_focus(self.owner.state, self.owner.cut, snapshot['squad'], goal=goal) is not None)
 
     def review_block(self, goal):
         """到安全站位后只用新紧凑帧验证光幕；看不清不当成解封，也不消耗机关结果。
@@ -323,7 +328,7 @@ class CampaignExecutor:
         self.owner.last_route_signature = None
         logger.info(f"地面机关 {goal['id']} 已触发，中央光幕 {identifier} 已解除；"
                     '开始小队回正与十字扫描。')
-        snapshot = self.session.recover_center(mechanism_position=goal['position'])
+        snapshot = self.session.recover_center(mechanism_position=goal['position'], for_scan=True)
         state.update(snapshot, advance=False)
         self.owner.cut.update(state.blocking())
         if not self.scan_start('机关触发后', center_checked=True):
@@ -486,7 +491,7 @@ class CampaignExecutor:
             self.scout_pending = scout_focus(state, self.owner.cut, squad, include_unavailable=True, goal=goal)
             return False
         self.session.begin_target('scout')
-        self.session.scout_begin()
+        self.session.scout_begin(snapshot)
         views = 0
         total = Stopwatch()
         for view in range(max_views):
@@ -895,6 +900,51 @@ class CampaignExecutor:
             self.owner.state.target_failures.pop('story-location', None)
         return settled
 
+    def opening_enemy(self, squad):
+        """返回本拍实测且道路可达的普通敌人；历史线索和已绑定但未复核的目标不结束开局扫描。"""
+        state = self.owner.state
+        goal, _ = nearest_enemy(state, self.owner.cut, squad)
+        if (goal is not None and goal['enemy_kind'] == 'normal'
+                and state.enemies[goal['id']].get('confirmed_at') == state.tick):
+            return goal
+        return None
+
+    def prepare_opening(self, snapshot):
+        """把开局观测和扫描记在首个决策拍内，已有可达普通敌人时转入道路侦察。
+
+        准备帧只在身份已核对且缓存未失效时传入。当前圆环仅用于判断地图扫描的起点，
+        不能代替移动时的镜头配准。离屏、标记冲突或定位失败时保留原回正入口。
+        """
+        if snapshot is None:
+            snapshot = self.session.snapshot(retry_localization=False)
+        state = self.owner.state
+        state.update(snapshot)
+        self.owner.cut.update(state.blocking())
+        position = self.session.stationary_squad()
+        ready = False
+        if (position is not None and snapshot.get('localization') == 'accepted'
+                and snapshot.get('squad_source') != 'known' and np.array_equal(position, snapshot.get('squad'))
+                and (snapshot.get('minimap') or {}).get('mode') == 'compact'):
+            evidence = centering_frame(self.session)
+            ring = evidence['ring']
+            # 圆环与注视点同属归一化紧凑面板，只接受中心附近 6 像素内的实测圆心。
+            near_gaze = ring is not None and np.linalg.norm(np.asarray(ring) - GAZE) <= 6.
+            if evidence['ground'] is None:
+                ready = near_gaze and evidence['offscreen'] is None
+            else:
+                ready = centered(evidence) and (ring is None or near_gaze)
+            if ready and not curtains(snapshot):
+                goal = self.opening_enemy(position)
+                if goal is not None:
+                    logger.info(f"开局已确认可达普通敌人 {goal['id']}，直接检查目标前置道路。")
+                    return False
+        expanded_position = (snapshot.get('localization') == 'accepted' and position is not None
+                             and (snapshot.get('minimap') or {}).get('mode') == 'expanded'
+                             and np.array_equal(position, snapshot.get('squad')))
+        if not self.scan_start(center_checked=ready or expanded_position):
+            raise RuntimeError('开局十字扫描未取得可信视野。')
+        return True
+
     def scan_start(self, scene='开局', center_checked=False):
         """按场景名十字扫描小队周围，返回可信屏数，零屏由剧情执行层触发恢复。
 
@@ -908,14 +958,15 @@ class CampaignExecutor:
         if not center_checked and (self.session.stationary_squad() is None
                                    or not centered(centering_frame(self.session))):
             logger.info(f'{scene}十字扫描缺少有效小队位置或镜头未居中，先执行回正与重新定位。')
-            self.session.recover_center()
+            self.session.recover_center(for_scan=True)
         self.session.begin_target('scout')
-        self.session.scout_begin()
+        self.session.scout_begin(self.owner.last_snapshot)
         watch = Stopwatch()
         scanned = 0
         try:
-            scanned = self.session.scan_explored()
-        except (TargetTriggered, WindowChanged, NavigationStalled):
+            scanned = self.session.scan_explored(stop_when=self.opening_enemy if scene == '开局' else None)
+        except (TargetTriggered, WindowChanged, NavigationStalled, SceneRequired, ChapterTransitionTimeout,
+                ExBypassUnavailable):
             raise
         except (RuntimeError, ValueError) as exc:
             logger.warning(f'{scene}扫描未能完成（{exc}），本轮不采纳扫描结果。')
@@ -960,7 +1011,7 @@ class CampaignExecutor:
         self.owner.last_goal = None
         self.owner.last_routes = None
         self.owner.last_route_signature = None
-        snapshot = self.session.recover_center(allow_unlocalized=allow_visual)
+        snapshot = self.session.recover_center(allow_unlocalized=allow_visual, for_scan=True)
         if not snapshot.get('recovery_position_confirmed'):
             attempt = self.recoveries
             self.session.record('recovery_visual_attempt', snapshot=snapshot, attempt=attempt)
@@ -974,7 +1025,7 @@ class CampaignExecutor:
                 return
             logger.info('恢复近敌检查未通过，本次恢复继续执行展开实测定位；不沿用旧目标坐标。')
             self.session.record('recovery_localization_fallback', attempt=attempt)
-            snapshot = self.session.recover_center()
+            snapshot = self.session.recover_center(for_scan=True)
             if not snapshot.get('recovery_position_confirmed'):
                 raise RuntimeError('恢复阶段展开实测未通过，停止地图规划。')
         state.route_goal = None
@@ -1011,7 +1062,7 @@ class CampaignExecutor:
         实时小队圆环。实际执行移动或接管战斗前结束此模式，后续恢复移动闭环的位置观测。
         剧情定位、规划或侦察异常在下一轮独立回正并重新定位，丢弃冻结坐标；窗口、路线停滞、取消
         和战斗失败仍立即停止；路线停滞仅允许按唯一邻近光幕标注新增封锁后重新决策。
-        主线会话开局必须先取得有效小队位置并完成十字扫描；普通战后不额外强制扫描。
+        开局先用可信位置和可达普通敌人检查前置道路，缺少有效目标时再做有界十字扫描。
         开局或恢复扫描中断后保留待扫描标记，战斗／EX 处理结束后、重新选目标前补完扫描。
         扫描结束及普通战后先读取不重试的当前快照；近敌必须独立确认底图位置与同分区步行道路，
         无法确认则按原流程重试定位，不以屏幕坐标绕过电梯。恢复与普通循环使用相同门禁。
@@ -1056,6 +1107,8 @@ class CampaignExecutor:
                     if recovery_reason is not None:
                         camera_options = {}
                         self.recover(recovery_reason, goal=goal)
+                        if self.required_scan is None:
+                            camera_options = {'known_squad': self.session.stationary_squad()}
                         recovery_reason = None
                         goal = None
                         continue
@@ -1067,11 +1120,25 @@ class CampaignExecutor:
                         self.correct_ex_target(evidence)
                         self.ex_evidence = None
                         self.ex_pending = False
-                    if self.required_scan is not None:
+                    opening = self.required_scan == '开局'
+                    if opening:
+                        prepared = (initial if index == 0 and not resumed_ex
+                                    and self.session.reuse_reason() == 'unchanged' else None)
+                        if resumed_ex:
+                            # EX 归属已在展开面板实测；保持当前视野，避免收图丢失刚配准的道路。
+                            field = self.session.win.client()
+                            self.session.identity(field)
+                            if self.owner.minimap_expanded(field):
+                                prepared = self.session.observe_frame(field,
+                                                                      known_squad=self.session.stationary_squad())
+                        if self.prepare_opening(prepared):
+                            camera_options = {'known_squad': self.session.stationary_squad()}
+                        self.required_scan = None
+                    elif self.required_scan is not None:
                         if not self.scan_start(self.required_scan):
                             raise RuntimeError(f'{self.required_scan}十字扫描未取得可信视野。')
                         self.required_scan = None
-                        camera_options = {}
+                        camera_options = {'known_squad': self.session.stationary_squad()}
                     if self.purpose == 'story':
                         snapshot = self.session.snapshot(retry_localization=False, **camera_options)
                         if not located(snapshot) or snapshot.get('squad') is None:
@@ -1100,7 +1167,7 @@ class CampaignExecutor:
                         self.owner.state.update(snapshot, advance=False)
                         self.owner.cut.update(self.owner.state.blocking())
                         goal, snapshot = self.terminal_precheck(self.terminal_continuation, snapshot)
-                    goal = self.plan_tick(snapshot)
+                    goal = self.plan_tick(snapshot, advance=not opening)
                     gestures = self.session.gestures
                     if self.execute_visible_enemy(goal, snapshot):
                         camera_options = {}

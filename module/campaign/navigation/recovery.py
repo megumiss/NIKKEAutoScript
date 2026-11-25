@@ -4,17 +4,16 @@ import cv2
 import numpy as np
 
 from module.campaign.navigation import controls as goto
-from module.campaign.navigation.camera_navigation import pan_endpoints, pan_scene
+from module.campaign.navigation.camera_navigation import SquadOffscreen, pan_endpoints, pan_scene
 from module.campaign.vision.offscreen import squad_offscreen
 from module.campaign.vision.perception import detect_markers, squad_arrow
 from module.campaign.vision.surface_motion import project
 from module.logger import logger
 
-# 横向视野更长，左右各搜索四次；每次拖动端点仍在安全场景区域内。
-RECOVERY_DRAGS = ((1100., 0.),) * 4 + ((-1100., 0.),) * 4 + ((0., 650.),) * 2 + ((0., -650.),) * 2
 CENTER_TOLERANCE = 50.
 GROUND_STABLE_TOLERANCE = 20.
 VERIFY_INTERVAL = .4
+CENTER_ATTEMPTS = 4
 
 
 def centering_frame(session):
@@ -88,15 +87,10 @@ def recenter_mechanism_edge(session, mechanism_position):
 
 
 def recenter_squad(session, mechanism_position=None):
-    """短拖按箭头居中，长拖只用于寻找并点击离屏小队图标。
+    """回正小队并复核停稳，图标回正返回 True，视觉居中返回 False，缺少标记返回 None。
 
-    初始箭头可见时持续按地面点短拖，双帧均以箭头居中且位移不超过 20 像素为准。需要定向
-    搜索时在场景安全区域按右、左、下、上长拖，途中不再按箭头微调；离屏图标出现后立即点击
-    并直接视为回正成功，不再复核。普通回正不展开地图，定向搜索用尽后抛 ValueError。
-    回正前先确认野外并收起大地图，待背景遮罩消退后用新帧核对章节，避免暗化角标造成 OCR 空结果。
-    全部输入经过原会话闸门，窗口、预算、取消及战斗异常不在此捕获。
-    仅机关触发后可提供 mechanism_position，在两种小队标记均缺失时按新配准的视野执行
-    一次中央区域短拖；之后仍须恢复原视觉回正判据，不把投影位置直接当作小队定位。
+    未找到安全拖动起点时交由调用方在地图面板定位。每次微调前以两帧核对箭头和圆环，
+    小队仍在移动期间只采样；额度用尽停止。已绑定机关的边缘回正只允许一次。
     """
     session.check()
     session.await_field()
@@ -107,50 +101,37 @@ def recenter_squad(session, mechanism_position=None):
     if mechanism_position is not None and evidence['ground'] is None and evidence['offscreen'] is None:
         recenter_mechanism_edge(session, mechanism_position)
         evidence = centering_frame(session)
-    clicks, adjustments, drags = 0, 0, 0
-    searching = False
-    while True:
-        marker = evidence['offscreen']
-        if marker is not None and clicks < 2:
-            session.pause(VERIFY_INTERVAL)
-            checked = centering_frame(session)
-            current = checked['offscreen']
-            if (current is not None
-                    and np.linalg.norm(np.asarray(current['center']) - marker['center']) <= 12.):
-                session.click_client(current['center'])
-                clicks += 1
-                logger.info(f"小队离屏图标已点击：客户区位置 {current['center']}，第 {clicks}/2 次。")
+    for attempt in range(CENTER_ATTEMPTS):
+        session.pause(VERIFY_INTERVAL)
+        checked = centering_frame(session)
+        marker, current = evidence['offscreen'], checked['offscreen']
+        if marker is not None and current is not None:
+            if np.linalg.norm(np.asarray(current['center']) - marker['center']) <= 12.:
+                session.click_client(current['center'], camera_only=True)
+                logger.info('已双帧确认并点击离屏小队图标。')
                 return True
-            evidence = checked
-        if not searching:
-            if centered(evidence):
-                session.pause(VERIFY_INTERVAL)
-                checked = centering_frame(session)
-                if (centered(checked)
-                        and np.linalg.norm(np.asarray(checked['ground']) - evidence['ground'])
-                        <= GROUND_STABLE_TOLERANCE):
-                    session.record('recovery_centered', force=True, clicks=clicks, drags=drags,
-                                   adjustments=adjustments, **checked)
-                    logger.info(f'小队居中已确认：图标点击 {clicks} 次，定向拖动 {drags} 次，微调 {adjustments} 次。')
-                    return clicks > 0
-                evidence = checked
-                continue
-            ground = evidence['ground']
-            if ground is not None:
-                offset = np.asarray(goto.VIEWPORT_PIXEL) - ground
-                distance = float(np.linalg.norm(offset))
-                if distance > CENTER_TOLERANCE:
-                    pan_scene(session, offset * min(1., 560. / distance))
-                    adjustments += 1
+        elif current is None and marker is None:
+            ground, latest = evidence['ground'], checked['ground']
+            ring, new_ring = evidence['ring'], checked['ring']
+            if ground is None and latest is None:
+                logger.info('未取得小队场景箭头或离屏图标，转入地图定位。')
+                return None
+            if ground is not None and latest is not None:
+                stable = np.linalg.norm(np.asarray(latest) - ground) <= GROUND_STABLE_TOLERANCE
+                if ring is not None and new_ring is not None:
+                    stable = stable and np.linalg.norm(np.asarray(new_ring) - ring) <= 3.
+                if stable and centered(evidence) and centered(checked):
+                    session.record('recovery_centered', force=True, **checked)
+                    return False
+                if stable and not centered(checked) and attempt + 1 < CENTER_ATTEMPTS:
+                    offset = np.asarray(goto.VIEWPORT_PIXEL) - latest
+                    try:
+                        pan_scene(session, offset * min(1., 560. / np.linalg.norm(offset)), require_arrow=True)
+                    except SquadOffscreen:
+                        return None
                     evidence = centering_frame(session)
                     continue
-        if drags == len(RECOVERY_DRAGS):
-            break
-        ground = evidence['ground']
-        drag = np.asarray(RECOVERY_DRAGS[drags])
-        drags += 1
-        searching = True
-        pan_scene(session, drag)
-        logger.info(f'小队回正定向拖动：第 {drags}/{len(RECOVERY_DRAGS)} 次，位移 {drag.tolist()} 客户区像素。')
-        evidence = centering_frame(session)
-    raise ValueError('小队回正未确认：定向拖动及图标点击已达上限，禁止沿用异常前的定位。')
+                if not stable:
+                    session.reset_navigation()
+        evidence = checked
+    raise ValueError('回正复核达到上限，小队位置或镜头仍未稳定。')

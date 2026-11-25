@@ -41,7 +41,7 @@ from module.logger import logger
 SCOUT_DRAGS = 3
 SCOUT_CENTER_TOLERANCE = 60.
 SCOUT_DRAG_MAX = 300.
-SCOUT_SETTLE_SECONDS = 1.0
+SCOUT_SETTLE_SECONDS = .6
 # 展开地图只渲染已探索区域（实测见 doc/campaign-auto-flow.md）：面板道路占比低于该值说明
 # 视口已到探索前沿，那边既没有道路可配准也没有敌人标记，平移重试无益，按前沿失败处理。
 FRONTIER_BLUE_MAX = 18.
@@ -61,7 +61,8 @@ IDENTITY_CHECK_ATTEMPTS = 3
 IDENTITY_CHECK_INTERVAL = 0.5
 # 换视野的方向（客户区向量）、位移与停稳等待：起止点以面板中心对称，落点仍在 486×462 面板内。
 # 四个方向都留：视野已经贴着地图某一边时，沿那条边再拖是白费一次重试。
-PAN_DIRECTIONS = ((1., 0.), (-1., 0.), (0., 1.), (0., -1.))
+# 连续平移后采样不同区域，避免第二次拖回刚失败的起点。
+PAN_DIRECTIONS = ((1., 0.), (0., 1.), (-1., 0.), (0., -1.))
 PAN_PIXELS = 140.
 PAN_SETTLE_SECONDS = 1.0
 # 展开定位首次失败后仅补一次小幅地图平移，避免在相同视野上反复更换侦察目标。
@@ -286,6 +287,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         self.localized_report = None
         # 最近一次侦察/扫描配准的失败原因与面板道路占比：供调用方区分普通失败与探索前沿。
         self.scout_failure = None
+        self.scout_origin = self.scout_reference = None
         self.planned_enemy_click = None
         self.last_enemy_click = None
         self.planned_movement_click = None
@@ -1013,7 +1015,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         被接受的定位之后没有再发过手势时，可以直接沿用：
         紧凑面板配准没过线时重新展开大地图只会得到同一个坐标，白花一次开合与几秒配准。
         每帧都打一行观测摘要（见 describe_snapshot）与这一段耗时：推图的等待绝大部分花在这里。
-        keep_expanded 仅用于 expanded=True 后直接衔接侦察；调用方负责正常结束时收起。
+        keep_expanded 保留显式展开或定位重试中打开的面板，供紧接的侦察使用。
         展开帧收起后重新识别紧凑画面，不能把暗化场景里缺失的主线指引和机关传给规划器。
         收起前将可信展开帧并入历史观测，保留本次补充视野；紧凑配准仍失败时只保留未移动的
         小队坐标，标为 reused，不把旧展开矩阵、敌人或覆盖附到新紧凑快照。
@@ -1028,8 +1030,6 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         retry_localization=False 只返回本帧结果，不展开重试或复用旧定位；供主循环先尝试
         无底图坐标的可见近敌。失败仍标为未定位，不允许写入路网、覆盖或用于机关／电梯规划。
         """
-        if keep_expanded and not expanded:
-            raise ValueError('保留展开面板要求 expanded=True。')
         self.check()
         watch = Stopwatch()
         self.await_field()
@@ -1047,16 +1047,25 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         self.identity(field)
         snapshot = self.observe_frame(field, **options)
         if retry_localization and expanded and snapshot.get('localization') != 'accepted':
-            logger.info(f'展开地图定位未通过：小幅平移 {EXPANDED_RETRY_PIXELS:.0f} 客户区像素后重试（1/1）。')
-            self.win.capture()
-            self.pan_expanded((1., 0.), distance=EXPANDED_RETRY_PIXELS)
-            field = self.win.client()
-            self.identity(field)
-            snapshot = self.observe_frame(field, **options)
-            if snapshot.get('localization') != 'accepted':
+            # 死胡同或贴边视野下 60px 微移可能仍缺道路特征，按有限序列递增到标准换视野幅度再停。
+            retry_pans = (
+                ((1., 0.), EXPANDED_RETRY_PIXELS),
+                ((1., 0.), PAN_PIXELS),
+                ((0., 1.), PAN_PIXELS),
+            )
+            for idx, (direction, distance) in enumerate(retry_pans, 1):
+                logger.info(f'展开地图定位未通过：平移 {distance:.0f} 客户区像素后重试'
+                            f'（{idx}/{len(retry_pans)}）。')
+                self.pan_expanded(direction, distance=distance)
+                field = self.win.client()
+                self.identity(field)
+                snapshot = self.observe_frame(field, **options)
+                if snapshot.get('localization') == 'accepted':
+                    break
+            else:
                 self.owner.last_snapshot = snapshot
                 self.preview(field)
-                raise RuntimeError('展开地图小幅平移重试后仍未定位成功；停止目标选择并请求人工复核。')
+                raise RuntimeError('展开地图平移重试后仍未定位成功；停止目标选择并请求人工复核。')
         elif retry_localization and known_squad is not None and not located(snapshot):
             if (self.stationary_squad() is not None
                     and self.last_registration['gestures'] == self.gestures):
@@ -1064,7 +1073,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
             else:
                 logger.info('紧凑地图视野配准未通过，展开地图复核当前视野；保留未移动的小队坐标。')
                 self.record('viewport_expanded_retry', snapshot=snapshot, known_squad=known_squad)
-                return self.snapshot(expanded=True, known_squad=known_squad)
+                return self.snapshot(expanded=True, known_squad=known_squad, keep_expanded=keep_expanded)
         elif retry_localization and not located(snapshot):
             why = self.reuse_reason()
             snapshot = (self.reuse_registration(snapshot, why) if why is not None
@@ -1192,6 +1201,9 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
                           for item in snapshot.get('enemies', []) if item.get('kind') == 'boss']})
         if snapshot.get('squad_source') == 'known':
             report['squad_source'] = 'known'
+        reference = self.scout_reference
+        if reference is not None and reference.get('gestures') == self.gestures:
+            report['scout_reference'] = reference
         self.localized_report = {'report': report, 'gestures': self.gestures}
 
     def reusable_report(self):
@@ -1206,7 +1218,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
             return None
         return dict(cached['report'])
 
-    def pan_expanded(self, direction, distance=PAN_PIXELS):
+    def pan_expanded(self, direction, distance=PAN_PIXELS, settle=PAN_SETTLE_SECONDS):
         """在展开面板里沿客户区方向拖一次换视野；起止点以面板中心对称，拖动经输入闸门发送。
 
         只平移地图视图，小队本身不动：原本道路证据太少、配准差一点没过线的视野会换成另一段，
@@ -1217,10 +1229,14 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         center = np.array([(left + right) / 2, (top + bottom) / 2])
         half = np.asarray(direction, float) * distance / 2
         self.check()
+        field = self.win.client()
+        self.identity(field)
+        if not self.owner.minimap_expanded(field):
+            raise WindowChanged('拖动前未确认展开地图面板。')
         base = np.asarray(self.win.client_origin(), float) + center
         start, end = np.rint(base - half).astype(int), np.rint(base + half).astype(int)
         self.win.handler.mouse_swipe(tuple(start.tolist()), tuple(end.tolist()))
-        self.pause(PAN_SETTLE_SECONDS)
+        self.pause(settle)
 
     def retry_localization(self, snapshot, expanded=False, keep_expanded=False):
         """定位未被接受时利用展开面板有限重试，返回最后一次快照。
@@ -1241,7 +1257,9 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
                 expanded = True
             elif attempt:
                 self.pan_expanded(PAN_DIRECTIONS[(attempt - 1) % len(PAN_DIRECTIONS)])
-            snapshot = self.observe_frame(self.win.client())
+            field = self.win.client()
+            self.identity(field)
+            snapshot = self.observe_frame(field)
             if snapshot['localization'] == 'accepted':
                 logger.info(f"第 {attempt + 1}/{LOCALIZE_RETRIES} 次展开视野重试定位成功："
                             f"小队位置 {points_text(snapshot['squad'])}，耗时 {watch}")
@@ -1269,15 +1287,17 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         self.camera_gain = 1.
         self.last_plan_enemy_ring = False
         self.scout_failure = None
+        self.scout_origin = self.scout_reference = None
         self.owner.last_snapshot = None
 
-    def recover_center(self, mechanism_position=None, allow_unlocalized=False):
+    def recover_center(self, mechanism_position=None, allow_unlocalized=False, *, for_scan=False):
         """独立回正小队并取得全新实测定位；失败时不把旧位置降级为可用。
 
         回正与重新定位各使用一个单目标输入窗口；前者不发送小队移动。
         默认要求新快照来自实际小队圆环并通过既有配准门限；短拖回正后仍须居中，图标回正信任游戏结果。
         mechanism_position 仅供已确定中央解锁光幕的机关触发后回正，允许一次有界边缘小队镜头短拖；
-        普通恢复不提供此参数；缺少画面标记时按既有定向搜索拖动，跳过小队避让但保留端点检查。
+        普通恢复缺少画面标记时改在地图内定位。for_scan 可保留已展开的可信视野；
+        扫描只使用独立实测的位置与视口，不需要把实景镜头强制拖向小队。
         allow_unlocalized 仅供执行层已通过近敌门禁的普通恢复使用：回正后只取单帧、不展开重试，
         可返回未定位快照供纯画面近敌检查，但不能据此恢复地图规划。回正失败与安全异常仍直接传播。
         机关与扫描调用方默认保持严格定位要求，不能降级使用已知或失败坐标。
@@ -1292,71 +1312,95 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         icon_clicked = recenter_squad(self, mechanism_position=mechanism_position)
         self.reset_navigation()
         self.begin_target('position')
-        snapshot = self.snapshot(retry_localization=not allow_unlocalized)
+        snapshot = self.snapshot(keep_expanded=for_scan,
+                                 retry_localization=not allow_unlocalized or icon_clicked is None)
         position = self.stationary_squad()
         confirmed = (position is not None and located(snapshot)
                      and np.array_equal(np.asarray(snapshot.get('squad')), np.asarray(position)))
-        if not allow_unlocalized and not confirmed:
+        if not confirmed and (not allow_unlocalized or (snapshot.get('minimap') or {}).get('mode') == 'expanded'):
             raise ValueError('小队回正后的实测定位未通过，不能恢复地图规划。')
-        if not icon_clicked and not centered(centering_frame(self)):
+        if not (for_scan and confirmed) and not icon_clicked and not centered(centering_frame(self)):
             raise ValueError('重新定位后镜头偏离小队，不能恢复地图规划或实景近敌检查。')
         snapshot['recovery_position_confirmed'] = confirmed
         self.record('recovery_position_result', snapshot=snapshot, confirmed=confirmed)
         return snapshot
 
-    def scout_begin(self):
+    def scout_begin(self, snapshot=None):
         """侦察前确保地图已展开；沿用补视野面板，不为回正额外收起再开。
 
-        小队位置由调用方可信快照提供，侦察用每帧配准定位视口，不要求面板中心就是小队。
+        仅从当前已配准的紧凑视野实际开图时记录原矩阵，与首次无平移的稳定展开帧配对。
         """
         self.check()
+        self.scout_origin = self.scout_reference = None
+        inputs = self.inputs
         goto.map_open(self.win, reset=False)
+        if (snapshot is not None and snapshot is self.owner.last_snapshot
+                and snapshot.get('localization') == 'accepted' and snapshot.get('roi_to_map') is not None
+                and (snapshot.get('minimap') or {}).get('mode') == 'compact'
+                and self.inputs == inputs + 1 and self.reusable_report() is not None):
+            self.scout_origin = snapshot['roi_to_map']
 
     def scout_end(self):
         """侦察结束收回紧凑小地图；调用方保留侦察前小队坐标，并重新配准当前视野。"""
         goto.map_close(self.win)
+        if self.scout_reference is not None:
+            self.scout_reference['gestures'] = self.gestures
 
-    def scout_locate(self, tag):
+    def scout_locate(self, tag, *, scan_origin=False):
         """只配准展开侦察视口，不检测或约束小队圆环，独立道路配准通过后才采用本帧敌人。
 
         成功返回 (panel, report)；失败返回 None，原因与面板道路占比存 self.scout_failure，
         由调用方按类型降级（记录失败或前沿标记），不再直接终止侦察与目标选择。
         稳定性检查失败先原地换帧复验（最多 STABLE_RESAMPLES 次），仍不稳才小幅平移重试：
         长拖后的惯性滚动往往换一帧就稳，直接平移会丢掉本来可用的视野。
-        面板道路占比低于 FRONTIER_BLUE_MAX 说明视口已出已探索区域，平移重试无益，立即返回。
+        普通支路道路过少时按探索前沿返回。扫描首屏没有可回退的可信视野，允许有限的异向换位。
         截图、窗口、取消和输入异常不捕获；不在异常后补发地图收起动作。
         """
         self.scout_failure = None
-        for attempt in range(2):
+        origin, self.scout_origin = self.scout_origin, None
+        retries = ((PAN_PIXELS, 0.), (-PAN_PIXELS, PAN_PIXELS)) if scan_origin else ((EXPANDED_RETRY_PIXELS, 0.),)
+        for attempt in range(len(retries) + 1):
             if attempt:
-                self.win.capture()
-                self.pan_expanded((1., 0.), distance=EXPANDED_RETRY_PIXELS)
+                offset = np.asarray(retries[attempt - 1], float)
+                length = np.linalg.norm(offset)
+                self.pan_expanded(offset / length, distance=length)
             panel = self.win.capture()
-            blue = float(np.mean(terrain(panel)))
-            try:
-                report = self.localizer.locate(panel, tag, require_player=False, locate_player=False)
-            except (RuntimeError, ValueError) as exc:
-                reason = str(exc)
-            else:
-                for _ in range(STABLE_RESAMPLES + 1):
-                    if np.mean(terrain(panel) != terrain(self.win.capture())) <= .03:
-                        return panel, report
-                    self.pause(STABLE_RESAMPLE_SECONDS)
-                reason = '道路画面尚未稳定'
+            road = terrain(panel)
+            reason = '道路画面尚未稳定'
+            for _ in range(STABLE_RESAMPLES + 1):
+                self.pause(STABLE_RESAMPLE_SECONDS)
+                fresh = self.win.capture()
+                current = terrain(fresh)
+                stable = np.mean(road != current) <= .03
+                panel, road = fresh, current
+                if not stable:
+                    continue
+                try:
+                    report = self.localizer.locate(panel, tag, require_player=False, locate_player=False)
+                except (RuntimeError, ValueError) as exc:
+                    reason = str(exc)
+                    break
+                if np.mean(road != terrain(self.win.capture())) <= .03:
+                    self.scout_failure = None
+                    if attempt == 0 and origin is not None:
+                        self.scout_reference = dict(compact=origin, center=project(
+                            report['roi_to_map'], goto.EXPANDED_CENTER).tolist())
+                    return panel, report
+            blue = float(np.mean(road))
             self.scout_failure = {'reason': reason, 'blue_ratio': blue}
             self.record('scout_localization_failed', field=self.trace.last_field, force=True,
                         tag=tag, attempt=attempt + 1, reason=reason, blue_ratio=round(blue, 1))
-            if blue < FRONTIER_BLUE_MAX:
+            if blue < FRONTIER_BLUE_MAX and not scan_origin:
                 logger.info(f'侦察定位未通过：{reason}；面板道路占比 {blue:.0f}%，'
                             f'视口已出已探索区域，按探索前沿处理。')
                 return None
-            if not attempt:
-                logger.info(f'侦察定位未通过：{reason}；小幅平移 '
-                            f'{EXPANDED_RETRY_PIXELS:.0f} 客户区像素后重试（1/1）。')
+            if attempt < len(retries):
+                logger.info(f'侦察定位未通过：{reason}；面板换位 {retries[attempt]} 后重试'
+                            f'（{attempt + 1}/{len(retries)}）。')
         return None
 
-    def scout_drag(self, panel, report, point):
-        """把展开地图向 point（底图坐标）拖一次；返回实际发送的面板像素偏移，已到位返回 None。
+    def scout_offset(self, panel, report, point, tolerance=SCOUT_CENTER_TOLERANCE):
+        """按可信视口计算向底图目标拖动的面板像素偏移，已到位返回 None。
 
         地图内容跟随拖动：实测剩余偏移按本帧配准换算，单次拖动不超过 SCOUT_DRAG_MAX，
         闭环调用方在拖动后重新配准。逆投影的齐次分母以当前视口中心归一化；远处目标跨越
@@ -1374,18 +1418,18 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         homogeneous /= (inverse @ np.r_[origin, 1.])[2]
         offset = center * homogeneous[2] - homogeneous[:2]
         length = float(np.linalg.norm(offset))
-        if length <= SCOUT_CENTER_TOLERANCE * homogeneous[2]:
+        if length <= tolerance * homogeneous[2]:
             return None
         # 先按最大拖距约束正分母，等价于投影同一直线上的近处中间点，避免跨地平线外推。
         offset /= max(float(homogeneous[2]), length / SCOUT_DRAG_MAX)
         if homogeneous[2] <= 0:
             logger.info(f'侦察目标超出当前投影范围，采用分段拖动：目标 {points_text(point)}。')
-        return self.drag_expanded_offset(offset)
+        return offset
 
     def drag_expanded_offset(self, offset):
         """按面板像素向量发送一次展开地图拖动，返回实际发送的偏移；过短不拖动返回 None。
 
-        停稳等待随拖动长度伸缩：实测 300 像素长拖后地图惯性可超过 2 秒，固定等待不够。
+        先等待拖动响应；后续 scout_locate 比较连续道路帧，惯性未停时有限换帧复核。
         拖动前检查停止与窗口。
         """
         offset = np.asarray(offset, float)
@@ -1393,15 +1437,10 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         if length < 3:
             return None
         # 地图内容跟手移动：从 center - v/2 拖到 center + v/2，落点正好挪到面板中心。
-        offset = offset * min(1., SCOUT_DRAG_MAX / length)
-        self.check()
-        left, top, right, bottom = EXPANDED_ROI
-        center = np.array([(right - left) / 2, (bottom - top) / 2])
-        base = np.asarray(self.win.client_origin(), float) + [left, top] + center
-        start, end = np.rint(base - offset / 2).astype(int), np.rint(base + offset / 2).astype(int)
-        self.win.handler.mouse_swipe(tuple(start.tolist()), tuple(end.tolist()))
-        self.pause(SCOUT_SETTLE_SECONDS + min(length, SCOUT_DRAG_MAX) / SCOUT_DRAG_MAX)
-        return offset
+        distance = min(length, SCOUT_DRAG_MAX)
+        direction = offset / length
+        self.pan_expanded(direction, distance=distance, settle=SCOUT_SETTLE_SECONDS)
+        return direction * distance
 
     def scout_view(self, point, tag, check_enemies=False, enemy_id=None):
         """把展开地图拖向 point（底图坐标），沿途可信帧均记录敌人与覆盖；返回是否记录过可信帧。
@@ -1423,64 +1462,74 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
                        else self.owner.state.is_observed(point))
             if covered or attempt == SCOUT_DRAGS:
                 return True
-            if self.scout_drag(located[0], located[1], point) is None:
+            # 历史敌人仍有分类冲突时，用实际偏移对准它；已经正中仍未确认，再换一个视角复核。
+            offset = self.scout_offset(*located, point, tolerance=8. if enemy_id else SCOUT_CENTER_TOLERANCE)
+            if offset is None and enemy_id:
+                offset = np.array([PAN_PIXELS if attempt % 2 == 0 else -PAN_PIXELS, 0.])
+            if offset is None or self.drag_expanded_offset(offset) is None:
                 break
             located = self.scout_locate(f'{tag}_{attempt + 1}')
             if located is None:
                 return recorded
         return recorded
 
-    def scan_explored(self):
+    def scan_explored(self, stop_when=None):
         """开局扫描小队周围：中心一屏加四向各 SCAN_ARM_STOPS 站，返回成功配准的屏数。
 
         向外拖动用固定面板向量（面板尺寸的 SCAN_ARM_STEP 倍），每臂逐站配准吸收，失败就不再深入。
         拖回以未移动的小队底图坐标为目标，每帧按实测配准计算相对偏移，最多拖 SCOUT_DRAGS 次；
-        地图边缘造成斜向位移时因此仍能回到小队附近。向外配准失败使用最后可信视野拖回，
-        拖回失败或超过次数只跳过当前方向，其余方向仍按序尝试。最后一个方向结束后不再拖回，
+        地图边缘造成斜向位移时仍按实际视口回到小队附近，不使用失败拖动前的矩阵。
+        开局可在首次确认可达普通敌人时转入前置道路侦察。拖回失去配准时重开面板取得新中心；
+        若仍无法定位则结束本批。最后一个方向结束后不再拖回，
         由调用方直接收起展开地图；纯地图拖动不改变扫描前的小队坐标。安全异常照常传播。
         """
         squad = self.stationary_squad()
         if squad is None:
             raise ValueError('十字扫描缺少可信的小队位置，不能按相对位置拖回。')
-        located = self.scout_locate('scan_00')
+        located = self.scout_locate('scan_00', scan_origin=True)
         if located is None:
             return 0
         panel = located[0]
         step = np.array([panel.shape[1], panel.shape[0]], float) * SCAN_ARM_STEP
-        scanned = 0
-        directions = ((0., 0.), (1., 0.), (-1., 0.), (0., 1.), (0., -1.))
-        for index, direction in enumerate(directions):
-            if index == 0:
-                self.absorb_view(*located)
-                scanned += 1
-                continue
+        self.absorb_view(*located)
+        scanned = 1
+        if stop_when and stop_when(squad):
+            return scanned
+        directions = ((1., 0.), (-1., 0.), (0., 1.), (0., -1.))
+        for index, direction in enumerate(directions, 1):
             vector = step * np.asarray(direction, float)
             sent = 0
             for stop in range(SCAN_ARM_STOPS):
                 if self.drag_expanded_offset(vector) is None:
                     break
                 sent += 1
-                previous = located
                 located = self.scout_locate(f'scan_{index:02}_{stop}')
                 if located is None:
-                    logger.info('当前扫描方向配准未通过，停止深入并使用最后可信视野拖回小队。')
-                    located = previous
                     break
                 self.absorb_view(*located)
                 scanned += 1
-            if not sent or index == len(directions) - 1:
+                if stop_when and stop_when(squad):
+                    return scanned
+            if not sent or index == len(directions):
                 continue
             returned = False
             for attempt in range(SCOUT_DRAGS + 1):
-                if located is not None and self.scout_drag(located[0], located[1], squad) is None:
+                if located is None:
+                    break
+                offset = self.scout_offset(*located, squad)
+                if offset is None:
                     returned = True
                     break
-                if located is None or attempt == SCOUT_DRAGS:
+                if attempt == SCOUT_DRAGS:
                     break
+                self.drag_expanded_offset(offset)
                 located = self.scout_locate(f'scan_{index:02}_back_{attempt}')
             if not returned:
-                logger.warning('十字扫描未能按相对位置拖回小队附近，跳过当前方向并继续下一方向。')
-                continue
+                logger.info('十字扫描未取得可信返回视野，复位展开面板。')
+                goto.map_open(self.win, reset=True)
+                located = self.scout_locate(f'scan_{index:02}_reset', scan_origin=True)
+                if located is None:
+                    break
         return scanned
 
 
@@ -1498,7 +1547,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
             minimap={'mode': 'expanded', 'size': [width, height]}, enemies=enemies), advance=False)
         detail = describe_changes(changes) or '无新增敌人或观测区域'
         logger.info(f"侦察帧配准位置 {points_text(report['position'])}：检测敌人 {len(enemies)} 个，{detail}")
-        self.preview(self.win.client())
+        self.preview(self.trace.last_field)
 
     def close(self):
         """始终释放已按下鼠标，不关闭调度器 Device，也不在失焦或取消后点控件。"""

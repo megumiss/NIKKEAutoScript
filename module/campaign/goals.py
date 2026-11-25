@@ -286,15 +286,14 @@ def choose_goal(state, chart, snapshot, cut, purpose='story'):
     if goal is None and purpose == 'story' and state.route_goal is not None:
         goal, rejected = nearest_enemy(state, cut, squad)
     if goal is None:
-        transfer_candidates = list(candidates)
-        if purpose == 'story':
-            transfer_candidates.extend(item for item in state.enemy_hints()
-                                       if item['kind'] in COMBAT_ENEMY_KINDS)
-        goal = elevator_goal(state, chart, cut, squad, transfer_candidates)
+        goal = elevator_goal(state, chart, cut, squad, list(candidates))
     if goal is None and purpose == 'story' and state.route_goal is not None:
         goal = {'kind': 'none', 'reason': 'route_unreachable', 'for_target': state.route_goal['id']}
     if goal is None and purpose == 'story':
         goal = enemy_hint_goal(state, cut, squad)
+    if goal is None and purpose == 'story':
+        hint_candidates = [item for item in state.enemy_hints() if item['kind'] in COMBAT_ENEMY_KINDS]
+        goal = elevator_goal(state, chart, cut, squad, hint_candidates)
     if goal is None and purpose == 'story':
         goal = direct_elevator_goal(state, chart, cut, squad)
     if goal is None:

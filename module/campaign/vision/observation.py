@@ -124,15 +124,13 @@ class CampaignObserver:
                     self.last_story_error = str(exc)
         players, enemies = (self.minimap_markers(panel, mode, observe_squad=False) if known_squad is not None
                             else self.minimap_markers(panel, mode))
-        if mode == 'compact' and not players and not enemies and known_squad is None:
-            return snapshot
         ok, encoded = cv2.imencode('.jpg', panel, [cv2.IMWRITE_JPEG_QUALITY, 85])
         if not ok:
             raise ValueError('Cannot encode campaign minimap.')
         snapshot['minimap'] = dict(image='data:image/jpeg;base64,' + base64.b64encode(encoded).decode('ascii'),
                                    size=list(panel.shape[1::-1]), squad=players[0] if len(players) == 1 else None,
                                    enemies=enemies, mode=mode)
-        if self.matcher is None:
+        if self.matcher is None or (mode == 'compact' and not players and not enemies and known_squad is None):
             return snapshot
         squad_registration, viewport = None, None
         try:

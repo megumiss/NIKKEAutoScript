@@ -553,7 +553,7 @@ class Campaign(ModuleBase):
                             executor.interrupted_inputs = suspended['interrupted_inputs']
                             executor.terminal_destination = suspended['terminal_destination']
                         position = (points_text(snapshot['squad']) if located(snapshot)
-                                    and snapshot.get('squad') is not None else '底图未定位，仅允许实景检查')
+                                    and snapshot.get('squad') is not None else '待会话重新定位')
                         logger.info(f'场景与章节准备结束：{identity[1].upper()} 第 {chapter} 章，'
                                     f'小队起点 {position}，任务累计耗时 {watch}。')
                         try:

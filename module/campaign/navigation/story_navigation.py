@@ -113,7 +113,8 @@ def visible_enemy_target(session, recenter=True, field=None):
         if arrow is None or squad_offscreen(field) is not None:
             if attempt or not recenter:
                 return None
-            recenter_squad(session)
+            if recenter_squad(session) is None:
+                return None
             continue
         ground = np.asarray(arrow, float) + [0., goto.ARROW_GROUND_OFFSET]
         click = min(rings, key=lambda point: np.linalg.norm(point - ground))

@@ -273,21 +273,75 @@ class MapMatcher:
             self.warm_center, self.local_steps = None, 0
             if not had_warm:
                 raise
+            result = None
         else:
             if local:
                 result['local_search_retry'] = True
-            if result['status'] == 'accepted' or not had_warm or result['search_scope'] == 'full':
-                if expected_position is None:
-                    self._remember_center(panel, result)
-                return result
-        self.warm_parameters, self.warm_margin = None, None
-        self.warm_center, self.local_steps = None, 0
-        result = self._match_panel(panel, road, valid, player, review, expected_position)
-        result['full_search_retry'] = True
-        if local:
-            result['local_search_retry'] = True
-        self._remember_center(panel, result)
+        if result is None or (result['status'] != 'accepted' and had_warm and result['search_scope'] != 'full'):
+            self.warm_parameters, self.warm_margin = None, None
+            self.warm_center, self.local_steps = None, 0
+            result = self._match_panel(panel, road, valid, player, review, expected_position)
+            result['full_search_retry'] = True
+            if local:
+                result['local_search_retry'] = True
+        if result['status'] != 'accepted' and result.get('road_iou', 0.) < ACCEPT_ROAD_IOU:
+            island = self._match_islands(panel, road, valid, player, review, expected_position)
+            if island is not None:
+                result = island
+        if expected_position is None:
+            self._remember_center(panel, result)
         return result
+
+    def _match_islands(self, panel, road, valid, player, review=None, expected_position=None):
+        """整帧配准因道路重合度不足失败时，按独立连通岛屿分区回退配准。
+
+        只桥接面板内部的图标／圆环空洞，不跨越深色背景或边角控件区；存在至少两个独立
+        道路岛屿时按距离锚点由近及远依次以最近岛屿域裁剪 valid，排除跨岛拼接偏移的影响，
+        仍必须通过完整 ACCEPT_* 判据与可选小队位置约束才返回。
+        """
+        total = int(np.count_nonzero(road))
+        if total < 600:
+            return None
+        interior = valid.copy()
+        interior[:4] = interior[-4:] = interior[:, :4] = interior[:, -4:] = 255
+        interior[:32, :45] = interior[:32, -38:] = interior[-36:, -78:] = 255
+        bridge = ((road > 0) | (interior == 0)).astype(np.uint8)
+        count, labels = cv2.connectedComponents(bridge)
+        py, px = float(player[1]), float(player[0])
+        components = []
+        for idx in range(1, count):
+            mask = (labels == idx) & (road > 0)
+            area = int(np.count_nonzero(mask))
+            if area < max(400, int(total * .05)):
+                continue
+            ys, xs = np.nonzero(mask)
+            distance = float(np.min(np.hypot(xs - px, ys - py)))
+            components.append((distance, -area, area, mask))
+        if len(components) < 2:
+            return None
+        components.sort(key=lambda item: (item[0], item[1]))
+        min_island = max(600, int(total * .25))
+        for _, _, area, mask in components:
+            if area < min_island:
+                continue
+            other = (road > 0) & (~mask)
+            d_self = cv2.distanceTransform((~mask).astype(np.uint8), cv2.DIST_L2, 5)
+            d_other = cv2.distanceTransform((~other).astype(np.uint8), cv2.DIST_L2, 5)
+            comp_valid = valid.copy()
+            comp_valid[d_other <= d_self] = 0
+            comp_road = np.where(mask, road, np.uint8(0))
+            if np.count_nonzero(comp_road) < 200:
+                continue
+            self.warm_parameters, self.warm_margin = None, None
+            self.warm_center, self.local_steps = None, 0
+            try:
+                candidate = self._match_panel(panel, comp_road, comp_valid, player, review, expected_position)
+            except (ValueError, cv2.error):
+                continue
+            if candidate['status'] == 'accepted':
+                candidate['island_fallback'] = True
+                return candidate
+        return None
 
     def _remember_center(self, panel, result):
         """只缓存已接受的面板中心底图坐标，失败立即使局部先验失效。
