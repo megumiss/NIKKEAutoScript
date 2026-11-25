@@ -4,6 +4,7 @@ from module.base.button import Button
 from module.base.timer import Timer
 from module.base.utils import exec_file, mask_area
 from module.event.assets import SHOP_MONEY_LACK
+from module.exception import GameStuckError
 from module.logger import logger
 from module.map.map_grids import SelectedGrids
 from module.shop.assets import BUY, CANCEL, MAX, NO_MONEY, PURCHASE_CHECK, SHIFTY_SHOP_CHECK
@@ -71,11 +72,11 @@ class ShopBase(UI):
                 continue
 
     def handle_purchase(self, button=None, skip_first_screenshot=True):
-        """
-        处理购买逻辑。
-        """
+        """处理一次购买。商品列表已恢复而奖励未确认时，由调用方跳过本商品。"""
         self.device.click_record_clear()
         _confirm_timer = Timer(1, 2).start()
+        returned_timer = Timer(1, 2).start()
+        timeout = Timer(25).start()
         click_timer = Timer(0.3)
         max_clicks = 0
         while 1:
@@ -83,6 +84,14 @@ class ShopBase(UI):
                 skip_first_screenshot = False
             else:
                 self.device.screenshot()
+
+            if self._shop_list_visible():
+                if returned_timer.reached():
+                    raise PurchaseTimeTooLong('已返回商品列表，未确认领取结果')
+                continue
+            returned_timer.reset()
+            if timeout.reached():
+                raise GameStuckError('等待商店购买结果超时')
 
             # 检查是否余额不足
             if self.appear(NO_MONEY, offset=(5, 5), static=False) and NO_MONEY.match_appear_on(self.device.image):
@@ -112,6 +121,8 @@ class ShopBase(UI):
             if click_timer.reached() and self.handle_reward(1):
                 skip_first_screenshot = True
                 while 1:
+                    if timeout.reached():
+                        raise GameStuckError('领取后未能返回商品列表')
                     if skip_first_screenshot:
                         skip_first_screenshot = False
                     else:
@@ -120,6 +131,10 @@ class ShopBase(UI):
                     if self.appear(SHOP_CHECK, offset=(5, 5)) and _confirm_timer.reached():
                         max_clicks = 0
                         return
+
+    def _shop_list_visible(self):
+        """用图标与颜色共同确认商品列表，避免把弹窗下的暗色背景识别为已返回。"""
+        return self.appear(SHOP_CHECK, offset=(5, 5)) and SHOP_CHECK.appear_on(self.device.image, 25)
 
     def process_purchase(self, products: SelectedGrids, check_price=False, refresh=False, skip_first_screenshot=True):
         """
@@ -153,12 +168,15 @@ class ShopBase(UI):
                     timeout.reset()
                     try:
                         self.handle_purchase()
-                    except NotEnoughMoneyError:
-                        # 余额不足只跳过当前商品，避免中断后续商品（含免费商品）的购买
-                        logger.warning(f'Not enough money to buy {products.first_or_none().name}, skip')
+                    except (NotEnoughMoneyError, PurchaseTimeTooLong) as error:
+                        name = products.first_or_none().name
+                        if isinstance(error, NotEnoughMoneyError):
+                            logger.warning(f'Not enough money to buy {name}, skip')
+                            self.ensure_back(SHOP_CHECK)
+                        else:
+                            logger.warning(f'{name}：{error}，跳过本次购买')
                         products = products.delete([products.first_or_none()])
                         logger.attr('PENDING PRODUCT LIST', [i.name for i in products])
-                        self.ensure_back(SHOP_CHECK)
                         if products.first_or_none() is None:
                             if refresh and not self.refreshed:
                                 raise Refresh
