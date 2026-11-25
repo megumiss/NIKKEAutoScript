@@ -253,10 +253,15 @@ def _wait_app_ready(process, timeout=10):
 
 
 def start_app():
-    """启动常驻进程；接管期间禁用其快照恢复，避免拆分前修改共享桌面的方向。"""
+    """
+    启动常驻进程并返回本次是否持有新进程；接管期间禁用其快照恢复。
+
+    已有进程可枚举时直接接管。若新进程以 0 退出，可能已将请求转交给无法枚举的
+    外部实例，此时恢复快照设置并返回 False，由后续 CLI 建屏验证实例是否可用。
+    """
     if is_app_running():
         logger.info('ParsecDisplay is already running')
-        return
+        return False
     if not os.path.isfile(PARSEC_EXE):
         raise ParsecVddError(f'ParsecDisplay.exe not found: {PARSEC_EXE}')
     logger.info(f'Starting ParsecDisplay: {PARSEC_EXE}')
@@ -268,16 +273,21 @@ def start_app():
     except OSError as e:
         _restore_snapshot_restore()
         raise ParsecVddError(f'Failed to start ParsecDisplay: {e}')
-    if not _wait_app_ready(process):
-        exit_code = process.poll()
-        if exit_code is not None:
-            raise ParsecVddError(
-                f'ParsecDisplay exited before initialization (pid={process.pid}, exit_code={exit_code})'
-            )
+    if _wait_app_ready(process):
+        return True
+    exit_code = process.poll()
+    if exit_code == 0:
+        logger.info('ParsecDisplay exited with code 0; checking for an existing instance through CLI')
+        _restore_snapshot_restore()
+        return False
+    if exit_code is not None:
         raise ParsecVddError(
-            'Timed out waiting for ParsecDisplay to initialize after 10s: '
-            f'process is still running but no window was detected (pid={process.pid})'
+            f'ParsecDisplay exited before initialization (pid={process.pid}, exit_code={exit_code})'
         )
+    raise ParsecVddError(
+        'Timed out waiting for ParsecDisplay to initialize after 10s: '
+        f'process is still running but no window was detected (pid={process.pid})'
+    )
 
 
 def stop_app(timeout=10):
@@ -492,10 +502,7 @@ def ensure_screen_1080p_portrait():
 
     started_here = not is_app_running()
     try:
-        if started_here:
-            start_app()
-        else:
-            logger.info('ParsecDisplay is already running')
+        started_here = start_app()
         displays = [item for item in _active_displays() if _is_parsec(item)]
 
         if not displays:
@@ -503,6 +510,8 @@ def ensure_screen_1080p_portrait():
                 logger.info('No Parsec virtual display, adding one')
                 output = _cli('add')
                 logger.info(f'ParsecDisplay add: {output.strip()}')
+                if not re.search(r'^Added a virtual display with index \d+\.', output, re.MULTILINE):
+                    raise ParsecVddError(f'ParsecDisplay add failed: {output.strip()}')
             displays = _wait_parsec_displays()
             if not displays:
                 raise ParsecVddError('Parsec 虚拟屏未接入当前桌面，请检查驱动及 Windows 显示设置')
