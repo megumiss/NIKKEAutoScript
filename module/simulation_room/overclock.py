@@ -8,7 +8,7 @@ from module.logger import logger
 from module.ocr.ocr import Digit
 from module.simulation_room.assets import *
 from module.tribe_tower.assets import BACK
-from module.ui.assets import ARK_GOTO_SIMULATION_ROOM, GOTO_BACK, SIMULATION_ROOM_CHECK
+from module.ui.assets import ARK_GOTO_SIMULATION_ROOM, FIGHT_CLOSE, GOTO_BACK, SIMULATION_ROOM_CHECK
 from module.ui.page import page_ark
 from module.ui.ui import UI
 
@@ -314,10 +314,20 @@ class Overclock(UI):
                 click_timer.reset()
                 continue
 
+            if (
+                click_timer.reached()
+                and self.appear(OVERCLOCK_RESET_TIME_IN, offset=(30, 30), threshold=0.85)
+                and self.appear_then_click(FIGHT_CLOSE, offset=(12, 12), interval=2, threshold=0.85)
+            ):
+                click_timer.reset()
+                continue
+
             if timeout.reached():
                 raise GameStuckError
 
-            if self.appear(GOTO_BACK, offset=(30, 30)):
+            if self.appear(GOTO_BACK, offset=(30, 30)) or self.appear(
+                OVERCLOCK_SIMULATION_CHECK, offset=10, threshold=0.86
+            ):
                 return
 
             elif self.appear(RESET_TIME_IN, offset=(30, 30), interval=2):
