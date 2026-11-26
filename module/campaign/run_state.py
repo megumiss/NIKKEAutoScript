@@ -14,6 +14,8 @@ from module.logger import logger
 
 # 小地图标记每帧重检；此半径仅用于复用邻近记录的编号，不证明跨帧敌人身份。
 ENEMY_MERGE_RADIUS = 25.
+# 当前拍未检出的旧目标只有与两帧主线定位紧邻时才参与身份匹配（底图像素）。
+STORY_HISTORY_MATCH_RADIUS = 12.
 # 历史线索靠近本轮已确认的同类敌人时不重复侦察或展示；只隐藏线索，不合并敌人或删除记忆。
 ENEMY_HINT_RADIUS = 90.
 # 已观测区域的粗网格边长，只用来回答「这块地方看过没有」，不参与路径规划。
@@ -499,6 +501,8 @@ class RunState:
 
         position 为可靠小地图配准的底图坐标，不能传入场景菱形或脚圈客户区坐标。
         普通敌人和 Boss 的开战与清除仍使用同一编号，不另外建立一份主线敌人状态。
+        本拍没有匹配时，允许两帧实测复核距离更近的历史记录。歧义、类型冲突和已清除记录
+        仍拒绝绑定，防止为同一位置生成另一个待清编号。
         kind 必须来自两帧一致的小地图分类；ex_matched 仅供主线脚圈与 EX 位置通过两帧对应时
         纠正为 Boss。原 EX 编号只在无相邻竞争、未清除且未获真实 EX 弹窗证据时复用。
         """
@@ -507,16 +511,17 @@ class RunState:
             return None
         if np.any(position < 0) or np.any(position >= self.size):
             return None
-        nearby = [record for record in self.confirmed_enemies()
-                  if np.linalg.norm(np.asarray(record['position']) - position) <= ENEMY_MERGE_RADIUS]
         if kind not in COMBAT_ENEMY_KINDS or any(
                 np.linalg.norm(position - point) <= ENEMY_MERGE_RADIUS for point in self.confirmed_ex_positions):
             return None
         if ex_matched and kind != 'boss':
             return None
-        if ex_matched:
+        candidates = self.enemies.values() if ex_matched else self.confirmed_enemies()
+        nearby = [record for record in candidates
+                  if np.linalg.norm(np.asarray(record['position']) - position) <= ENEMY_MERGE_RADIUS]
+        if not nearby and not ex_matched:
             nearby = [record for record in self.enemies.values()
-                      if np.linalg.norm(np.asarray(record['position']) - position) <= ENEMY_MERGE_RADIUS]
+                      if np.linalg.norm(np.asarray(record['position']) - position) <= STORY_HISTORY_MATCH_RADIUS]
         if len(nearby) > 1 or (nearby and (nearby[0]['status'] != 'pending'
                                          or (nearby[0]['kind'] != kind
                                              and not (ex_matched and nearby[0]['kind'] == 'ex')))):
@@ -528,9 +533,11 @@ class RunState:
                                             confirmed_at=self.tick, reviewed_at=None, visible=False)
             nearby = [self.enemies[identifier]]
         if ex_matched:
-            nearby[0].update(kind='boss', story_boss_verified=True, confirmed_at=self.tick, reviewed_at=None)
-        nearby[0]['position'] = position.tolist()
-        self.story_target = nearby[0]['id']
+            nearby[0].update(kind='boss', story_boss_verified=True)
+        record = nearby[0]
+        record.update(position=position.tolist(), last_seen=self.tick, confirmed_at=self.tick,
+                      reviewed_at=None, classification_ambiguous=False)
+        self.story_target = record['id']
         self.target_failures.pop('story-location', None)
         return self.story_target
 
