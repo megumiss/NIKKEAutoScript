@@ -518,7 +518,7 @@ def confirm_ring_click(session, matcher, reference, field, viewport, scale_a, ta
             from module.campaign.vision.enemy_direction import match_target_direction
 
             direction = match_target_direction(fresh, rings, current['matrix'], target, squad_position,
-                                               enemy_kind=enemy_kind)
+                                               enemy_kind=enemy_kind, panel_scale=current['a'])
             if direction.get('click') is None or not np.allclose(direction['click'], result['click']):
                 raise ValueError(f'原目标方向复核未通过：{direction["reason"]}')
         latest_click = np.asarray(result['click'], float)
@@ -645,7 +645,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
             try:
                 current_rings = observe_rings(field, panel, matrix, viewport)
                 result = match_target_direction(field, current_rings, matrix, target, squad_position,
-                                                enemy_kind=enemy_kind)
+                                                enemy_kind=enemy_kind, panel_scale=scale_a)
             except (OSError, ValueError, RuntimeError, cv2.error, np.linalg.LinAlgError) as error:
                 result = dict(reason=f'目标方向辅助不可用：{error}')
             session.emit(message=f'目标方向辅助：{result["reason"].rstrip("。")}',
