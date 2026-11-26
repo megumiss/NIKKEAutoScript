@@ -34,8 +34,9 @@ def match_target_direction(field, frame, matrix, target, squad, enemy_kind='norm
     frame 来自同帧 observe_rings，matrix 为已接受的紧凑面板到底图变换；target/squad 为底图像素。
     先沿用现有 30 地图像素范围与类别检查找到原目标标记，再反投影到小地图比较方向，
     不比较大小地图中的敌我距离。实景原点使用当前唯一箭头下移 90 客户区像素，离屏即拒绝。
-    45 度内只有一个可点击脚圈且没有其他小地图敌人同向竞争时返回；否则继续原目标的导航，
-    不按检测置信度、距离或检测顺序改点其他敌人。调用方仍须在点击前复核新帧。
+    45 度内有多个可点击脚圈时，用小地图到客户区的标定方向再筛一次。只缩小已有候选集合，
+    不用估计距离排第二高度的脚圈。最终仍要求唯一候选且没有其他小地图敌人同向竞争；
+    调用方仍须在点击前复核新帧。
     """
     from module.campaign.navigation.controls import ARROW_GROUND_OFFSET
     from module.campaign.vision.offscreen import squad_offscreen
@@ -65,6 +66,13 @@ def match_target_direction(field, frame, matrix, target, squad, enemy_kind='norm
     target_index = nearby[0][0]
     indices = direction_candidates([vectors[target_index]], scene_vectors)
     report = dict(candidate_count=len(indices), angle_tolerance=DIRECTION_TOLERANCE)
+    if len(indices) > 1:
+        from module.campaign.navigation.camera_navigation import panel_delta_to_client
+
+        direction = panel_delta_to_client(1., vectors[target_index])
+        projected = direction_candidates([direction], scene_vectors[indices])
+        indices = [indices[index] for index in projected]
+        report['projected_candidate_count'] = len(indices)
     if len(indices) != 1:
         return dict(report, reason='原目标方向没有唯一实景落点，保留原目标继续导航。')
     index = indices[0]
