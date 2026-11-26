@@ -30,6 +30,9 @@ FUSED_IOU = .25
 # 容差 IoU 的膨胀半径（面板像素）：紧凑面板底图投影道路 ~18px、实时道路 ~4px，各膨胀 7px 后
 # 宽度对齐；展开帧场景（宽度基本一致）用同值偏保守但不改变判别方向。
 FUSED_DILATE = 7
+# 起始紧凑定位已 accepted 时，单批 1~3 次重叠拖动可覆盖的近距阈值（地图像素）；
+# 该范围内不提前开合展开面板预建纠偏基准，仅远目标或起始定位偏弱时预先标定。
+COMPACT_REFERENCE_DISTANCE = 220.
 
 
 class CameraRegistrationError(ValueError):
@@ -650,11 +653,14 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
         reference = scout_camera_reference(session, observation, start)
         if reference is not None:
             session.emit(camera_reference='scout', camera_reference_offset=np.round(reference, 1).tolist())
-        elif np.linalg.norm(target - start['viewport']) > goto.SQUAD_REACH:
-            field, panel, road, valid, start, reference = prepare_compact_reference(
-                session, matcher, start, squad_position, known_squad=viewport_only)
-            if callable(camera_enemy_check):
-                camera_enemy_check(field)
+        else:
+            distance = float(np.linalg.norm(target - start['viewport']))
+            if distance > goto.SQUAD_REACH and (
+                    start['status'] != 'accepted' or distance > COMPACT_REFERENCE_DISTANCE):
+                field, panel, road, valid, start, reference = prepare_compact_reference(
+                    session, matcher, start, squad_position, known_squad=viewport_only)
+                if callable(camera_enemy_check):
+                    camera_enemy_check(field)
     matrix, scale_a, road_prev = start['matrix'], start['a'], road
     ring_previous = None
     ring_pan, ring_scale, ring_path = 0, scale_a, 0.

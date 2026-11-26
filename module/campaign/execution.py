@@ -124,6 +124,7 @@ class CampaignExecutor:
         self.terminal_scan_stalls = 0
         self.recoveries = 0
         self.required_scan = '开局' if purpose == 'story' else None
+        self.scan_fresh = False
         self.scene_controller = owner.scene_controller
 
     def plan_tick(self, snapshot, advance=True):
@@ -951,7 +952,7 @@ class CampaignExecutor:
         return settled
 
     def opening_enemy(self, squad):
-        """返回本拍实测且道路可达的普通敌人；历史线索和已绑定但未复核的目标不结束开局扫描。"""
+        """返回本拍实测且道路可达的普通敌人；历史线索和已绑定但未复核的目标不结束扫描。"""
         state = self.owner.state
         goal, _ = nearest_enemy(state, self.owner.cut, squad)
         if (goal is not None and goal['enemy_kind'] == 'normal'
@@ -1013,14 +1014,20 @@ class CampaignExecutor:
         self.session.scout_begin(self.owner.last_snapshot)
         watch = Stopwatch()
         scanned = 0
+        if scene != '开局':
+            # 非开局扫描前推进决策拍，使移动前旧位置观测退为历史线索，避免误把旧敌人当本次实测早停，
+            # 也让本次扫描新确认的敌人保留到紧接着的下一轮规划。
+            self.owner.state.tick += 1
         try:
-            scanned = self.session.scan_explored(stop_when=self.opening_enemy if scene == '开局' else None)
+            scanned = self.session.scan_explored(stop_when=self.opening_enemy)
         except (TargetTriggered, WindowChanged, NavigationStalled, SceneRequired, ChapterTransitionTimeout,
                 ExBypassUnavailable):
             raise
         except (RuntimeError, ValueError) as exc:
             logger.warning(f'{scene}扫描未能完成（{exc}），本轮不采纳扫描结果。')
         else:
+            if scanned > 0 and scene != '开局':
+                self.scan_fresh = True
             logger.info(f'{scene}扫描完成：{scanned} 屏，耗时 {watch}')
         self.session.begin_target('position')
         self.session.scout_end()
@@ -1057,6 +1064,7 @@ class CampaignExecutor:
         state.execution_target = None
         state.unscoutable.clear()
         self.scout_pending = None
+        self.scan_fresh = False
         self.terminal_scan_stalls = 0
         self.owner.last_goal = None
         self.owner.last_routes = None
@@ -1199,6 +1207,7 @@ class CampaignExecutor:
                             logger.info('底图定位未通过，先检查可见近敌；地图路线与设施标注暂不执行。')
                             if self.execute_visible_enemy(preferred, snapshot):
                                 camera_options = {}
+                                self.scan_fresh = False
                                 self.interrupted_goal = None
                                 self.interrupted_inputs = 0
                                 continue
@@ -1217,7 +1226,9 @@ class CampaignExecutor:
                         self.owner.state.update(snapshot, advance=False)
                         self.owner.cut.update(self.owner.state.blocking())
                         goal, snapshot = self.terminal_precheck(self.terminal_continuation, snapshot)
-                    goal = self.plan_tick(snapshot, advance=not opening)
+                    advance = not opening and not self.scan_fresh
+                    self.scan_fresh = False
+                    goal = self.plan_tick(snapshot, advance=advance)
                     gestures = self.session.gestures
                     if self.execute_visible_enemy(goal, snapshot):
                         camera_options = {}

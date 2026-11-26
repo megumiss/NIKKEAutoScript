@@ -1178,10 +1178,25 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         options = {'expected_squad': expected} if expected is not None else {}
         if known_squad is not None:
             options['known_squad'] = known_squad
+        origin = None
+        if (expanded and known_squad is not None
+                and self.owner.last_snapshot is not None
+                and self.owner.last_snapshot.get('localization') == 'accepted'
+                and self.owner.last_snapshot.get('roi_to_map') is not None
+                and (self.owner.last_snapshot.get('minimap') or {}).get('mode') == 'compact'
+                and self.reusable_report() is not None):
+            origin = (self.owner.last_snapshot['roi_to_map'], self.inputs, self.gestures)
         self.win.reset_minimap(expanded=expanded, reset=expanded and known_squad is None)
         field = self.win.client()
         self.identity(field)
         snapshot = self.observe_frame(field, **options)
+        if (origin is not None and self.inputs == origin[1] + 1 and self.gestures == origin[2]
+                and snapshot.get('localization') == 'accepted' and snapshot.get('roi_to_map') is not None):
+            self.scout_reference = dict(
+                compact=origin[0],
+                center=project(np.asarray(snapshot['roi_to_map'], float), goto.EXPANDED_CENTER).tolist(),
+                gestures=self.gestures,
+            )
         if retry_localization and expanded and snapshot.get('localization') != 'accepted':
             # 死胡同或贴边视野下 60px 微移可能仍缺道路特征，按有限序列递增到标准换视野幅度再停。
             retry_pans = (
@@ -1352,7 +1367,11 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         cached = self.localized_report
         if cached is None or cached['gestures'] != self.gestures:
             return None
-        return dict(cached['report'])
+        report = dict(cached['report'])
+        if ('scout_reference' not in report and self.scout_reference is not None
+                and self.scout_reference.get('gestures') == self.gestures):
+            report['scout_reference'] = self.scout_reference
+        return report
 
     def pan_expanded(self, direction, distance=PAN_PIXELS, settle=PAN_SETTLE_SECONDS):
         """在展开面板里沿客户区方向拖一次换视野；起止点以面板中心对称，拖动经输入闸门发送。
@@ -1464,12 +1483,16 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
     def scout_begin(self, snapshot=None):
         """侦察前确保地图已展开；沿用补视野面板，不为回正额外收起再开。
 
-        仅从当前已配准的紧凑视野实际开图时记录原矩阵，与首次无平移的稳定展开帧配对。
+        仅从当前已配准的紧凑视野实际开图时记录原矩阵，与首次无平移的稳定展开帧配对；
+        若沿用补视野已展开的同一视野且已有同手势基准，则保留该基准供后续镜头规划复用。
         """
         self.check()
-        self.scout_origin = self.scout_reference = None
+        self.scout_origin = None
         inputs = self.inputs
         goto.map_open(self.win, reset=False)
+        if not (self.inputs == inputs and self.scout_reference is not None
+                and self.scout_reference.get('gestures') == self.gestures):
+            self.scout_reference = None
         if (snapshot is not None and snapshot is self.owner.last_snapshot
                 and snapshot.get('localization') == 'accepted' and snapshot.get('roi_to_map') is not None
                 and (snapshot.get('minimap') or {}).get('mode') == 'compact'
