@@ -26,7 +26,7 @@ from module.campaign.vision.chapter import chapter_identity
 from module.campaign.vision import battle
 from module.campaign.vision.minimap import terrain
 from module.campaign.vision.observation import EXPANDED_ROI
-from module.campaign.vision.perception import expanded_minimap_masks, project_centers
+from module.campaign.vision.perception import ExpandedSquadRingMissing, expanded_minimap_masks, project_centers
 from module.campaign.vision.surface_motion import project
 from module.campaign.window import CampaignWindow, WindowChanged
 from module.campaign.scene_session import CampaignBattleActions, CampaignInput
@@ -621,10 +621,11 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         return bool(battle.field_visible(field) or self.owner.minimap_expanded(field))
 
     def observe(self):
-        """优先复用未发生手势的有效小队定位，否则回正并展开定位，失败时有限换视野重试。
+        """优先复用有效位置，否则展开观测并在失败时有限重试。
 
         每次尝试的失败原因与量化指标由观察器的告警给出，这里只在成功时补一行：接受了哪一次尝试、
         道路重合度与小队坐标是多少、整段展开与定位花了多久——这一段的耗时是移动闭环的主要开销。
+        小队位置仍有效但展开面板无圆环时，先按场景箭头回正一次，不用旧坐标替代该次实测。
         成功那一帧上认出的敌人会一并并进运行状态（见 absorb_expanded）。
         上一次被接受的定位之后没有再发过手势时，这一拍要的坐标与上次完全相同，直接复用而不展开面板
         （见 reusable_report）：navigate 每走一步都会调用这里，而两步之间只有中间那次点击会改变画面。
@@ -641,10 +642,21 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
             return cached
         goto.map_open(self.win, reset=True)
         error = None
+        recentered = False
+        pans = 0
         for attempt in range(LOCALIZE_RETRIES + 1):
             if attempt:
-                logger.info(f'展开地图定位未通过，平移视野后重试（{attempt}/{LOCALIZE_RETRIES}）。')
-                self.pan_expanded(PAN_DIRECTIONS[(attempt - 1) % len(PAN_DIRECTIONS)])
+                if not recentered and isinstance(error, ExpandedSquadRingMissing) and self.stationary_squad() is not None:
+                    from module.campaign.navigation.recovery import recenter_squad
+
+                    logger.info('纯镜头操作后展开地图未检测到小队圆环，回正并重新展开观测一次。')
+                    recenter_squad(self)
+                    goto.map_open(self.win, reset=True)
+                    recentered = True
+                else:
+                    logger.info(f'展开地图定位未通过，平移视野后重试（{attempt}/{LOCALIZE_RETRIES}）。')
+                    self.pan_expanded(PAN_DIRECTIONS[pans % len(PAN_DIRECTIONS)])
+                    pans += 1
             panel = self.win.capture()
             self.index += 1
             try:
@@ -834,6 +846,9 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         enemy_kind 传递原目标类型，Boss 脚圈辅助不得关联成普通敌人。
         """
         from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, curtains
+        from module.campaign.navigation.camera_navigation import CameraStartMismatch
+        from module.campaign.navigation.recovery import recenter_squad
+
         self.planned_enemy_click = None
         self.planned_movement_click = None
         options = {'enemy_kind': enemy_kind} if enemy_kind != 'normal' else {}
@@ -868,23 +883,22 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         except ValueError as exc:
             if observation.get('squad_source') == 'known':
                 raise RuntimeError(f'当前镜头无法完成移动规划：{exc}；停止执行，不重新寻找小队圆环。') from exc
-            if observation.get('minimap_mode') != 'compact':
+            if isinstance(exc, CameraStartMismatch):
+                logger.info(f'规划起始镜头偏离小队，回正后重新定位一次：{exc}')
+                recenter_squad(self)
+            elif observation.get('minimap_mode') == 'compact':
+                logger.info(f'紧凑定位不足以完成镜头规划，按需展开重新定位一次：{exc}')
+            else:
                 raise
-            logger.info(f'紧凑定位不足以完成镜头规划，按需展开重新定位一次：{exc}')
-        else:
-            self.prepare_move_progress(observation, target, click)
-            self.planned_enemy_click = dict(click=np.asarray(click).tolist(),
-                                           target=np.asarray(target).tolist(),
-                                           direct=np.array_equal(target, original_target))
-            return click
-        self.localized_report = None
-        updated = self.observe()
-        if np.linalg.norm(np.asarray(updated['position']) - np.asarray(observation['position'])) > 12:
-            raise SquadPositionChanged(observation['position'], updated['position'])
-        if self.ex_bypass.obstacles:
-            target = self.ex_bypass.waypoint(self.owner.cut.road, updated['position'], original_target)
-        click = super().plan(updated, target, enemy_assist=enemy_assist, **options)
-        self.prepare_move_progress(updated, target, click)
+            self.localized_report = None
+            updated = self.observe()
+            if np.linalg.norm(np.asarray(updated['position']) - np.asarray(observation['position'])) > 12:
+                raise SquadPositionChanged(observation['position'], updated['position'])
+            observation = updated
+            if self.ex_bypass.obstacles:
+                target = self.ex_bypass.waypoint(self.owner.cut.road, observation['position'], original_target)
+            click = super().plan(observation, target, enemy_assist=enemy_assist, **options)
+        self.prepare_move_progress(observation, target, click)
         self.planned_enemy_click = dict(click=np.asarray(click).tolist(), target=np.asarray(target).tolist(),
                                        direct=np.array_equal(target, original_target))
         return click

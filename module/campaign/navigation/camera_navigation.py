@@ -33,7 +33,11 @@ FUSED_DILATE = 7
 
 
 class CameraRegistrationError(ValueError):
-    """展开道路配准未通过；仅用于区分可报告的视觉失败与不能捕获的窗口、取消及输入异常。"""
+    """镜头道路配准未通过；区分可报告的视觉失败与不能捕获的窗口、取消及输入异常。"""
+
+
+class CameraStartMismatch(CameraRegistrationError):
+    """首帧镜头中心远离实测小队，尚未发送本次规划的镜头手势或移动点击。"""
 
 
 class SquadOffscreen(RuntimeError):
@@ -393,12 +397,15 @@ def fusion_acceptable(session, candidate, matrix, road, valid, origin, predicted
     return True
 
 
-def compact_viewport(session, matcher, panel, road, valid):
-    """紧凑面板的无种子视野定位：用道路配准。
+def compact_viewport(session, matcher, panel, road, valid, *, player=None, expected_position=None):
+    """用紧凑面板道路定位视野，必要时用实测小队圆环约束候选。
 
-    返回 dict(matrix, a, viewport, iou, status)，matrix 为面板→地图单应；失败抛 ValueError。
+    默认用面板几何中心搜索视野，不假定那里有小队。有小队底图坐标约束时，player 必须是本帧的
+    实测圆环，符合道路配准门限后才可使用。返回的 viewport 始终是注视点底图坐标。
     """
-    result = matcher.match_panel(panel, road, valid, np.array([panel.shape[1] / 2, panel.shape[0] / 2]))
+    if player is None:
+        player = np.asarray(panel.shape[1::-1], float) / 2
+    result = matcher.match_panel(panel, road, valid, player, expected_position=expected_position)
     matrix = np.asarray(result['roi_to_map'], float)
     return dict(matrix=matrix, a=float(result['a']), viewport=project(matrix, goto.GAZE),
                 iou=float(result['road_iou']), status=result['status'])
@@ -412,7 +419,8 @@ def start_viewport(start, squad_position, tolerance=60.):
     """
     offset = float(np.linalg.norm(np.asarray(start['viewport'], float) - np.asarray(squad_position, float)))
     if offset > tolerance:
-        raise ValueError(f"紧凑小地图与小队定位不一致（{label(LOCALIZATION, start['status'])}，偏差 {offset:.0f} 像素）。")
+        status = label(LOCALIZATION, start['status'])
+        raise CameraStartMismatch(f'紧凑小地图与小队定位不一致（{status}，偏差 {offset:.0f} 像素）。')
     return offset
 
 
@@ -541,7 +549,8 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     像素，不能用时才退回固定的 VIEWPORT_PIXEL。只点注视点会漏掉一种常态——相机本来就对着小队、
     小队正站在注视点上，这时再点注视点等于叫它走到自己脚下（38 章实机连点三次，小队坐标只变了
     1.2 地图像素），而目标离注视点还有十几像素时这一步就走不完。
-    普通起始帧的视野中心以与已确认的小队定位一致为准（start_viewport），不要求 accepted。
+    普通起始帧先核对视野中心与已确认的小队定位；若不一致，只有当前帧小队圆环约束下的独立道路
+    配准被接受，才允许用偏离小队的视野中心规划。看不到唯一圆环时交回上层回正重试。
     纯镜头找敌人后携带 squad_source=known 时，小队坐标取自出发前，当前视口可远离小队；
     此时只要求当前道路配准 accepted，不因视口与小队不重合而展开重新寻找圆环。
     紧凑报告的起点即使来自本帧实测，展开校正也只定位视野；不能把两种面板的小队配准
@@ -591,7 +600,19 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
             raise RuntimeError('找敌人后的当前镜头配准未通过，不能使用旧视野矩阵规划移动。')
         session.emit(start_registration=start['status'], start_iou=round(float(start['iou']), 4))
     else:
-        offset = start_viewport(start, squad_position)
+        try:
+            offset = start_viewport(start, squad_position)
+        except CameraStartMismatch as mismatch:
+            try:
+                ring_panel, ring_road, ring_valid, player = perception.minimap_masks(field)
+                start = compact_viewport(session, matcher, ring_panel, ring_road, ring_valid,
+                                         player=player, expected_position=squad_position)
+            except (ValueError, cv2.error) as exc:
+                raise mismatch from exc
+            if start['status'] != 'accepted':
+                raise
+            offset = float(np.linalg.norm(start['viewport'] - squad_position))
+            session.emit(message=f'当前紧凑小队圆环与实测底图位置一致，采用道路配准结果，镜头偏差 {offset:.1f} 像素。')
         session.emit(start_registration=start['status'], start_iou=round(float(start['iou']), 4),
                      start_offset=round(offset, 1))
     if start['status'] != 'accepted':
