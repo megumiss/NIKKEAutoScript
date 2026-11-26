@@ -11,15 +11,20 @@ from PIL import Image
 from module.campaign.map.terrain import render_terrain, terrain_colors
 
 
-def supplemental_terrain_edits(metadata):
-    """返回与底图哈希绑定的 29-14 平台补图；其他地图继续使用资源包自身的道路。"""
+def supplemental_map(metadata):
+    """只在底图摘要匹配时启用第 29 章的场景、步行路网和传送标注。"""
     if metadata.get('chapter') != 29:
-        return []
+        return {}
     path = Path(__file__).resolve().parents[1] / 'assets' / 'chapter_29_terrain.json'
     supplement = json.loads(path.read_text(encoding='utf-8'))
     if supplement['image_sha256'] != metadata['image_sha256']:
-        return []
-    return supplement['terrain_edits']
+        return {}
+    return supplement
+
+
+def supplemental_terrain_edits(metadata):
+    """返回小地图配准使用的道路补图，保留画面中叠在一起的跨层道路。"""
+    return supplemental_map(metadata).get('terrain_edits', [])
 
 
 def edited_roads(package, metadata, baseline=None, *, include_supplement=True):

@@ -2,10 +2,55 @@
 
 import heapq
 
+import cv2
 import numpy as np
 
 from module.campaign.map.edited_map import road_distance
 from module.campaign.navigation.pathfinding import NoConnectedRoad
+
+
+def visible_elevator(field, state):
+    """只接受当前画面中唯一的指定形态升降台，返回客户区中心；远近由调用方校验。"""
+    from module.campaign.vision.detection import detect_scene
+
+    candidates = [item.center for item in detect_scene(field, (f'scene_elevator_{state}',))
+                  if item.confidence >= .75]
+    return candidates[0] if len(candidates) == 1 else None
+
+
+def visible_street_elevator(field):
+    """在升起的平台下识别地面入口的蓝色箭头和白色底板。
+
+    搜索窗口相对于当前帧识别的上层平台，使用 1776×999 客户区像素；遮挡或候选分散时
+    不推测入口。箭头有时被门框分割，允许合并同一块底板上的近邻轮廓。
+    """
+    lift = visible_elevator(field, 'end')
+    if lift is None:
+        return None
+    x, y = np.rint(lift).astype(int)
+    left, top, right, bottom = (max(0, x + 22), max(0, y + 242),
+                                min(field.shape[1], x + 146), min(field.shape[0], y + 385))
+    if left >= right or top >= bottom:
+        return None
+    hsv = cv2.cvtColor(field[top:bottom, left:right], cv2.COLOR_BGR2HSV)
+    blue = cv2.inRange(hsv, (89, 25, 150), (123, 142, 255))
+    white = cv2.inRange(hsv, (0, 0, 174), (179, 44, 255))
+    joined = cv2.morphologyEx(blue, cv2.MORPH_CLOSE, np.ones((5, 3), np.uint8))
+    contours, _ = cv2.findContours(joined, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    candidates = []
+    for contour in contours:
+        i, j, width, height = cv2.boundingRect(contour)
+        if not (7 <= width <= 55 and 4 <= height <= 45 and cv2.contourArea(contour) >= 15):
+            continue
+        bottom_plate = white[max(0, j - 5):j + height + 16, max(0, i - 5):i + width + 5]
+        if np.mean(bottom_plate > 0) >= .57:
+            candidates.append([left + i + width / 2, top + j + height / 2])
+    if not candidates:
+        return None
+    points = np.asarray(candidates)
+    if np.max(np.linalg.norm(points[:, None] - points, axis=2)) > 20.:
+        return None
+    return np.mean(points, axis=0) + [0., 9.]
 
 
 def walking_distance(localizer, start, target):

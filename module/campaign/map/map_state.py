@@ -11,6 +11,7 @@ import numpy as np
 
 from module.campaign.map.annotations import COORDINATES, validate_annotations
 from module.campaign.map.connectivity import decode_labels, ensure_data, package_road
+from module.campaign.map.edited_map import supplemental_map
 
 # 标记中心和人工标注都会偏出道路几个像素，按最近的道路像素归属分量。
 ROAD_TOLERANCE = 12
@@ -57,6 +58,15 @@ class StaticMap:
         self.image_sha256 = matcher.digest
         self.supported = self.model is None
         self.annotations = self._document(matcher.digest, metadata['size'])
+        supplement = supplemental_map(metadata)
+        for key in ('objects', 'connections'):
+            local = self.annotations[key]
+            identifiers = {item['id'] for item in local}
+            self.annotations[key] = [*local, *(item for item in supplement.get(key, ())
+                                                if item['id'] not in identifiers)]
+        if supplement:
+            validate_annotations(self.annotations, matcher.digest, metadata['size'])
+        self.elevator_controls = supplement.get('elevator_controls', {})
         self.road = None
         self.regions = None
         if self.model is None:

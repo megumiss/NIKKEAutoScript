@@ -18,5 +18,41 @@
       "operation": "add",
       "points": [[892, 767], [808, 792], [838, 883], [901, 883], [901, 791]]
     }
-  ]
+  ],
+  "routing_terrain_edits": [
+    {
+      "type": "polygon",
+      "operation": "erase",
+      "points": [[1083, 806], [1095, 806], [1095, 943], [1083, 943]]
+    }
+  ],
+  "objects": [
+    {
+      "id": "ch29-rooftop-lift-street",
+      "category": "ground_elevator",
+      "type": "point",
+      "points": [[1126, 852]]
+    },
+    {
+      "id": "ch29-rooftop-lift-roof",
+      "category": "ground_elevator",
+      "type": "point",
+      "points": [[975, 824]]
+    }
+  ],
+  "connections": [
+    {
+      "id": "ch29-rooftop-lift",
+      "category": "elevator_connection",
+      "from": "ch29-rooftop-lift-street",
+      "to": "ch29-rooftop-lift-roof",
+      "directed": false
+    }
+  ],
+  "elevator_controls": {
+    "ch29-rooftop-lift": {
+      "street": {"entry": [1126, 852]},
+      "roof": {"entry": [975, 824]}
+    }
+  }
 }

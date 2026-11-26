@@ -841,12 +841,12 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         紧凑快照只提供底图位置，不冒充展开 ROI 的投影基准。起始镜头不一致或跟踪需要展开
         校正时，先回正并取得原始展开报告再规划；若小队已移动超过 12 地图像素，交回移动
         闭环更新起点。窗口、弹窗和路线停滞异常不捕获，也不补发清理输入。
-        纯镜头找敌人后的已知起点不进入实时小队定位回退；规划器在首拖前独立建立视野校正基准，
-        仍不足以规划时直接停止，不以旧小队坐标替代镜头位置。
+        纯镜头找敌人后须独立建立视野校正基准；配准失败只允许回正并取得新实测位置，
+        不以旧小队坐标替代镜头或继续使用开合前的视野。
         enemy_kind 传递原目标类型，Boss 脚圈辅助不得关联成普通敌人。
         """
         from module.campaign.navigation.barrier_navigation import BarrierUnconfirmed, curtains
-        from module.campaign.navigation.camera_navigation import CameraStartMismatch
+        from module.campaign.navigation.camera_navigation import CameraRegistrationError, CameraStartMismatch
         from module.campaign.navigation.recovery import recenter_squad
 
         self.planned_enemy_click = None
@@ -881,11 +881,14 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         try:
             click = super().plan(observation, target, enemy_assist=enemy_assist, **options)
         except ValueError as exc:
-            if observation.get('squad_source') == 'known':
-                raise RuntimeError(f'当前镜头无法完成移动规划：{exc}；停止执行，不重新寻找小队圆环。') from exc
-            if isinstance(exc, CameraStartMismatch):
+            known = observation.get('squad_source') == 'known'
+            if known and not isinstance(exc, CameraRegistrationError):
+                raise RuntimeError(f'当前镜头无法完成移动规划：{exc}；停止执行。') from exc
+            if known or isinstance(exc, CameraStartMismatch):
                 logger.info(f'规划起始镜头偏离小队，回正后重新定位一次：{exc}')
                 recenter_squad(self)
+                if known:
+                    self.reset_navigation()
             elif observation.get('minimap_mode') == 'compact':
                 logger.info(f'紧凑定位不足以完成镜头规划，按需展开重新定位一次：{exc}')
             else:
@@ -1019,6 +1022,43 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         if len(players) != 1:
             raise SquadOffscreen(f'道路已停稳，后续小队定位不可用：本帧圆环数量为 {len(players)}；'
                                  '不继续等待，交由目标确认或定位恢复。')
+
+    def activate_elevator(self, observation, leg):
+        """在已规划的入口附近点击实景升降台，并为楼层变化重新取证。
+
+        只处理底图绑定的升降台。屋顶识别降下的平台，地面识别升起的平台下方的入口底板；
+        同一入口须连续两帧匹配，移动闭环再确认出口分区。
+        """
+        from module.campaign.navigation.camera_navigation import inside
+        from module.campaign.navigation.elevator_navigation import visible_elevator, visible_street_elevator
+        from module.campaign.navigation.recovery import recenter_squad
+
+        controls = self.owner.cut.chart.elevator_controls.get(leg['connection'])
+        if controls is None or np.linalg.norm(np.asarray(observation['position']) - leg['entry']) > 130.:
+            return False
+        street = controls['street']['entry'] == leg['entry']
+        if not street and controls['roof']['entry'] != leg['entry']:
+            return False
+        goto.map_close(self.win)
+        recognize = visible_street_elevator if street else lambda field: visible_elevator(field, 'start')
+        field = self.win.client()
+        self.identity(field)
+        initial = recognize(field)
+        if initial is None:
+            return False
+        self.pause(.3)
+        fresh = self.win.client()
+        self.identity(fresh)
+        point = recognize(fresh)
+        if point is None or np.linalg.norm(point - initial) > 14. or not inside(point, (248, 78, 1488, 895)):
+            return False
+        self.move(point)
+        self.record('elevator_activation', field=fresh, force=True, leg=leg, click=np.asarray(point).tolist())
+        logger.info(f'电梯 {leg["connection"]} 入口已复核并点击，等待出口定位。')
+        self.pause(4)
+        recenter_squad(self)
+        self.reset_navigation()
+        return True
 
     def snapshot(self, expanded=False, keep_expanded=False, known_squad=None, *, retry_localization=True):
         """取得一拍业务观测；定位失败时有限重试，展开默认收起，也可留给紧接着的侦察。
@@ -1330,13 +1370,14 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         """侦察结束收回紧凑小地图；调用方保留侦察前小队坐标，并重新配准当前视野。"""
         goto.map_close(self.win)
 
-    def scout_locate(self, tag):
+    def scout_locate(self, tag, *, scan_center=False):
         """只配准展开侦察视口，不检测或约束小队圆环，独立道路配准通过后才采用本帧敌人。
 
         成功返回 (panel, report)；失败返回 None，原因与面板道路占比存 self.scout_failure，
         由调用方按类型降级（记录失败或前沿标记），不再直接终止侦察与目标选择。
         稳定性检查失败先原地换帧复验（最多 STABLE_RESAMPLES 次），仍不稳才小幅平移重试：
         长拖后的惯性滚动往往换一帧就稳，直接平移会丢掉本来可用的视野。
+        十字扫描首帧失败时改为纵向取一屏，中心与横向的小范围重试可能始终看见同一处缺失道路。
         面板道路占比低于 FRONTIER_BLUE_MAX 说明视口已出已探索区域，平移重试无益，立即返回。
         截图、窗口、取消和输入异常不捕获；不在异常后补发地图收起动作。
         """
@@ -1344,7 +1385,10 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         for attempt in range(2):
             if attempt:
                 self.win.capture()
-                self.pan_expanded((1., 0.), distance=EXPANDED_RETRY_PIXELS)
+                if scan_center:
+                    self.drag_expanded_offset((0., 128.))
+                else:
+                    self.pan_expanded((1., 0.), distance=EXPANDED_RETRY_PIXELS)
             panel = self.win.capture()
             blue = float(np.mean(terrain(panel)))
             try:
@@ -1365,8 +1409,8 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
                             f'视口已出已探索区域，按探索前沿处理。')
                 return None
             if not attempt:
-                logger.info(f'侦察定位未通过：{reason}；小幅平移 '
-                            f'{EXPANDED_RETRY_PIXELS:.0f} 客户区像素后重试（1/1）。')
+                retry = '纵向换一屏' if scan_center else f'小幅平移 {EXPANDED_RETRY_PIXELS:.0f} 客户区像素'
+                logger.info(f'侦察定位未通过：{reason}；{retry}后重试（1/1）。')
         return None
 
     def scout_drag(self, panel, report, point):
@@ -1456,7 +1500,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         squad = self.stationary_squad()
         if squad is None:
             raise ValueError('十字扫描缺少可信的小队位置，不能按相对位置拖回。')
-        located = self.scout_locate('scan_00')
+        located = self.scout_locate('scan_00', scan_center=True)
         if located is None:
             return 0
         panel = located[0]

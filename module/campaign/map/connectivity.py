@@ -15,7 +15,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw
 
-from module.campaign.map.edited_map import supplemental_terrain_edits
+from module.campaign.map.edited_map import supplemental_map
 from module.campaign.map.terrain import render_terrain, terrain_colors
 
 
@@ -61,7 +61,9 @@ def package_road(package, metadata, annotations):
     没有概率缓存的包退回渲染出的地形图，按 add 颜色精确比色取道路。
     """
     package = Path(package)
-    edits = [*supplemental_terrain_edits(metadata), *annotations.get('terrain_edits', [])]
+    supplement = supplemental_map(metadata)
+    edits = [*supplement.get('terrain_edits', []), *supplement.get('routing_terrain_edits', []),
+             *annotations.get('terrain_edits', [])]
     with Image.open(package / 'map.png') as image:
         edited, override = render_terrain(image, edits, terrain_colors(metadata))
     cache = package / 'source/map_data.npz'

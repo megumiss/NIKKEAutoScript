@@ -455,11 +455,12 @@ def anchor_viewport(session, matrix, reference, squad_position, limit=900., *, k
     return translation @ matrix
 
 
-def prepare_compact_reference(session, matcher, start, squad_position, *, known_squad=False):
+def prepare_compact_reference(session, matcher, start, squad_position, old_road, old_valid, *, known_squad=False):
     """首次镜头拖动前建立同一视野的展开中心与紧凑注视点偏移，不用小队坐标代替镜头基准。
 
     只开合地图，不回正或拖动；展开配准必须通过原门限。收图后重新检查身份、收集提示和
-    紧凑道路，沿用点击复核的 12 地图像素、12% 尺度稳定界限。失败时不发送镜头或小队移动。
+    紧凑道路。尺度搜索换档时，只有两帧共同有效域的道路重合度达到 0.99 且注视点稳定，才采用新尺度。
+    失败时不发送镜头或小队移动。
     返回新紧凑帧及其配准，调用方不得继续使用开图前的道路或脚圈证据。
     """
     options = {'known_squad': True} if known_squad else {}
@@ -470,10 +471,23 @@ def prepare_compact_reference(session, matcher, start, squad_position, *, known_
     session.preview(field)
     panel, road, valid = perception.compact_road_masks(field)
     current = compact_viewport(session, matcher, panel, road, valid)
-    if (current['status'] != 'accepted'
-            or np.linalg.norm(current['viewport'] - start['viewport']) > 12
-            or abs(current['a'] / start['a'] - 1.) > .12):
+    shift = float(np.linalg.norm(current['viewport'] - start['viewport']))
+    scale_change = abs(current['a'] / start['a'] - 1.)
+    stable_roads = False
+    if scale_change > .12:
+        common = (old_valid > 0) & (valid > 0)
+        before = (old_road > 0) & common
+        after = (road > 0) & common
+        union = np.count_nonzero(before | after)
+        overlap = np.count_nonzero(before & after) / union if union else 0.
+        stable_roads = overlap >= .99
+    if current['status'] != 'accepted' or shift > 12 or (scale_change > .12 and not stable_roads):
+        session.emit(camera_reference='rejected', reference_status=current['status'],
+                     reference_shift=round(shift, 1), reference_scale_change=round(scale_change, 3))
         raise CameraRegistrationError('地图开合后紧凑视野或尺度未通过复核，不能建立镜头校正基准。')
+    if stable_roads:
+        session.emit(message='紧凑道路画面一致，采用复核帧的配准尺度。',
+                     reference_road_overlap=round(overlap, 3), reference_scale_change=round(scale_change, 3))
     reference = current['viewport'] - project(np.asarray(report['roi_to_map']), goto.EXPANDED_CENTER)
     session.emit(camera_reference='accepted', camera_reference_offset=np.round(reference, 1).tolist())
     return field, panel, road, valid, current, reference
@@ -625,7 +639,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
     elif (observation.get('minimap_mode') == 'compact'
           and np.linalg.norm(target - start['viewport']) > goto.SQUAD_REACH):
         field, panel, road, valid, start, reference = prepare_compact_reference(
-            session, matcher, start, squad_position, known_squad=viewport_only)
+            session, matcher, start, squad_position, road, valid, known_squad=viewport_only)
         if callable(camera_enemy_check):
             camera_enemy_check(field)
     matrix, scale_a, road_prev = start['matrix'], start['a'], road
