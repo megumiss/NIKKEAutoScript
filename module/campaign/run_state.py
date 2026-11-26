@@ -55,10 +55,11 @@ def panel_quad(snapshot, margin=0):
     if matrix is None or minimap is None:
         return None
     width, height = snapshot.get('coverage_size', minimap['size'])
-    if margin < 0 or min(width, height) <= 2 * margin:
+    left, top, right, bottom = snapshot.get('coverage_bounds') or (0, 0, width, height)
+    if margin < 0 or min(right - left, bottom - top) <= 2 * margin:
         return None
-    corners = np.array([[margin, margin], [width - margin, margin],
-                        [width - margin, height - margin], [margin, height - margin]], float)
+    corners = np.array([[left + margin, top + margin], [right - margin, top + margin],
+                        [right - margin, bottom - margin], [left + margin, bottom - margin]], float)
     matrix = np.asarray(matrix, float)
     points = np.column_stack((corners, np.ones(len(corners)))) @ matrix.T
     divisor = points[:, 2]
