@@ -38,6 +38,9 @@ CHAPTER_CARD_ROI = (630, 130, 1140, 830)
 CHAPTER_NEXT_OFFSET = 35
 CHAPTER_ENTRY_POINT = (1635, 940)
 CHAPTER_CLOSE_POINT = (1098, 120)
+# 教学跳过提示位于中央通知，确认键是底部右侧的高亮蓝色按钮。
+TUTORIAL_SKIP_PROMPT_ROI = (735, 422, 1025, 481)
+TUTORIAL_SKIP_CONFIRM_ROI = (905, 606, 1104, 645)
 
 TEMPLATES = {
     'chapter_clear': ((680, 340, 1090, 440), .9),
@@ -129,6 +132,25 @@ def chapter_next(field, reader, templates=None):
         center = box.reshape(-1, 2).mean(axis=0) + [x1, y1 + CHAPTER_NEXT_OFFSET]
         return center.tolist()
     return None
+
+
+def tutorial_skip_confirmation(field, reader):
+    """用简中提示原文确认跳过教学弹窗，返回其启用的确认键客户区坐标。
+
+    SKIP 打开确认弹窗后，背景里依然能匹配到 SKIP。这里只接受明确的教学跳过文案和
+    已亮起的确认键，其他通知、纯剧情和教学页自身继续走原有流程。
+    """
+    left, top, right, bottom = TUTORIAL_SKIP_CONFIRM_ROI
+    button = cv2.cvtColor(field[top:bottom, left:right], cv2.COLOR_BGR2HSV)
+    blue = cv2.inRange(button, (85, 95, 140), (115, 255, 255))
+    if np.count_nonzero(blue) < .65 * blue.size:
+        return None
+    x1, y1, x2, y2 = TUTORIAL_SKIP_PROMPT_ROI
+    prompt = cv2.resize(field[y1:y2, x1:x2], None, fx=2., fy=2., interpolation=cv2.INTER_CUBIC)
+    text = reader.ocr(prompt, direct_ocr=True, threshold=CHAPTER_OCR_THRESHOLD)['text']
+    if ''.join(text.split()).rstrip('？?') != '是否跳过进行中的教学指南':
+        return None
+    return (left + right) // 2, (top + bottom) // 2
 
 
 def chapter_list_difficulty(field, templates):
@@ -567,6 +589,11 @@ class CampaignSceneController:
             if continue_point is not None:
                 self.tap(continue_point, 'UNLOCK 点击继续', interval=1.)
             return self.wait('unlock', scores, field)
+
+        guide_confirm = tutorial_skip_confirmation(field, self.session.owner.chapter_ocr)
+        if guide_confirm is not None:
+            self.tap(guide_confirm, '确认跳过教学指南', interval=1.)
+            return self.wait('tutorial_skip_confirm', scores, field)
 
         skip_score, skip_point = battle.story_skip(field)
         scores['story_skip'] = round(skip_score, 3)
