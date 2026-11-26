@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 
-from module.campaign.run_state import MAX_FAILURES, RunState, located, panel_quad
+from module.campaign.run_state import COMBAT_ENEMY_KINDS, MAX_FAILURES, RunState, located, panel_quad
 from module.campaign.goals import describe, frontier_point, nearest_enemy, unobserved_component_cells
 from module.campaign.report import (BATTLE_OUTCOMES, BATTLE_STATES, EVIDENCE_KINDS, GOAL_KINDS, GOAL_REASONS,
                                     RESULT_STATES, label, points_text)
@@ -47,6 +47,8 @@ BATTLE_DEFEAT_RETRIES = 3
 # 升级弹窗、加载或未识别画面不计入野外确认，Timer 的 count 语义仍为 count + 1 帧。
 BATTLE_SETTLE_CONFIRM = 1.0
 BATTLE_SETTLE_FRAMES = 3
+# 战后只复核原目标近处的标记，避免把同屏另一个敌人算作未完成的 Boss。
+BOSS_VICTORY_RECHECK_RADIUS = 12.
 # 一段战斗超过这么多秒还没有结算就报一次进度：说明一直在等游戏自己推进（战斗里没有该点的按钮）。
 BATTLE_IDLE_REPORT = 60
 
@@ -878,22 +880,56 @@ class CampaignExecutor:
             logger.info('继续提示后已确认返回野外，胜负未确认；保留敌人与失败记录，重新观测。')
             return settled
         if goal is not None and goal.get('kind') == 'enemy':
-            self.owner.state.enemies[goal['id']]['status'] = 'cleared'
-            self.session.complete_move_target(goal)
-            logger.info(f'战斗胜利：{goal_brief(goal)} 已标记为清除，移出候选集合。')
+            chapter_finished = boss_visible = False
             if goal.get('enemy_kind') == 'boss':
                 self.terminal_destination = None
                 field = self.session.win.client()
-                if self.scene_controller.start_if_complete(field):
-                    self.session.reuse_squad = False
-                    raise SceneRequired('Boss 战后已确认章节结束，交上层处理换章。')
-                self.session.verify_identity(field)
+                chapter_finished = self.scene_controller.start_if_complete(field)
+                if not chapter_finished:
+                    self.session.verify_identity(field)
+                    boss_visible = self.boss_visible_after_victory(goal, field)
+            if boss_visible:
+                logger.info(f'战后复核确认 {goal_brief(goal)} 的标记仍在，保留该目标继续推进。')
+            else:
+                self.owner.state.enemies[goal['id']]['status'] = 'cleared'
+                self.session.complete_move_target(goal)
+                logger.info(f'战斗胜利：{goal_brief(goal)} 已标记为清除，移出候选集合。')
+            if chapter_finished:
+                self.session.reuse_squad = False
+                raise SceneRequired('Boss 战后已确认章节结束，交上层处理换章。')
         else:
             logger.warning(f'战斗胜利但无关联敌人目标（最近执行目标：{goal_brief(goal)}），不更新敌人状态。')
         if settled == 'victory':
             self.recoveries = 0
             self.owner.state.target_failures.pop('story-location', None)
         return settled
+
+    def boss_visible_after_victory(self, goal, field):
+        """确认战后可信小地图仍显示原位置的 Boss。
+
+        途中开战可能由相邻关卡触发。原位置须在两张独立定位的画面中均有战斗标记，
+        至少一帧明确分类为 Boss。允许其它帧受标记动画影响变为普通类型；关联距离用底图像素。
+        章末弹窗由调用方优先处理；本次复核不发送地图或移动输入。
+        """
+        sightings, boss_seen = 0, False
+        for index in range(REVIEW_FRAMES):
+            if index:
+                self.session.pause(.4)
+                field = self.session.win.client()
+                self.session.verify_identity(field)
+            snapshot = self.session.observe_frame(field)
+            if snapshot.get('localization') != 'accepted':
+                continue
+            nearby = [marker for marker in snapshot.get('enemies', [])
+                      if marker['kind'] in COMBAT_ENEMY_KINDS
+                      and np.linalg.norm(np.subtract(marker['position'], goal['position']))
+                      <= BOSS_VICTORY_RECHECK_RADIUS]
+            sightings += bool(nearby)
+            boss_seen |= any(marker['kind'] == 'boss' and marker.get('conflict_group') is None
+                             for marker in nearby)
+            if sightings >= 2 and boss_seen:
+                return True
+        return False
 
     def scan_start(self, scene='开局', center_checked=False):
         """按场景名十字扫描小队周围，返回可信屏数，零屏由剧情执行层触发恢复。
