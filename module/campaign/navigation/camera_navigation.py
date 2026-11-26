@@ -19,6 +19,7 @@ PAN_REGIONS = ((24, 320, 1752, 880), (250, 70, 1490, 880))
 SQUAD_AVOID_STEP = 20.
 SQUAD_EXCLUDE_HALF_WIDTH = 150.
 SQUAD_EXCLUDE_HALF_HEIGHT = 180.
+SQUAD_PROJECTION_MARGIN = 60.
 # 落点至少离开小队脚下这么多客户区像素，否则会被游戏当成原地点击（38 章实机：连点三次注视点，
 # 小队坐标只变了 1.2 地图像素）。这里不能用拖动按下点的排除矩形：那个区域管的是另一件事——
 # 按下点压在小队身上会被读成走位指令，不能让一次镜头拖动变成移动命令。
@@ -77,12 +78,13 @@ def inside(point, bounds):
     return bool(np.isfinite([x, y]).all() and left <= x <= right and top <= y <= bottom)
 
 
-def pan_endpoints(region, drag, squad_ground=None):
+def pan_endpoints(region, drag, squad_ground=None, *, squad_margin=0.):
     """生成场景拖动端点，并在按下点落在小队排除矩形内时整体平移手势到空地。
 
-    region 是允许起终点出现的客户区矩形，drag 保持调用者计算的向量不变。squad_ground 必须是
-    当前场景箭头向下换算的脚下点；None 表示跳过小队避让，但仍检查端点边界。排除矩形以脚下点
-    为中心，半宽 150、半高 180，边界也算占用；没有可行空地时抛 ValueError，禁止发成走位点击。
+    region 是允许起终点出现的客户区矩形，drag 保持调用者计算的向量不变。squad_ground 是
+    客户区脚下点；None 表示跳过小队避让，但仍检查端点边界。排除矩形以脚下点为中心，
+    半宽 150、半高 180，squad_margin 为粗略投影额外留出的客户区像素。边界也算占用；
+    没有可行空地时抛 ValueError，禁止发成走位点击。
     """
     drag = np.asarray(drag, float)
     left, top, right, bottom = region
@@ -91,7 +93,7 @@ def pan_endpoints(region, drag, squad_ground=None):
     end = np.rint(center + drag / 2).astype(int)
     if squad_ground is not None:
         ground = np.asarray(squad_ground, float)
-        exclusion = np.array([SQUAD_EXCLUDE_HALF_WIDTH, SQUAD_EXCLUDE_HALF_HEIGHT])
+        exclusion = np.array([SQUAD_EXCLUDE_HALF_WIDTH, SQUAD_EXCLUDE_HALF_HEIGHT]) + squad_margin
 
         def on_squad(point):
             return bool(np.all(np.abs(np.asarray(point, float) - ground) <= exclusion))
@@ -164,12 +166,12 @@ def target_projection(chart, observation, target):
     return roi, project(chart, roi)
 
 
-def pan_scene(session, drag):
+def pan_scene(session, drag, *, projected_ground=None):
     """用当前场景箭头避让后发送一次镜头拖动，不发送小队移动点击。
 
-    每次拖动都在最新帧重新识别唯一箭头，并向下换算脚下点；箭头缺失时跳过小队避让，
-    离屏标记仅记录跳过原因，不再作为拖动前提。不用历史地图坐标估算小队画面位置，
-    不修改已知小队底图坐标。端点越界、窗口异常或驱动失败仍立即抛错，成功后等待场景稳定。
+    优先使用最新帧中的唯一箭头。箭头和离屏标记都缺失时，调用方可用当前可信配准提供
+    客户区内的脚点投影，扩大避让区吸收投影误差。投影仅用于拖动起点避让，不修改小队
+    底图坐标。端点越界、窗口异常或驱动失败仍立即抛错，成功后等待场景稳定。
     """
     from module.campaign.vision.offscreen import squad_offscreen
     from module.campaign.vision.perception import squad_arrow
@@ -178,17 +180,22 @@ def pan_scene(session, drag):
     field = goto.capture_client(session.win)
     session.identity(field)
     arrow = squad_arrow(field)
+    margin = 0.
     if arrow is not None:
         ground = np.asarray(arrow, float) + [0., goto.ARROW_GROUND_OFFSET]
         session.emit(squad_avoidance='arrow', squad_avoid_ground=ground.tolist())
     elif squad_offscreen(field) is not None:
         ground = None
         session.emit(squad_avoidance='offscreen')
+    elif projected_ground is not None and inside(projected_ground, FIELD_BOUNDS):
+        ground = np.asarray(projected_ground, float)
+        margin = SQUAD_PROJECTION_MARGIN
+        session.emit(squad_avoidance='projection', squad_avoid_ground=ground.tolist())
     else:
         ground = None
         session.emit(squad_avoidance='skipped', message='未检测到小队画面标记，跳过拖动起点的小队避让')
     region, _ = pan_region(drag)
-    start, end = pan_endpoints(region, drag, ground)
+    start, end = pan_endpoints(region, drag, ground, squad_margin=margin)
     session.check()
     origin = np.array(session.win.gui.ClientToScreen(session.win.hwnd, (0, 0)))
     session.win.handler.mouse_swipe(tuple(origin + start), tuple(origin + end))
@@ -702,7 +709,7 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
         # 拖动指令换算的预期视野落点：融合判据的位置先验。响应未知（首拖 gain=1）时先验
         # 半径按残差自适应放宽，见 fusion_acceptable。
         predicted = viewport + commanded_delta * min(1. / gain, 1.5)
-        pan_scene(session, drag)
+        pan_scene(session, drag, projected_ground=ground if ring_trusted else None)
         field = goto.capture_client(session.win)
         session.identity(field)
         session.check_collectible(field)
