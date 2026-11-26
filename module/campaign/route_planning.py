@@ -115,6 +115,7 @@ def route_road_section(cut, point, path):
     point/path 均为章节底图像素。先在导航既有 ROAD_TOLERANCE 内将标记中心吸附到真实
     道路，再求该道路点在 A* 折线上的最近投影，不只比较离散路径节点。投影位于路段内部时
     截面垂直该段，落在路径端点时沿道路点到端点扫描，也覆盖小队身后仍处于同片路面的敌人。
+    终点最接近时，仅允许道路吸附容差内的纵向外延，避免宽路上更远的敌人被纳入本段。
     截面逐像素检查，遇到背景、墙、光幕或地图边缘立即截断，不跨越空隙连接另一条路。
     道路宽度自然决定候选范围，不设敌人距离或绕行门限；同一连通分量并不能替代此判据。
     吸附仅容忍标记的道路边缘误差，不膨胀道路；越界、非有限坐标和无可行截面都拒绝。
@@ -148,7 +149,15 @@ def route_road_section(cut, point, path):
         ratios = np.divide(np.sum((road_point - path[:-1]) * segments, axis=1), squared,
                            out=np.zeros(len(segments)), where=squared > 0)
         projected = path[:-1] + np.clip(ratios, 0, 1)[:, None] * segments
-        route_point = projected[int(np.argmin(np.linalg.norm(projected - road_point, axis=1)))]
+        closest = int(np.argmin(np.linalg.norm(projected - road_point, axis=1)))
+        route_point = projected[closest]
+        if np.array_equal(route_point, path[-1]):
+            nonzero = np.flatnonzero(squared)
+            if nonzero.size:
+                forward = segments[nonzero[-1]]
+                overrun = np.dot(road_point - route_point, forward) / np.linalg.norm(forward)
+                if overrun > ROAD_TOLERANCE:
+                    return None
     if not segment_clear(road, road_point, route_point):
         return None
     return dict(road_point=road_point.tolist(), route_point=route_point.tolist(),
