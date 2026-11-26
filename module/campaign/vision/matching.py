@@ -182,8 +182,8 @@ class MapMatcher:
     否则配准结果对应的是另一张图。
     """
 
-    def __init__(self, package):
-        """核对底图哈希、配准状态和缓存投影，再构建粗搜索与全分辨率搜索画布。"""
+    def __init__(self, package, *, include_supplement=True):
+        """校验地图并构造搜索画布；有平台补图时保留一份未显示平台的配准画布。"""
         self.package = Path(package)
         meta = json.loads((self.package / 'map.json').read_text(encoding='utf-8'))
         self.digest = hashlib.sha256((self.package / 'map.png').read_bytes()).hexdigest()
@@ -200,8 +200,9 @@ class MapMatcher:
             self.terrain = (cache['terrain_probability'] >= .5).astype(np.float32)
             if not np.allclose(cache['projection'], self.projection):
                 raise ValueError('Cached projection differs from map metadata.')
-        from module.campaign.map.edited_map import edited_roads
-        self.terrain, _, edits_digest = edited_roads(self.package, meta, self.terrain)
+        from module.campaign.map.edited_map import edited_roads, supplemental_terrain_edits
+        self.terrain, _, edits_digest = edited_roads(self.package, meta, self.terrain,
+                                                    include_supplement=include_supplement)
         self.terrain = self.terrain.astype(np.float32)
         self.cache_digest = hashlib.sha256((self.cache_digest + edits_digest).encode()).hexdigest()
         if list(self.terrain.shape[::-1]) != meta['size']:
@@ -219,11 +220,17 @@ class MapMatcher:
         self.local_parameters = None
         self.local_margin = None
         self.local_steps = 0
+        self.without_supplement = (
+            MapMatcher(self.package, include_supplement=False)
+            if include_supplement and supplemental_terrain_edits(meta) else None
+        )
 
     def match(self, image, review=None):
         """粗搜索尺度和位移后细化最佳候选，以 IoU、远处候选分差及参数分散度联合决定是否接受。"""
         # Wiki 图片之间没有时序连续性，不能把上一张图的位置当作本张的局部搜索先验。
         self.warm_center, self.local_steps = None, 0
+        if self.without_supplement is not None:
+            self.without_supplement.warm_center, self.without_supplement.local_steps = None, 0
         cropped = None
         try:
             panel, road, valid, player = minimap_masks(image)
@@ -241,6 +248,27 @@ class MapMatcher:
         return result
 
     def match_panel(self, panel, road, valid, player, review=None, expected_position=None):
+        """先匹配含补图的视野，失败时用原图复核实时画面是否尚未显示平台。
+
+        原图复核仍使用完整接受门限和同一小队锚点；返回矩阵只用于定位，不改变带补图的路网。
+        """
+        args = panel, road, valid, player, review, expected_position
+        try:
+            result = self._match_panel_with_retry(*args)
+        except (ValueError, cv2.error):
+            if self.without_supplement is None:
+                raise
+            return self.without_supplement.match_panel(*args)
+        if self.without_supplement is not None and result['status'] != 'accepted':
+            try:
+                separate = self.without_supplement.match_panel(*args)
+            except (ValueError, cv2.error):
+                return result
+            if separate['status'] == 'accepted':
+                return separate
+        return result
+
+    def _match_panel_with_retry(self, panel, road, valid, player, review=None, expected_position=None):
         """连续帧先局部定位，失败后全图搜索平移，尺度仍不可信时最多补一次全参数搜索。
 
         面板尺寸变化、显式小队坐标约束和定位失败都会清除位置先验。局部结果必须沿用已验证的
