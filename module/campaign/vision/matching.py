@@ -28,6 +28,9 @@ ACCEPT_COARSE_MARGIN = .10
 ACCEPT_PARAMETER_SPREAD_PX = 40
 # 已确认小队坐标对展开面板配准的约束半径，单位为章节底图像素。
 SQUAD_ANCHOR_RADIUS = 12.
+# 紧凑地图粗搜只因 IoU 略低而失败时，允许在高置信候选附近补搜半步尺度。
+COMPACT_REFINE_IOU_GAP = .03
+COMPACT_REFINE_MAX_DRIFT = 12.
 # match_panel 粗搜索的参数网格；同一个 MapMatcher 实例反复配准时尺度基本不变，先在最近
 # 接受的 (a, b) 附近做小网格热启动，命中即跳过全网格，未命中再退回完整扫描。
 PARAMETER_GRID = sorted({(round(float(a), 2), round(float(b), 2))
@@ -182,9 +185,13 @@ class MapMatcher:
     否则配准结果对应的是另一张图。
     """
 
-    def __init__(self, package):
-        """核对底图哈希、配准状态和缓存投影，再构建粗搜索与全分辨率搜索画布。"""
+    def __init__(self, package, *, refine_live_compact=False):
+        """核对底图哈希、配准状态和缓存投影，再构建粗搜索与全分辨率搜索画布。
+
+        refine_live_compact 仅供实时观察器启用，离线地图和收集物配准继续使用原参数网格。
+        """
         self.package = Path(package)
+        self.refine_live_compact = refine_live_compact
         meta = json.loads((self.package / 'map.json').read_text(encoding='utf-8'))
         self.digest = hashlib.sha256((self.package / 'map.png').read_bytes()).hexdigest()
         if meta['image_sha256'] != self.digest:
@@ -432,6 +439,31 @@ class MapMatcher:
         margin = coarse[0]['score'] - max(alternatives, default=0)
         spread = max(np.linalg.norm(np.asarray(r['position']) - point) for r in candidates
                      if r['road_iou'] >= result['road_iou'] - .03)
+        refined_scale = False
+        if (getattr(self, 'refine_live_compact', False) and not local and not warm_hit and expected is None
+                and panel.shape[:2] == (ROI[3] - ROI[1], ROI[2] - ROI[0])
+                and ACCEPT_ROAD_IOU - COMPACT_REFINE_IOU_GAP <= result['road_iou'] < ACCEPT_ROAD_IOU
+                and margin >= ACCEPT_COARSE_MARGIN and spread <= COMPACT_REFINE_MAX_DRIFT):
+            nearby = sorted(candidates, key=lambda r: r['road_iou'], reverse=True)[:3]
+            parameters = {(round(r['a'] + step, 2), r['b']) for r in nearby for step in (-.05, .05)
+                          if PARAMETER_GRID[0][0] <= r['a'] + step <= PARAMETER_GRID[-1][0]}
+            fine = sweep(parameters)
+            # 半步尺度只补足同一位置的透视误差，不能靠它消除另一处相似道路的歧义。
+            distant = [r['score'] for r in fine if np.linalg.norm(r['position'] - point) > 130]
+            distant += [r['second'] for r in fine if np.linalg.norm(r['second_position'] - point) > 130]
+            refined_margin = min(margin, coarse[0]['score'] - max(distant, default=0))
+            if refined_margin >= ACCEPT_COARSE_MARGIN:
+                refined = [r for r in search_candidates(refine_seed, fine) if r is not None]
+                plausible = [r for r in refined if r['road_iou'] >= ACCEPT_ROAD_IOU
+                             and np.linalg.norm(np.asarray(r['position']) - point) <= COMPACT_REFINE_MAX_DRIFT]
+                if plausible:
+                    best = max(plausible, key=lambda r: r['road_iou'])
+                    best_point = np.asarray(best['position'])
+                    refined_spread = max(np.linalg.norm(np.asarray(r['position']) - best_point)
+                                         for r in candidates + refined if r['road_iou'] >= best['road_iou'] - .03)
+                    if refined_spread <= ACCEPT_PARAMETER_SPREAD_PX:
+                        result, point, margin, spread = best, best_point, refined_margin, refined_spread
+                        refined_scale = True
         inside = np.all(point >= 0) and np.all(point <= np.asarray(self.terrain.shape[::-1]) - 1)
         # 参数邻域没有覆盖完整网格，只能沿用同参数的已接受全图分差；局部裁剪还会排除远处
         # 候选，所以只允许降低该分差，不能把窗口外的证据缺失算作置信度提升。
@@ -452,11 +484,13 @@ class MapMatcher:
                       search_scope='local' if local else ('warm' if warm_hit else 'full'), coarse_margin=float(margin),
                       parameter_spread_px=float(spread), roi=list(ROI), player_center=player.tolist(),
                       normalized_size=[1920, 1080], image_sha256=self.digest, match_version=MATCH_VERSION)
+        if refined_scale:
+            result['refined_scale'] = True
         if expected is not None:
             result.update(expected_position=expected.tolist(), anchor_error=float(np.linalg.norm(point - expected)))
         # 只有全网格 accepted 才更新热启动：needs_review 的定位不可信，把它的参数喂给下一帧
         # 会把漂移延续下去；accepted 复用同一参数直接命中，后续帧全部走小网格并复用 margin。
-        if expected is None and accepted and not warm_hit and hasattr(self, 'warm_parameters'):
+        if expected is None and accepted and not warm_hit and not refined_scale and hasattr(self, 'warm_parameters'):
             self.warm_parameters = (result['a'], result['b'])
             self.warm_margin = float(margin)
         if review is not None:

@@ -106,7 +106,7 @@ class CampaignObserver:
             self.package, self.chart, self.chart_failed = None, None, False
             try:
                 package, self.map_info = chapter_map(chapter)
-                self.matcher = MapMatcher(package)
+                self.matcher = MapMatcher(package, refine_live_compact=True)
                 self.package = package
             except (OSError, ValueError, KeyError) as exc:
                 logger.warning(f'第 {chapter} 章地图资源不可用，无法定位：{exc}')
@@ -237,7 +237,8 @@ class CampaignObserver:
         result = self.matcher.match_panel(panel, road, valid, player, **options)
         snapshot['localization'] = result['status']
         snapshot['localization_diagnostics'] = {
-            name: result[name] for name in ('road_iou', 'coarse_margin', 'parameter_spread_px', 'anchor_error')
+            name: result[name] for name in ('road_iou', 'coarse_margin', 'parameter_spread_px', 'anchor_error',
+                                            'refined_scale')
             if name in result}
         if result['status'] != 'accepted':
             failed = [name for name, passed in
