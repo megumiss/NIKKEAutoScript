@@ -1,8 +1,12 @@
 import csv
+import json
 import os
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
+from filelock import FileLock
+
+from module.config.atomicwrites import atomic_write
 from module.logger import logger
 
 DEFAULT_STONE_CSV_PATH = './data/{config_name}/stones.csv'
@@ -100,6 +104,74 @@ def load_interception_stone_rows(csv_path: str, config_name: str = '') -> List[d
             row['stone_count'] = _to_int(row.get('stone_count', 0))
             rows.append(row)
     return rows
+
+
+def _read_daily_overrides(path: str) -> dict:
+    """读取按实例和自然日分组的自定义总数；只有文件不存在才视为尚未设置。"""
+    try:
+        with open(path, encoding='utf-8') as f:
+            overrides = json.load(f)
+    except FileNotFoundError:
+        return {}
+    if not isinstance(overrides, dict) or not all(isinstance(days, dict) for days in overrides.values()):
+        raise ValueError('Invalid interception daily overrides')
+    return overrides
+
+
+def daily_override_path(csv_path: str) -> str:
+    """由已展开实例名的 CSV 路径派生修正文件路径，空路径表示未启用统计。"""
+    return f'{csv_path}.daily.json' if csv_path else ''
+
+
+def set_daily_override(csv_path: str, config_name: str, day: date, total: Optional[int]) -> None:
+    """保存已校验的当日总数；None 表示恢复自动统计，0 是有效的自定义总数。
+
+    独立文件不与结算或截图导入争写 CSV。共享路径的实例共用一把锁，避免并发编辑覆盖彼此。
+    """
+    path = daily_override_path(csv_path)
+    _ensure_parent_dir(path)
+    with FileLock(f'{path}.lock', timeout=5):
+        overrides = _read_daily_overrides(path)
+        days = overrides.setdefault(config_name, {})
+        key = day.isoformat()
+        if total is None:
+            if key not in days:
+                return
+            del days[key]
+            if not days:
+                del overrides[config_name]
+        else:
+            days[key] = total
+        with atomic_write(path, overwrite=True, encoding='utf-8') as f:
+            json.dump(overrides, f, ensure_ascii=False, indent=2)
+
+
+def interception_stone_stats(csv_path: str, config_name: str) -> dict:
+    """汇总当前实例的逐日原始数量，并以自定义总数替代对应日期参与日、周、月统计。
+
+    返回的 rows 始终是原始明细；没有结算记录的日期也可以仅凭自定义数量参与统计。
+    """
+    rows = load_interception_stone_rows(csv_path, config_name)
+    override_path = daily_override_path(csv_path)
+    overrides = _read_daily_overrides(override_path).get(config_name, {}) if override_path else {}
+    days = {day: {'recorded': 0, 'override': count} for day, count in overrides.items()}
+    for row in rows:
+        day = _parse_timestamp(row['timestamp']).date().isoformat()
+        days.setdefault(day, {'recorded': 0, 'override': None})['recorded'] += row['stone_count']
+    effective = [
+        {'timestamp': day, 'stone_count': data['recorded'] if data['override'] is None else data['override']}
+        for day, data in days.items()
+    ]
+    return {
+        'csv_path': os.path.abspath(csv_path) if csv_path else '',
+        'override_path': os.path.abspath(override_path) if override_path else '',
+        'today': date.today().isoformat(), 'rows': rows, 'days': days,
+        'series': {
+            'daily': dict(zip(('labels', 'values'), build_daily_series(effective))),
+            'weekly': dict(zip(('labels', 'values'), build_weekly_series(effective))),
+            'monthly': dict(zip(('labels', 'values'), build_monthly_series(effective))),
+        },
+    }
 
 
 def _aggregate_by_bucket(rows: List[dict], buckets: List[date], bucket_of) -> List[int]:

@@ -25,7 +25,7 @@ import { useInstancesStore } from '../stores/instances'
 import { useToastStore } from '../stores/toast'
 import { useWorkspaceStore } from '../stores/workspace'
 
-// ECharts is only needed by one read-only statistics field.  Loading it on
+// ECharts is only needed by one statistics field.  Loading it on
 // demand keeps normal configuration and scheduler pages within the first-load
 // budget defined by the UI plan.
 const FieldInterception = defineAsyncComponent(() => import('../components/config/FieldInterception.vue'))
@@ -134,7 +134,7 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
                     <FieldItemTable v-else-if="field.widget === 'item_table'" :data="field.special_data" :loading="!field.special_data"/>
                     <FieldPriority v-else-if="field.widget === 'priority'" :value="field.value" :options="field.options" :disabled="field.display !== 'show'" :placeholder="t('添加')" @change="(value: string) => saveValue(field, value).catch(() => {})"/>
                     <FieldInterception v-else-if="field.widget === 'interception_stone_import'" :widget="field.widget" :busy="Boolean(importBusy[field.key])" @import="importInterception(field, $event)" @error="toast.error = $event"/>
-                    <FieldInterception v-else-if="field.widget === 'interception_stone_charts'" :widget="field.widget" :data="field.special_data"/>
+                    <FieldInterception v-else-if="field.widget === 'interception_stone_charts'" :key="field.data_endpoint" :widget="field.widget" :data="field.special_data" :endpoint="field.data_endpoint" @updated="field.special_data = $event"/>
                     <template v-else-if="field.widget === 'datetime'">
                       <div class="dt-field">
                         <input type="datetime-local" :value="datetimeValue(field.value)" :readonly="field.display !== 'show'" @input="scheduleDatetimeSave(field, $event)" @blur="flushDatetimeSave(field, $event)">

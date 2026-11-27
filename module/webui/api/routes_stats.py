@@ -1,6 +1,7 @@
-"""Read-only statistics and explicit import actions used by specialised fields."""
+"""Statistics, per-day corrections and explicit import actions used by specialised fields."""
 
 import asyncio
+from datetime import date
 
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -45,16 +46,35 @@ async def interception_stats(request: Request):
         validate_instance(name)
     except InstanceNotFound as exc:
         return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=404)
-    from module.interception.data import (DEFAULT_STONE_CSV_PATH, build_daily_series, build_monthly_series,
-                                          build_weekly_series, load_interception_stone_rows, resolve_stone_csv_path)
+    from module.interception.data import (DEFAULT_STONE_CSV_PATH, interception_stone_stats, resolve_stone_csv_path,
+                                          set_daily_override)
     config = _config(name)
-    csv_path = resolve_stone_csv_path(deep_get(config, 'InterceptionTaskStats.InterceptionDropStats.CsvPath', DEFAULT_STONE_CSV_PATH), name)
-    rows = load_interception_stone_rows(csv_path, config_name=name)
-    return JSONResponse({'rows': rows, 'series': {
-        'daily': dict(zip(('labels', 'values'), build_daily_series(rows))),
-        'weekly': dict(zip(('labels', 'values'), build_weekly_series(rows))),
-        'monthly': dict(zip(('labels', 'values'), build_monthly_series(rows))),
-    }})
+    configured_path = deep_get(config, 'InterceptionTaskStats.InterceptionDropStats.CsvPath', DEFAULT_STONE_CSV_PATH)
+    csv_path = resolve_stone_csv_path(configured_path, name)
+    if request.method == 'PATCH':
+        if not csv_path:
+            return JSONResponse({'message': '未配置掉落数据文件。'}, status_code=422)
+        try:
+            body = await request.json()
+            day = date.fromisoformat(body['date'])
+            if day.isoformat() != body['date']:
+                raise ValueError('Expected YYYY-MM-DD')
+            total = body['total']
+        except (KeyError, TypeError, ValueError):
+            return JSONResponse({'message': '请选择有效的日期并填写当天总数。'}, status_code=422)
+        if day > date.today():
+            return JSONResponse({'message': '日期不能晚于今天。'}, status_code=422)
+        if total is not None and (type(total) is not int or not 0 <= total <= 2**53 - 1):
+            return JSONResponse({'message': '请输入非负整数。'}, status_code=422)
+        try:
+            await asyncio.to_thread(set_daily_override, csv_path, name, day, total)
+        except (OSError, ValueError) as exc:
+            return JSONResponse({'message': f'保存自定义总数失败：{exc}'}, status_code=500)
+    try:
+        stats = await asyncio.to_thread(interception_stone_stats, csv_path, name)
+    except (OSError, ValueError) as exc:
+        return JSONResponse({'message': f'读取掉落统计失败：{exc}'}, status_code=500)
+    return JSONResponse(stats)
 
 
 async def import_interception(request: Request):
