@@ -1018,6 +1018,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         收起前将可信展开帧并入历史观测，保留本次补充视野；紧凑配准仍失败时只保留未移动的
         小队坐标，标为 reused，不把旧展开矩阵、敌人或覆盖附到新紧凑快照。
         已经展开的定位重试保留面板，不再强制开合回正。可信紧凑帧可交给移动入口复用小队位置。
+        补侦察视野时，远端镜头重试仍无法配准可回正一次，按新实测小队位置重新展开。
         展开时只用无新增手势的已确认小队坐标约束本帧圆环；失败后小幅拖动再识别一次，
         仍失败则停止，不能只复用小队坐标而把尚未定位的敌人当成不存在。
         known_squad 只供尚未发送移动的找敌人阶段使用：跳过实时小队定位和圆环重试，
@@ -1053,6 +1054,14 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
             field = self.win.client()
             self.identity(field)
             snapshot = self.observe_frame(field, **options)
+            if snapshot.get('localization') != 'accepted' and keep_expanded and known_squad is not None:
+                logger.info('远端展开视野无法配准，回到小队附近重新实测侦察视野。')
+                recovered = self.recover_center()
+                known_squad = None
+                self.win.reset_minimap(expanded=True, reset=True)
+                field = self.win.client()
+                self.identity(field)
+                snapshot = self.observe_frame(field, expected_squad=recovered['squad'])
             if snapshot.get('localization') != 'accepted':
                 self.owner.last_snapshot = snapshot
                 self.preview(field)
