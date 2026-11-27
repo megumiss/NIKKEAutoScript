@@ -481,6 +481,24 @@ window.$docsify = {
                 setTimeout(moveSearch, 300);
             });
             hook.doneEach(moveSearch);
+        },
+        function (hook) {
+            hook.doneEach(function () {
+                // Wiki 正文使用 GitHub 锚点；Docsify 给数字开头的 ID 加下划线，且保留全角括号。
+                var aliases = new Map();
+                document.querySelectorAll('#main .anchor[data-id]').forEach(function (heading) {
+                    var id = heading.dataset.id;
+                    var githubId = id.replace(/^_(?=\d)/, '').replace(/[（）]/g, '');
+                    if (githubId !== id) aliases.set(githubId, heading.hash);
+                });
+                var currentPage = location.hash.split('?')[0];
+                document.querySelectorAll('#main a[href*="?id="]:not(.anchor)').forEach(function (link) {
+                    var parts = link.hash.split('?');
+                    if (parts[0] !== currentPage) return;
+                    var id = new URLSearchParams(parts[1]).get('id');
+                    if (aliases.has(id) && !document.getElementById(id)) link.setAttribute('href', aliases.get(id));
+                });
+            });
         }
     ],
     search: {
