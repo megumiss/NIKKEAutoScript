@@ -235,10 +235,14 @@ class CampaignObserver:
         """
         options = {'expected_position': expected_position} if expected_position is not None else {}
         result = self.matcher.match_panel(panel, road, valid, player, **options)
+        if snapshot['minimap']['mode'] == 'compact' and known_squad is None:
+            result = self.matcher.review_compact_boundary(result, road, valid)
         snapshot['localization'] = result['status']
         snapshot['localization_diagnostics'] = {
             name: result[name] for name in ('road_iou', 'coarse_margin', 'parameter_spread_px', 'anchor_error')
             if name in result}
+        if 'boundary_road_iou' in result:
+            snapshot['localization_diagnostics']['boundary_road_iou'] = result['boundary_road_iou']
         if result['status'] != 'accepted':
             failed = [name for name, passed in
                       (('road_iou', result['road_iou'] >= ACCEPT_ROAD_IOU),
