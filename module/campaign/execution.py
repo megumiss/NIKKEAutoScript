@@ -8,7 +8,7 @@ from module.campaign.run_state import MAX_FAILURES, RunState, located, panel_qua
 from module.campaign.goals import describe, frontier_point, nearest_enemy, unobserved_component_cells
 from module.campaign.report import (BATTLE_OUTCOMES, BATTLE_STATES, EVIDENCE_KINDS, GOAL_KINDS, GOAL_REASONS,
                                     RESULT_STATES, label, points_text)
-from module.campaign.route_planning import planning_routes, route_path
+from module.campaign.route_planning import ADVANCE_DISTANCE, planning_routes, route_path
 from module.campaign.scouting import scout_focus
 from module.campaign.session import DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, SETTLE_TAP_INTERVAL
 from module.campaign.navigation.progress import NavigationStalled
@@ -243,6 +243,29 @@ class CampaignExecutor:
                        f"距封锁段 {block['assumed_distance']:.1f} 地图像素，"
                        f"连续无进展 {result['failures']} 次；路网已更新，重新选择目标。")
         return position
+
+    def recenter_mechanism_approach(self, goal, snapshot):
+        """在前往机关的短段视野远离小队时，先回正并实测位置。
+
+        只处理主线已选机关的中途路点。纯镜头找到主线目标后，已知小队坐标仍有效，但摄像机可能
+        位于另一个区域。当前路段不超过常规推进距离且镜头与小队相隔两倍该距离以上时，才回正。
+        返回的实测位置交给调用方重新决策和复核前置道路。
+        """
+        destination = self.owner.state.route_goal
+        if (self.purpose != 'story' or not goal or goal['kind'] != 'advance'
+                or not destination or destination['kind'] != 'mechanism'
+                or goal.get('for_target') != destination['id']
+                or goal.get('distance', np.inf) > ADVANCE_DISTANCE
+                or snapshot.get('localization') != 'accepted' or snapshot.get('squad_source') != 'known'
+                or snapshot.get('viewport') is None or snapshot.get('squad') is None):
+            return None
+        offset = float(np.linalg.norm(np.subtract(snapshot['viewport'], snapshot['squad'])))
+        if offset <= 2 * ADVANCE_DISTANCE:
+            return None
+        self.session.record('mechanism_approach_recenter', force=True, goal=goal, viewport=snapshot['viewport'],
+                            squad=snapshot['squad'], offset=round(offset, 1))
+        logger.info(f'机关中途路点附近的小队离当前镜头 {offset:.0f} 地图像素，先回正并重新实测。')
+        return self.session.recover_center()
 
     def needs_expansion(self, goal, snapshot):
         """没有目标或前沿探索时展开；正常目标的道路经过未观测格时也补一次视野。"""
@@ -1147,6 +1170,12 @@ class CampaignExecutor:
                             self.plan_tick(self.session.snapshot(expanded=True), advance=False)
                             snapshot = self.session.snapshot()
                         goal = self.plan_tick(snapshot, advance=False)
+                    recentered = self.recenter_mechanism_approach(goal, snapshot)
+                    if recentered is not None:
+                        snapshot = recentered
+                        goal = self.plan_tick(snapshot, advance=False)
+                        camera_options = {}
+                        expanded_for_scout = False
                     goal, snapshot = self.scout_until_ready(goal, snapshot, camera_options,
                                                            expanded_for_scout=expanded_for_scout)
                     self.session.record('planning_result', goal=goal, snapshot=snapshot,
