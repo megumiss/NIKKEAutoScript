@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
+import { t } from '../../i18n'
 
 const props = defineProps<{ widget: 'interception_stone_import' | 'interception_stone_charts'; data?: any; busy?: boolean }>()
 const emit = defineEmits<{ import: [path: string]; error: [message: string] }>()
@@ -61,7 +62,9 @@ onBeforeUnmount(() => { window.removeEventListener('resize', onResize); charts.f
     <button type="button" class="btn primary sm" :disabled="busy" @click="submit">{{ busy ? '正在导入…' : '导入截图记录' }}</button>
   </div>
   <div v-else class="special-field charts-field">
-    <div v-if="!data?.rows?.length" class="special-empty">暂无拦截战掉落记录。</div>
+    <div v-if="data && !data.csv_path" class="special-empty">{{ t('未配置掉落数据文件。') }}</div>
+    <div v-else-if="!data" class="special-empty">{{ t('未能读取掉落统计，请刷新页面重试。') }}</div>
+    <div v-else-if="!Object.keys(data.days || {}).length && !data.rows?.length" class="special-empty">{{ t('暂无掉落记录，可选择日期补录。') }}</div>
     <div ref="chartRoot" class="charts-grid"><div></div><div></div><div></div></div>
   </div>
 </template>

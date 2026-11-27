@@ -106,7 +106,7 @@ def mount_api(app):
         Route('/api/{name:str}/schedule/reset', routes_schedule.reset_schedule, methods=['POST']),
         Route('/api/{name:str}/schedule/reset-next-run', routes_schedule.reset_next_run, methods=['POST']),
         Route('/api/{name:str}/warehouse', routes_stats.warehouse, methods=['GET']),
-        Route('/api/{name:str}/interception/stats', routes_stats.interception_stats, methods=['GET']),
+        Route('/api/{name:str}/interception/stats', routes_stats.interception_stats, methods=['GET', 'PATCH']),
         Route('/api/{name:str}/interception/import', routes_stats.import_interception, methods=['POST']),
         Route('/api/{name:str}/notify/test', routes_notify.test_notify, methods=['POST']),
         Route('/api/{name:str}/notify/providers', routes_notify.providers, methods=['GET']),

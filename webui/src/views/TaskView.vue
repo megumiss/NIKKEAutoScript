@@ -25,10 +25,11 @@ import { useInstancesStore } from '../stores/instances'
 import { useToastStore } from '../stores/toast'
 import { useWorkspaceStore } from '../stores/workspace'
 
-// ECharts is only needed by one read-only statistics field.  Loading it on
+// ECharts is only needed by one statistics field.  Loading it on
 // demand keeps normal configuration and scheduler pages within the first-load
 // budget defined by the UI plan.
 const FieldInterception = defineAsyncComponent(() => import('../components/config/FieldInterception.vue'))
+const InterceptionDailyEditor = defineAsyncComponent(() => import('../components/config/InterceptionDailyEditor.vue'))
 
 const { selectedPage, selectedTask } = useRouteInfo()
 const workspace = useWorkspaceStore()
@@ -114,6 +115,8 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
                     <AppSelect :model-value="selectedClientName" :options="clientOptions" :placeholder="clientPlaceholder" :empty-text="t('未检测到可用客户端')" :disabled="field.display !== 'show'" @change="applyClientProfile" @open="loadClientProfiles"/>
                   </div>
                 </div>
+                <InterceptionDailyEditor v-if="field.widget === 'interception_stone_charts' && field.data_endpoint && field.special_data?.csv_path && field.special_data.today"
+                  :key="field.data_endpoint" :stats="field.special_data" :endpoint="field.data_endpoint" @updated="field.special_data = $event" />
                 <!-- 通知渠道自带整行布局（标题与渠道下拉同行），不吃通用的 field 结构 -->
                 <FieldNotify v-if="field.widget === 'notify_channel'" :field="field" :data="field.special_data" :scope="workspace.selectedName" :disabled="field.display !== 'show'" :busy="notifyTestBusy" @save="(payload: any) => saveNotifyConfig(field, payload)" @save-raw="(value: string) => saveNotifyRaw(field, value)" @test="testNotify"/>
                 <div v-else :id="`field-${field.key}`" class="field" :class="{ 'field-wide': isWideField(field) }">
@@ -134,7 +137,7 @@ watch(selectedTask, task => { if (task === 'PCClient') loadClientProfiles() }, {
                     <FieldItemTable v-else-if="field.widget === 'item_table'" :data="field.special_data" :loading="!field.special_data"/>
                     <FieldPriority v-else-if="field.widget === 'priority'" :value="field.value" :options="field.options" :disabled="field.display !== 'show'" :placeholder="t('添加')" @change="(value: string) => saveValue(field, value).catch(() => {})"/>
                     <FieldInterception v-else-if="field.widget === 'interception_stone_import'" :widget="field.widget" :busy="Boolean(importBusy[field.key])" @import="importInterception(field, $event)" @error="toast.error = $event"/>
-                    <FieldInterception v-else-if="field.widget === 'interception_stone_charts'" :widget="field.widget" :data="field.special_data"/>
+                    <FieldInterception v-else-if="field.widget === 'interception_stone_charts'" :key="field.data_endpoint" :widget="field.widget" :data="field.special_data"/>
                     <template v-else-if="field.widget === 'datetime'">
                       <div class="dt-field">
                         <input type="datetime-local" :value="datetimeValue(field.value)" :readonly="field.display !== 'show'" @input="scheduleDatetimeSave(field, $event)" @blur="flushDatetimeSave(field, $event)">

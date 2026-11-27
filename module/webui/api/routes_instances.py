@@ -600,19 +600,35 @@ def _delete_instance(name):
         modify_state(_delete_serial_state)
 
 
-def _migrate_instance_assets(name, new_name):
+def _migrate_instance_assets(name, new_name, mod='nkas'):
     """Move the per-instance files and directories that carry the instance
     name so a renamed instance keeps its stats, CDK history and log history.
     Every step is best-effort: a failure here must not abort the rename after
     the config file was already moved."""
     # ./data/<name>/ — warehouse and interception stats CSV directory.
+    from module.interception.data import DEFAULT_STONE_CSV_PATH, migrate_stone_records, resolve_stone_csv_path
+
     old_data = Path('./data') / name
     new_data = Path('./data') / new_name
+    moved_data = False
     if old_data.is_dir() and not new_data.exists():
         try:
             os.rename(old_data, new_data)
+            moved_data = True
         except OSError as exc:
             logger.warning(f'Unable to migrate data directory {old_data}: {exc}')
+    try:
+        config = read_file(filepath_config(new_name, mod))
+        pattern = deep_get(config, 'InterceptionTaskStats.InterceptionDropStats.CsvPath', DEFAULT_STONE_CSV_PATH)
+        source_csv = resolve_stone_csv_path(pattern, name)
+        target_csv = resolve_stone_csv_path(pattern, new_name)
+        if source_csv and moved_data:
+            source = Path(source_csv).resolve()
+            if source.is_relative_to(old_data.resolve()):
+                source_csv = str(new_data / source.relative_to(old_data.resolve()))
+        migrate_stone_records(source_csv, target_csv, name, new_name)
+    except (OSError, ValueError) as exc:
+        logger.warning(f'Unable to migrate interception records from {name} to {new_name}: {exc}')
     # ./tmp/<name>/ — CDK redeem history and temporary notify screenshots.
     old_tmp = Path('./tmp') / name
     new_tmp = Path('./tmp') / new_name
@@ -700,7 +716,7 @@ def _rename_instance_locked(manager, name, new_name, generation):
             # already renamed, so a leftover or colliding .acc file must not
             # abort the rename half-way.
             logger.warning(f'Unable to migrate account file {old_acc}: {exc}')
-    _migrate_instance_assets(name, new_name)
+    _migrate_instance_assets(name, new_name, mod)
     # Move the whole metadata entry (remark, order, avatar) to the new name.
     meta = _load_meta()
     if name in meta:
