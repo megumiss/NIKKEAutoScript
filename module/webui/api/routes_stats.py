@@ -8,6 +8,7 @@ from starlette.responses import JSONResponse
 
 from module.config.deep import deep_get
 from module.webui.api.deps import InstanceNotFound, validate_instance
+from module.webui.process_manager import ProcessManager
 from module.webui.setting import State
 
 
@@ -40,36 +41,53 @@ async def warehouse(request: Request):
     return JSONResponse({'groups': groups, 'updated_at': max((row.get('timestamp', '') for row in counts.values()), default='')})
 
 
+def _save_daily_totals(manager, generation, csv_path, name, totals) -> bool:
+    """在实例生命周期锁内保存整批补记；等待期间若实例改名或被替换，不再写入旧路径。"""
+    from module.interception.data import set_daily_totals
+    with manager.lifecycle_lock:
+        if not manager.is_current(name, generation):
+            return False
+        set_daily_totals(csv_path, name, totals)
+        return True
+
+
 async def interception_stats(request: Request):
     name = request.path_params['name']
     try:
         validate_instance(name)
     except InstanceNotFound as exc:
         return JSONResponse({'status': 'error', 'message': str(exc)}, status_code=404)
-    from module.interception.data import (DEFAULT_STONE_CSV_PATH, interception_stone_stats, resolve_stone_csv_path,
-                                          set_daily_override)
+    from module.interception.data import DEFAULT_STONE_CSV_PATH, interception_stone_stats, resolve_stone_csv_path
     config = _config(name)
     configured_path = deep_get(config, 'InterceptionTaskStats.InterceptionDropStats.CsvPath', DEFAULT_STONE_CSV_PATH)
     csv_path = resolve_stone_csv_path(configured_path, name)
     if request.method == 'PATCH':
+        manager = ProcessManager.get_manager(name)
+        generation = manager.generation
         if not csv_path:
             return JSONResponse({'message': '未配置掉落数据文件。'}, status_code=422)
         try:
             body = await request.json()
-            day = date.fromisoformat(body['date'])
-            if day.isoformat() != body['date']:
-                raise ValueError('Expected YYYY-MM-DD')
-            total = body['total']
+            totals = body['totals'] if 'totals' in body else {body['date']: body['total']}
+            if not isinstance(totals, dict) or not totals:
+                raise ValueError('Expected daily totals')
+            today = date.today()
+            for key, total in totals.items():
+                day = date.fromisoformat(key)
+                if day.isoformat() != key:
+                    raise ValueError('Expected YYYY-MM-DD')
+                if day > today:
+                    return JSONResponse({'message': '日期不能晚于今天。'}, status_code=422)
+                if type(total) is not int or not 0 <= total <= 2**53 - 1:
+                    return JSONResponse({'message': '请输入非负整数。'}, status_code=422)
         except (KeyError, TypeError, ValueError):
             return JSONResponse({'message': '请选择有效的日期并填写当天总数。'}, status_code=422)
-        if day > date.today():
-            return JSONResponse({'message': '日期不能晚于今天。'}, status_code=422)
-        if total is not None and (type(total) is not int or not 0 <= total <= 2**53 - 1):
-            return JSONResponse({'message': '请输入非负整数。'}, status_code=422)
         try:
-            await asyncio.to_thread(set_daily_override, csv_path, name, day, total)
+            saved = await asyncio.to_thread(_save_daily_totals, manager, generation, csv_path, name, totals)
+            if not saved:
+                return JSONResponse({'message': '实例已改名或被替换，请刷新页面重试。'}, status_code=409)
         except (OSError, ValueError) as exc:
-            return JSONResponse({'message': f'保存自定义总数失败：{exc}'}, status_code=500)
+            return JSONResponse({'message': f'保存掉落记录失败：{exc}'}, status_code=500)
     try:
         stats = await asyncio.to_thread(interception_stone_stats, csv_path, name)
     except (OSError, ValueError) as exc:
