@@ -4,6 +4,21 @@ import { computed, ref } from 'vue'
 export const uiLanguage = ref('zh-CN')
 
 export const staticLabels: Record<string, Record<string, string>> = {
+  '修改每日掉落': { 'en-US': 'Edit daily drops', 'ja-JP': '日別ドロップ数の編集' },
+  '保存目录': { 'en-US': 'Save directory', 'ja-JP': '保存先フォルダー' },
+  '打开日历': { 'en-US': 'Open calendar', 'ja-JP': 'カレンダーを開く' },
+  '在日期格内修改掉落总数，可跨月编辑后一次保存。': { 'en-US': 'Edit totals in the calendar. You can edit across months and save all changes at once.', 'ja-JP': '日付のマスで合計を編集し、月をまたいだ変更もまとめて保存できます。' },
+  '待保存天数': { 'en-US': 'Days to save', 'ja-JP': '未保存の日数' },
+  '上个月': { 'en-US': 'Previous month', 'ja-JP': '前の月' },
+  '下个月': { 'en-US': 'Next month', 'ja-JP': '次の月' },
+  '本月': { 'en-US': 'This month', 'ja-JP': '今月' },
+  '无记录': { 'en-US': 'No record', 'ja-JP': '記録なし' },
+  '当天掉落总数': { 'en-US': 'Total drops for the day', 'ja-JP': 'その日の合計' },
+  '已记录总数': { 'en-US': 'Recorded total', 'ja-JP': '記録済みの合計' },
+  '请输入非负整数。': { 'en-US': 'Enter a whole number of zero or more.', 'ja-JP': '0 以上の整数を入力してください。' },
+  '未配置掉落数据文件。': { 'en-US': 'No drop data file is configured.', 'ja-JP': 'ドロップデータファイルが設定されていません。' },
+  '未能读取掉落统计，请刷新页面重试。': { 'en-US': 'Could not load drop statistics. Refresh the page to try again.', 'ja-JP': 'ドロップ統計を読み込めませんでした。ページを再読み込みしてください。' },
+  '暂无掉落记录，可选择日期补录。': { 'en-US': 'No drops recorded yet. Choose a date to add a total.', 'ja-JP': 'ドロップの記録はまだありません。日付を選んで合計を入力できます。' },
   '开发中': { 'en-US': 'Under development', 'ja-JP': '開発中' },
   '自动主线收集品功能正在开发中，暂不开放使用。': { 'en-US': 'Automatic main story collectible collection is under development and is not available yet.', 'ja-JP': 'メインストーリー収集品の自動回収機能は開発中のため、現在は利用できません。' },
   '展开详情': { 'en-US': 'Show details', 'ja-JP': '詳細を表示' },
