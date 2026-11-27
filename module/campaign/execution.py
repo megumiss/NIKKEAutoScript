@@ -421,6 +421,7 @@ class CampaignExecutor:
                 raise RuntimeError(f'移动未完成：{describe_result(result)}')
             return
         if kind == 'mechanism':
+            self.session.trigger_visible_mechanism(goal, after_arrival=True)
             self.complete_mechanism(goal)
         elif kind == 'review_block':
             self.review_block(goal)
