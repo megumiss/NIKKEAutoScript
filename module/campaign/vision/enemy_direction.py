@@ -3,6 +3,8 @@
 import numpy as np
 
 DIRECTION_TOLERANCE = 45.
+STORY_PROJECTION_ERROR = 130.
+STORY_PROJECTION_GAP = 120.
 
 
 def direction_candidates(minimap_vectors, scene_vectors):
@@ -28,14 +30,41 @@ def direction_candidates(minimap_vectors, scene_vectors):
     return indices[np.any(np.abs(differences) <= DIRECTION_TOLERANCE, axis=1)].tolist()
 
 
-def match_target_direction(field, frame, matrix, target, squad, enemy_kind='normal'):
+def match_story_ring(field, frame, vectors, ground, target_index, indices, panel_scale):
+    """用唯一主线标记和双向投影分差复核多层场景的方向歧义。
+
+    仅校验已选目标，要求它与标记下方脚圈之间的误差在门限内。屏幕上其他脚圈和小地图上
+    其他敌人均须显著更远，避免用单帧投影距离把高低层的同向目标互换。
+    """
+    from module.campaign.navigation.camera_navigation import panel_delta_to_client
+    from module.campaign.vision.story_marker import marked_ring, story_markers
+
+    ring = marked_ring(story_markers(field), frame.centers)
+    if ring is None:
+        return None
+    ring_index = int(np.argmin(np.linalg.norm(frame.centers - ring, axis=1)))
+    if ring_index not in indices:
+        return None
+    projected = np.asarray([ground + panel_delta_to_client(panel_scale, vector) for vector in vectors])
+    on_screen = np.linalg.norm(frame.centers - projected[target_index], axis=1)
+    on_minimap = np.linalg.norm(projected - ring, axis=1)
+    error = on_screen[ring_index]
+    alternatives = np.r_[np.delete(on_screen, ring_index), np.delete(on_minimap, target_index)]
+    if error > STORY_PROJECTION_ERROR or alternatives.min() - error < STORY_PROJECTION_GAP:
+        return None
+    return dict(click=ring.tolist(), projection_error=round(float(error), 1),
+                reason='原目标与唯一主线脚圈通过双向投影复核。')
+
+
+def match_target_direction(field, frame, matrix, target, squad, enemy_kind='normal', *, panel_scale=None):
     """为已选底图敌人匹配同向脚圈，只返回点击落点，不选择或替换规划目标。
 
     frame 来自同帧 observe_rings，matrix 为已接受的紧凑面板到底图变换；target/squad 为底图像素。
     先沿用现有 30 地图像素范围与类别检查找到原目标标记，再反投影到小地图比较方向，
     不比较大小地图中的敌我距离。实景原点使用当前唯一箭头下移 90 客户区像素，离屏即拒绝。
-    45 度内只有一个可点击脚圈且没有其他小地图敌人同向竞争时返回；否则继续原目标的导航，
-    不按检测置信度、距离或检测顺序改点其他敌人。调用方仍须在点击前复核新帧。
+    45 度内有多个可点击脚圈时，用小地图到客户区的标定方向再筛一次。普通主线敌人仍有
+    多个候选时，可用唯一主线标记和双向投影分差解歧义。其他目标仍须通过同向竞争检查，
+    所有点击均由调用方在新帧中复核。
     """
     from module.campaign.navigation.controls import ARROW_GROUND_OFFSET
     from module.campaign.vision.offscreen import squad_offscreen
@@ -65,7 +94,18 @@ def match_target_direction(field, frame, matrix, target, squad, enemy_kind='norm
     target_index = nearby[0][0]
     indices = direction_candidates([vectors[target_index]], scene_vectors)
     report = dict(candidate_count=len(indices), angle_tolerance=DIRECTION_TOLERANCE)
+    if len(indices) > 1:
+        from module.campaign.navigation.camera_navigation import panel_delta_to_client
+
+        direction = panel_delta_to_client(1., vectors[target_index])
+        projected = direction_candidates([direction], scene_vectors[indices])
+        indices = [indices[index] for index in projected]
+        report['projected_candidate_count'] = len(indices)
     if len(indices) != 1:
+        if len(indices) > 1 and enemy_kind == 'normal' and panel_scale is not None:
+            story = match_story_ring(field, frame, vectors, ground, target_index, indices, panel_scale)
+            if story is not None:
+                return dict(report, **story)
         return dict(report, reason='原目标方向没有唯一实景落点，保留原目标继续导航。')
     index = indices[0]
     others = np.delete(vectors, target_index, axis=0)

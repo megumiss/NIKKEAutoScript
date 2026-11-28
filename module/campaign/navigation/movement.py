@@ -54,6 +54,7 @@ def navigate(
     localization_short_move = False
     legs, transfers = None, []
     exit_near, entry_waits, leg_start_clicks = 0, 0, 0
+    activated = False
     deadline = time.monotonic() + 600
     while time.monotonic() < deadline:
         session.check()
@@ -101,6 +102,8 @@ def navigate(
                     iou=observation['iou'],
                 )
                 if exit_near < 2:
+                    if activated:
+                        session.reset_navigation()
                     session.pause(1)
                     continue
                 completed = legs.pop(0)
@@ -116,6 +119,7 @@ def navigate(
                 session.anchor_reference_method = None
                 previous, probes, probe_index, stagnant, near = None, None, 0, 0, 0
                 exit_near, entry_waits, leg_start_clicks = 0, 0, clicks
+                activated = False
                 if arrived:
                     session.finish_view()
                     return {
@@ -178,6 +182,14 @@ def navigate(
             )
             if clicks - leg_start_clicks >= 3:
                 raise RuntimeError('已尝试三次前往电梯入口，尚未确认传送，停止移动。')
+            activate = getattr(session, 'activate_elevator', None)
+            if not activated and callable(activate) and activate(observation, legs[0]):
+                clicks += 1
+                activated = True
+                previous = None
+                continue
+            if activated:
+                raise RuntimeError('已点击电梯入口，但新定位仍在入口道路；停止尝试传送。')
             if distance < 2:
                 entry_waits += 1
                 if entry_waits > 3:

@@ -238,6 +238,10 @@ def detect_markers(image, matrix, mode):
     return project_centers(players, matrix), project_centers(enemies, matrix)
 
 
+class ExpandedSquadRingMissing(ValueError):
+    """要求定位小队，但展开小地图中未找到圆环；多个候选属于不同的观察失败。"""
+
+
 def expanded_minimap_masks(panel, require_player=True, locate_player=True):
     """提取生产展开面板的道路、有效域和实测小队圆环，供观测与导航共用。
 
@@ -251,7 +255,9 @@ def expanded_minimap_masks(panel, require_player=True, locate_player=True):
     if require_player and not locate_player:
         raise ValueError('只定位视野时不能要求小队圆环。')
     players, _ = detect_markers(panel, np.eye(3), mode='expanded') if locate_player else ([], [])
-    if len(players) > 1 or (require_player and len(players) != 1):
+    if require_player and not players:
+        raise ExpandedSquadRingMissing('展开地图未检测到小队圆环。')
+    if len(players) > 1:
         raise ValueError(f'展开地图小队圆环数量无效：检测到 {len(players)} 个。')
     player = np.asarray(players[0], float) if players else None
     road = terrain(panel)

@@ -1,0 +1,58 @@
+{
+  "image_sha256": "201bc4b769fbbc5ea235828d501da090d750219ab264d170c12cfb464c75ae9d",
+  "terrain_edits": [
+    {
+      "type": "polygon",
+      "operation": "add",
+      "points": [
+        [980, 658], [973, 658], [970, 664], [890, 688], [928, 799],
+        [930, 818], [910, 832], [865, 847], [857, 846], [812, 713],
+        [762, 725], [753, 732], [734, 736], [793, 901], [807, 896],
+        [817, 899], [820, 909], [812, 928], [831, 978], [837, 980],
+        [866, 971], [861, 957], [879, 951], [878, 940], [973, 909],
+        [1005, 902], [1014, 928], [1065, 912], [1065, 856], [1057, 867], [1049, 866]
+      ]
+    },
+    {
+      "type": "polygon",
+      "operation": "add",
+      "points": [[892, 767], [808, 792], [838, 883], [901, 883], [901, 791]]
+    }
+  ],
+  "routing_terrain_edits": [
+    {
+      "type": "polygon",
+      "operation": "erase",
+      "points": [[1083, 806], [1095, 806], [1095, 943], [1083, 943]]
+    }
+  ],
+  "objects": [
+    {
+      "id": "ch29-rooftop-lift-street",
+      "category": "ground_elevator",
+      "type": "point",
+      "points": [[1126, 852]]
+    },
+    {
+      "id": "ch29-rooftop-lift-roof",
+      "category": "ground_elevator",
+      "type": "point",
+      "points": [[975, 824]]
+    }
+  ],
+  "connections": [
+    {
+      "id": "ch29-rooftop-lift",
+      "category": "elevator_connection",
+      "from": "ch29-rooftop-lift-street",
+      "to": "ch29-rooftop-lift-roof",
+      "directed": false
+    }
+  ],
+  "elevator_controls": {
+    "ch29-rooftop-lift": {
+      "street": {"entry": [1126, 852]},
+      "roof": {"entry": [975, 824]}
+    }
+  }
+}

@@ -15,6 +15,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw
 
+from module.campaign.map.edited_map import supplemental_map
 from module.campaign.map.terrain import render_terrain, terrain_colors
 
 
@@ -53,15 +54,18 @@ def validate_edits(edits, size):
 
 
 def package_road(package, metadata, annotations):
-    """合成地图包的二值道路掩码，已套用人工地形修订。
+    """合成地图包的二值道路掩码，应用章节补图和人工地形修订。
 
     平面章节有扫描得到的道路概率缓存，优先用它（阈值 0.5）再套修订：override 为 1 表示抹掉、
     2 表示补上，这样人工修订只改局部，不影响其余像素的扫描证据。
     没有概率缓存的包退回渲染出的地形图，按 add 颜色精确比色取道路。
     """
     package = Path(package)
+    supplement = supplemental_map(metadata)
+    edits = [*supplement.get('terrain_edits', []), *supplement.get('routing_terrain_edits', []),
+             *annotations.get('terrain_edits', [])]
     with Image.open(package / 'map.png') as image:
-        edited, override = render_terrain(image, annotations.get('terrain_edits', []), terrain_colors(metadata))
+        edited, override = render_terrain(image, edits, terrain_colors(metadata))
     cache = package / 'source/map_data.npz'
     if metadata.get('coordinate_model') is None and cache.exists():
         with np.load(cache, allow_pickle=False) as data:

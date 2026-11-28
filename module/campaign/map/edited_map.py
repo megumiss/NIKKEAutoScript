@@ -11,10 +11,27 @@ from PIL import Image
 from module.campaign.map.terrain import render_terrain, terrain_colors
 
 
-def edited_roads(package, metadata, baseline=None):
+def supplemental_map(metadata):
+    """只在底图摘要匹配时启用第 29 章的场景、步行路网和传送标注。"""
+    if metadata.get('chapter') != 29:
+        return {}
+    path = Path(__file__).resolve().parents[1] / 'assets' / 'chapter_29_terrain.json'
+    supplement = json.loads(path.read_text(encoding='utf-8'))
+    if supplement['image_sha256'] != metadata['image_sha256']:
+        return {}
+    return supplement
+
+
+def supplemental_terrain_edits(metadata):
+    """返回小地图配准使用的道路补图，保留画面中叠在一起的跨层道路。"""
+    return supplemental_map(metadata).get('terrain_edits', [])
+
+
+def edited_roads(package, metadata, baseline=None, *, include_supplement=True):
     """将 annotations.json 的人工道路操作应用于绑定的底图或给定 baseline。
 
     返回二值道路、覆盖掩码和仅由道路操作计算的哈希；1 表示擦除、2 表示补路，收集品修改不改变该哈希。
+    补图在人工修订之前应用；配准可关闭它以核对尚未渲染平台的实时小地图。
     """
     package = Path(package)
     document = package / 'annotations.json'
@@ -22,6 +39,8 @@ def edited_roads(package, metadata, baseline=None):
     if annotations and annotations.get('image_sha256') != metadata['image_sha256']:
         raise ValueError('Road edits belong to a different map')
     edits = annotations.get('terrain_edits', [])
+    if include_supplement:
+        edits = [*supplemental_terrain_edits(metadata), *edits]
     image, override = render_terrain(Image.open(package / 'map.png').convert('RGB'), edits, terrain_colors(metadata))
     override = np.asarray(override)
     if baseline is None:
