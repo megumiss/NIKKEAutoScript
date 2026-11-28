@@ -125,6 +125,7 @@ class CampaignExecutor:
         self.recoveries = 0
         self.required_scan = '开局' if purpose == 'story' else None
         self.scan_fresh = False
+        self._interrupted_enemy = False
         self.scene_controller = owner.scene_controller
 
     def plan_tick(self, snapshot, advance=True):
@@ -345,6 +346,7 @@ class CampaignExecutor:
         同一个目标在共享闭环里会打十几行进度，这两行是把它们括起来的边界。
         """
         kind = goal['kind']
+        self._interrupted_enemy = False
         self.owner.state.execution_target = goal['id'] if kind == 'enemy' else None
         purpose = kind if kind in ('enemy', 'collectible') else 'position'
         self.session.begin_target(purpose)
@@ -428,10 +430,10 @@ class CampaignExecutor:
             return
         self.owner.state.execution_target = None
         if result.get('state') == 'interrupted':
-            self.session.complete_move_target(goal)
-            if result.get('movement_clicks', 0) > 0:
-                self.recoveries = 0
-                self.owner.state.target_failures.pop('story-location', None)
+            self.session.pause_move_target()
+            if self._interrupted_enemy:
+                self.scan_fresh = True
+                self._interrupted_enemy = False
             logger.info(f"{goal_brief(goal)} 提前中断：{result.get('reason')}，"
                         f"返回决策层重选目标；本目标操作 {self.session.target_inputs} 次，耗时 {watch}")
             return
@@ -771,6 +773,7 @@ class CampaignExecutor:
             enemy, _ = nearest_enemy(state, cut, squad)
             if (enemy is not None and enemy.get('enemy_kind') == 'normal'
                     and state.enemies.get(enemy['id'], {}).get('confirmed_at') == state.tick):
+                self._interrupted_enemy = True
                 return f"发现可达普通敌人 {enemy['id']}"
         return None
 
@@ -1026,11 +1029,11 @@ class CampaignExecutor:
         except (RuntimeError, ValueError) as exc:
             logger.warning(f'{scene}扫描未能完成（{exc}），本轮不采纳扫描结果。')
         else:
-            if scanned > 0 and scene != '开局':
-                self.scan_fresh = True
             logger.info(f'{scene}扫描完成：{scanned} 屏，耗时 {watch}')
         self.session.begin_target('position')
         self.session.scout_end()
+        if scanned > 0 and scene != '开局':
+            self.scan_fresh = True
         return scanned
 
     def recover(self, reason, goal=None):
@@ -1322,6 +1325,7 @@ class CampaignExecutor:
                     logger.info(f'战斗闸门已触发，开始接管；关联最近执行目标：'
                                 f'{goal_brief(self.last_executed)}')
                     camera_options = {}
+                    self.scan_fresh = False
                     try:
                         self.battle(self.last_executed)
                     except TargetTriggered as battle_exc:

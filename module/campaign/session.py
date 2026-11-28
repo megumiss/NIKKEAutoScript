@@ -523,6 +523,11 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
             self.movement_progress[key] = MovementProgress(target)
         self.active_movement_progress = self.movement_progress[key]
 
+    def pause_move_target(self):
+        """步行中途打断时暂停当前进展监控，保留同一目标的历史失败计数与最优路程。"""
+        self.active_movement_progress = None
+        self.planned_movement_click = None
+
     def complete_move_target(self, goal):
         """真实到点或战斗胜利后释放该目标的路线快照，不把失败或切换用途当作完成。
 
@@ -1049,18 +1054,26 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         """
         matrix = np.asarray(report['roi_to_map'], float)
         height, width = panel.shape[:2]
-        enemies = self.panel_enemies(panel, matrix)
-        changes = self.owner.state.update(dict(
+        coverage_box = report.get('coverage_box')
+        enemies = self.panel_enemies(panel, matrix, coverage_box=coverage_box)
+        payload = dict(
             localization='accepted', roi_to_map=matrix.tolist(), coverage_size=[width, height],
-            minimap={'mode': 'expanded', 'size': [width, height]}, enemies=enemies), advance=False)
+            minimap={'mode': 'expanded', 'size': [width, height]}, enemies=enemies)
+        if coverage_box is not None:
+            payload['coverage_box'] = list(coverage_box)
+        changes = self.owner.state.update(payload, advance=False)
         detail = describe_changes({key: value for key, value in changes.items()
                                    if key.startswith('enemies_')})
         if detail:
             logger.info(f'展开地图敌人状态更新：{detail}')
 
-    def panel_enemies(self, panel, matrix):
+    def panel_enemies(self, panel, matrix, coverage_box=None):
         """把面板上的敌人标记按本帧配准投到底图，返回可直接并进状态的记录（含类型与置信度）。"""
         _, markers = self.owner.observer.minimap_markers(panel, 'expanded')
+        if coverage_box is not None:
+            x1, y1, x2, y2 = coverage_box
+            markers = [item for item in markers
+                       if x1 <= item['position'][0] < x2 and y1 <= item['position'][1] < y2]
         positions = project_centers([item['position'] for item in markers], np.asarray(matrix, float))
         size = self.owner.state.size
         return [dict(item, position=position) for item, position in zip(markers, positions)
@@ -1714,10 +1727,14 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         """
         matrix = np.asarray(report['roi_to_map'], float)
         height, width = panel.shape[:2]
-        enemies = self.panel_enemies(panel, matrix)
-        changes = self.owner.state.update(dict(
+        coverage_box = report.get('coverage_box')
+        enemies = self.panel_enemies(panel, matrix, coverage_box=coverage_box)
+        payload = dict(
             localization='accepted', roi_to_map=matrix.tolist(), coverage_size=[width, height],
-            minimap={'mode': 'expanded', 'size': [width, height]}, enemies=enemies), advance=False)
+            minimap={'mode': 'expanded', 'size': [width, height]}, enemies=enemies)
+        if coverage_box is not None:
+            payload['coverage_box'] = list(coverage_box)
+        changes = self.owner.state.update(payload, advance=False)
         detail = describe_changes(changes) or '无新增敌人或观测区域'
         logger.info(f"侦察帧配准位置 {points_text(report['position'])}：检测敌人 {len(enemies)} 个，{detail}")
         self.preview(self.trace.last_field)

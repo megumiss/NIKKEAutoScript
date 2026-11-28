@@ -30,9 +30,6 @@ FUSED_IOU = .25
 # 容差 IoU 的膨胀半径（面板像素）：紧凑面板底图投影道路 ~18px、实时道路 ~4px，各膨胀 7px 后
 # 宽度对齐；展开帧场景（宽度基本一致）用同值偏保守但不改变判别方向。
 FUSED_DILATE = 7
-# 起始紧凑定位已 accepted 时，单批 1~3 次重叠拖动可覆盖的近距阈值（地图像素）；
-# 该范围内不提前开合展开面板预建纠偏基准，仅远目标或起始定位偏弱时预先标定。
-COMPACT_REFERENCE_DISTANCE = 220.
 
 
 class CameraRegistrationError(ValueError):
@@ -195,24 +192,24 @@ def pan_scene(session, drag, *, require_arrow=False):
 
         inputs = frame_inputs(field)
         if inputs.mode != 'compact':
-            raise SquadOffscreen('缺少小队标记及紧凑面板，无法确认拖动起点。')
+            raise RuntimeError('缺少小队标记及紧凑面板，无法确认拖动起点。')
         panel = inputs.compact
         players, _ = perception.detect_markers(panel, np.eye(3), mode='compact')
         matcher = getattr(session, 'compact_matcher', None)
         stationary = getattr(session, 'stationary_squad', None)
         position = stationary() if not players and stationary is not None else None
         if matcher is None or len(players) > 1 or (not players and position is None):
-            raise SquadOffscreen('当前帧无法定位小队以避让拖动起点。')
+            raise RuntimeError('当前帧无法定位小队以避让拖动起点。')
         panel, road, valid = perception.compact_road_masks(field)
         view = compact_viewport(session, matcher, panel, road, valid)
         if view['status'] != 'accepted':
-            raise SquadOffscreen('当前紧凑视野未通过配准，停止场景拖动。')
+            raise RuntimeError('当前紧凑视野未通过配准，停止场景拖动。')
         if players:
             offset = panel_delta_to_client(view['a'], np.asarray(players[0], float) - goto.GAZE)
         else:
             offset = target_view_offset(view['matrix'], view['a'], 1., view['viewport'], position)
             if offset is None or not np.isfinite(offset).all():
-                raise SquadOffscreen('当前视野无法投影已确认的小队位置，停止场景拖动。')
+                raise RuntimeError('当前视野无法投影已确认的小队位置，停止场景拖动。')
         ground = np.asarray(goto.VIEWPORT_PIXEL) + offset
         session.emit(squad_avoidance='ring' if players else 'stationary', squad_avoid_ground=ground.tolist())
     region, _ = pan_region(drag)
@@ -653,14 +650,11 @@ def plan_world_move_compact(session, observation, target, max_pans=12, batch_lim
         reference = scout_camera_reference(session, observation, start)
         if reference is not None:
             session.emit(camera_reference='scout', camera_reference_offset=np.round(reference, 1).tolist())
-        else:
-            distance = float(np.linalg.norm(target - start['viewport']))
-            if distance > goto.SQUAD_REACH and (
-                    start['status'] != 'accepted' or distance > COMPACT_REFERENCE_DISTANCE):
-                field, panel, road, valid, start, reference = prepare_compact_reference(
-                    session, matcher, start, squad_position, known_squad=viewport_only)
-                if callable(camera_enemy_check):
-                    camera_enemy_check(field)
+        elif float(np.linalg.norm(target - start['viewport'])) > goto.SQUAD_REACH:
+            field, panel, road, valid, start, reference = prepare_compact_reference(
+                session, matcher, start, squad_position, known_squad=viewport_only)
+            if callable(camera_enemy_check):
+                camera_enemy_check(field)
     matrix, scale_a, road_prev = start['matrix'], start['a'], road
     ring_previous = None
     ring_pan, ring_scale, ring_path = 0, scale_a, 0.

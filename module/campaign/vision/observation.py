@@ -279,6 +279,12 @@ class CampaignObserver:
         registration = dict(roi_to_map=matrix, a=result['a'], panel_size=list(panel.shape[1::-1]),
                             player_center=player)
         snapshot['coverage_size'] = list(panel.shape[1::-1])
+        coverage_box = result.get('coverage_box')
+        if coverage_box is not None:
+            snapshot['coverage_box'] = list(coverage_box)
+            x1, y1, x2, y2 = coverage_box
+            markers = [item for item in markers
+                       if x1 <= item['position'][0] < x2 and y1 <= item['position'][1] < y2]
         snapshot['roi_to_map'] = [[float(value) for value in row] for row in matrix]
         positions = project_centers([item['position'] for item in markers], matrix)
         snapshot['enemies'] = [dict(item, position=position) for item, position in zip(markers, positions)

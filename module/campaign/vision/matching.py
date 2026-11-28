@@ -26,6 +26,9 @@ MATCH_VERSION = 9
 ACCEPT_ROAD_IOU = .70
 ACCEPT_COARSE_MARGIN = .10
 ACCEPT_PARAMETER_SPREAD_PX = 40
+# 分岛回退只允许吸收地图接缝（如第 50 章跨海拼接偏移）：被排除的其余岛屿像素投影后仍须落在底图道路近旁。
+ISLAND_SEAM_TOLERANCE = 140.
+ISLAND_OTHER_SUPPORT = .85
 # 已确认小队坐标对展开面板配准的约束半径，单位为章节底图像素。
 SQUAD_ANCHOR_RADIUS = 12.
 # match_panel 粗搜索的参数网格；同一个 MapMatcher 实例反复配准时尺度基本不变，先在最近
@@ -219,6 +222,7 @@ class MapMatcher:
         self.local_parameters = None
         self.local_margin = None
         self.local_steps = 0
+        self._terrain_distance = None
 
     def match(self, image, review=None):
         """粗搜索尺度和位移后细化最佳候选，以 IoU、远处候选分差及参数分散度联合决定是否接受。"""
@@ -292,12 +296,36 @@ class MapMatcher:
             self._remember_center(panel, result)
         return result
 
+    def _island_seam_supported(self, other, roi_to_map):
+        """校验分岛回退中被排除的另一半道路仍落在底图接缝容差内，拦截远距错位误配。"""
+        ys, xs = np.nonzero(other)
+        if len(xs) == 0:
+            return False
+        if self._terrain_distance is None:
+            self._terrain_distance = cv2.distanceTransform((self.terrain == 0).astype(np.uint8), cv2.DIST_L2, 5)
+        matrix = np.asarray(roi_to_map, float)
+        points = np.column_stack((xs, ys, np.ones(len(xs)))) @ matrix.T
+        divisor = points[:, 2]
+        if not np.isfinite(divisor).all() or np.any(np.abs(divisor) < 1e-9):
+            return False
+        xy = points[:, :2] / divisor[:, None]
+        if not np.isfinite(xy).all():
+            return False
+        height, width = self._terrain_distance.shape
+        rounded = np.rint(xy).astype(int)
+        inside = (rounded[:, 0] >= 0) & (rounded[:, 0] < width) & (rounded[:, 1] >= 0) & (rounded[:, 1] < height)
+        if not np.any(inside):
+            return False
+        dist = self._terrain_distance[rounded[inside, 1], rounded[inside, 0]]
+        support = float((dist <= ISLAND_SEAM_TOLERANCE).sum()) / len(xs)
+        return support >= ISLAND_OTHER_SUPPORT
+
     def _match_islands(self, panel, road, valid, player, review=None, expected_position=None):
         """整帧配准因道路重合度不足失败时，按独立连通岛屿分区回退配准。
 
         只桥接面板内部的图标／圆环空洞，不跨越深色背景或边角控件区；存在至少两个独立
         道路岛屿时按距离锚点由近及远依次以最近岛屿域裁剪 valid，排除跨岛拼接偏移的影响，
-        仍必须通过完整 ACCEPT_* 判据与可选小队位置约束才返回。
+        仍必须通过完整 ACCEPT_* 判据、其余岛屿接缝容差与可选小队位置约束才返回。
         """
         total = int(np.count_nonzero(road))
         if total < 600:
@@ -338,8 +366,10 @@ class MapMatcher:
                 candidate = self._match_panel(panel, comp_road, comp_valid, player, review, expected_position)
             except (ValueError, cv2.error):
                 continue
-            if candidate['status'] == 'accepted':
+            if candidate['status'] == 'accepted' and self._island_seam_supported(other, candidate['roi_to_map']):
+                ys, xs = np.nonzero(mask)
                 candidate['island_fallback'] = True
+                candidate['coverage_box'] = [int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1]
                 return candidate
         return None
 

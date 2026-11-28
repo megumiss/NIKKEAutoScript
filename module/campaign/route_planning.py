@@ -161,9 +161,9 @@ def route_road_section(cut, point, path):
 def route_enemy_candidates(cut, squad, target, path, distances, enemies):
     """按道路距离排列实际路径上的敌人记录，不赋予历史记录可战斗状态。
 
-    仅接受敌人所在道路截面与 A* 路径相交、到敌人与目的地都有可行道路，且不比
-    目的地更远、绕行增程不超过 ROUTE_DETOUR_LIMIT 的记录，避免起点后方直道上的
-    远距敌人抢占更近的目标或机关。执行目标和历史线索复核共用此几何条件。
+    仅接受敌人所在道路截面与 A* 路径相交、到敌人与目的地都有可行道路，且绕行增程
+    不超过 ROUTE_DETOUR_LIMIT 的记录，既保留终点前方微侧偏的拦路敌，也排除起点
+    后方或越过目标的远距绕行敌人。执行目标和历史线索复核共用此几何条件。
     """
     candidates = []
     home = cut.component(squad)
@@ -178,7 +178,7 @@ def route_enemy_candidates(cut, squad, target, path, distances, enemies):
         last = walking_distance(cut.road, cut.regions, point, target)
         if not np.isfinite(first + last):
             continue
-        if first > direct or (first + last) - direct > ROUTE_DETOUR_LIMIT:
+        if (first + last) - direct > ROUTE_DETOUR_LIMIT:
             continue
         candidates.append((first, enemy))
     return sorted(candidates, key=lambda pair: pair[0])
