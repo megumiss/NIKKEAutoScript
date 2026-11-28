@@ -9,7 +9,7 @@ from module.campaign.goals import describe, frontier_point, nearest_enemy, unobs
 from module.campaign.report import (BATTLE_OUTCOMES, BATTLE_STATES, EVIDENCE_KINDS, GOAL_KINDS, GOAL_REASONS,
                                     RESULT_STATES, label, points_text)
 from module.campaign.route_planning import planning_routes, route_path
-from module.campaign.scouting import scout_focus
+from module.campaign.scouting import confirmed_route_step, scout_focus
 from module.campaign.session import DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, SETTLE_TAP_INTERVAL
 from module.campaign.navigation.progress import NavigationStalled
 from module.campaign.timing import Stopwatch
@@ -385,7 +385,10 @@ class CampaignExecutor:
             previous_check = getattr(self.session, 'camera_enemy_check', None)
             self.session.camera_enemy_check = check_camera_enemy
             try:
-                result = navigate(self.session, target, progress, **kwargs)
+                if goal.get('scouted_step'):
+                    result = self.session.move_scouted_step(goal)
+                else:
+                    result = navigate(self.session, target, progress, **kwargs)
             finally:
                 self.session.camera_enemy_check = previous_check
         except TargetTriggered:
@@ -403,7 +406,7 @@ class CampaignExecutor:
                 self.owner.state.transfer_failed(goal['leg'])
             else:
                 identifier = f"review-{goal['id']}" if kind == 'review_block' else goal['id']
-                if kind == 'advance':
+                if kind == 'advance' and not goal.get('scouted_step'):
                     identifier = goal['for_target']
                 self.owner.state.record_failure(identifier)
             logger.warning(f"{goal_brief(goal)} 执行失败，已记录一次失败：{exc}；"
@@ -458,6 +461,8 @@ class CampaignExecutor:
         pending = scout_focus(state, self.owner.cut, squad, include_unavailable=True, goal=goal)
         if (pending is None or not state.is_unavailable(pending['id'])
                 or scout_focus(state, self.owner.cut, squad, goal=goal) is not None):
+            return
+        if confirmed_route_step(state, self.owner.cut, squad, goal, pending) is not None:
             return
         self.scout_pending = pending
         failures = state.target_failures[pending['id']]['failures']
@@ -542,6 +547,17 @@ class CampaignExecutor:
         remaining = SCOUT_VIEWS
         options = camera_options or {}
         while remaining > 0:
+            if self.purpose == 'story' and located(snapshot) and snapshot.get('squad') is not None:
+                state, cut, squad = self.owner.state, self.owner.cut, snapshot['squad']
+                pending = scout_focus(state, cut, squad, include_unavailable=True, goal=goal)
+                step = confirmed_route_step(state, cut, squad, goal, pending)
+                if step is not None:
+                    if expanded_for_scout:
+                        self.session.scout_end()
+                    self.scout_pending = None
+                    logger.info(f"远处前置道路 {pending['id']} 待复核，先沿已确认道路短移至 "
+                                f"{points_text(step['position'])}。")
+                    return step, snapshot
             scouted = self.scout(goal, snapshot, max_views=remaining)
             remaining -= self.last_scout_views
             if not scouted:
@@ -567,7 +583,8 @@ class CampaignExecutor:
                                     previous_goal=previous, goal=goal)
                 logger.warning(f"前置道路 {pending['id']} 本批复核通过后，新观测仍未确认；"
                                f'累计失败 {failures}/{MAX_FAILURES} 次。')
-                if failures >= MAX_FAILURES:
+                if failures >= MAX_FAILURES and confirmed_route_step(
+                        self.owner.state, self.owner.cut, snapshot['squad'], goal, pending) is None:
                     raise ScoutingIncomplete(f"前置道路 {pending['id']} 复核后再次失效，累计失败 {failures} 次。")
             if self.scout_pending is None or remaining <= 0 or self.last_scout_views == 0:
                 return goal, snapshot
@@ -1154,6 +1171,12 @@ class CampaignExecutor:
                     if self.scout_pending is not None:
                         pending = self.scout_pending
                         failures = self.owner.state.target_failures.get(pending['id'], {}).get('failures', 0)
+                        if failures >= MAX_FAILURES and located(snapshot) and snapshot.get('squad') is not None:
+                            step = confirmed_route_step(self.owner.state, self.owner.cut, snapshot['squad'],
+                                                        goal, pending)
+                            if step is not None:
+                                goal, self.scout_pending = step, None
+                    if self.scout_pending is not None:
                         if failures >= MAX_FAILURES:
                             if self.purpose == 'story':
                                 raise ScoutingIncomplete(f"前置道路 {pending['id']} 累计 {failures} 次未能确认。")

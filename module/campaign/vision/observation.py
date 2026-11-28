@@ -19,7 +19,8 @@ from module.campaign.vision.mechanisms import mechanism_observations
 from module.campaign.vision.story_marker import story_markers
 from module.campaign.vision.offscreen import squad_offscreen
 from module.campaign.vision.perception import (compact_road_masks, expanded_minimap_masks, marker_candidates,
-                                             minimap_masks, project_centers, refine_ring, enemy_marker_conflicts)
+                                             match_squad_neighborhood, minimap_masks, project_centers, refine_ring,
+                                             enemy_marker_conflicts)
 from module.logger import logger
 
 
@@ -235,6 +236,14 @@ class CampaignObserver:
         """
         options = {'expected_position': expected_position} if expected_position is not None else {}
         result = self.matcher.match_panel(panel, road, valid, player, **options)
+        anchor = expected_position if known_squad is None else known_squad
+        if (anchor is not None and snapshot['minimap']['mode'] == 'expanded'
+                and result['status'] == 'needs_review' and result['road_iou'] < ACCEPT_ROAD_IOU):
+            local = match_squad_neighborhood(self.matcher, panel, anchor)
+            if local is not None:
+                result = local
+                if known_squad is None:
+                    player = np.asarray(local['player_center'], float)
         snapshot['localization'] = result['status']
         snapshot['localization_diagnostics'] = {
             name: result[name] for name in ('road_iou', 'coarse_margin', 'parameter_spread_px', 'anchor_error')
@@ -282,6 +291,12 @@ class CampaignObserver:
                             player_center=player)
         snapshot['coverage_size'] = list(panel.shape[1::-1])
         snapshot['roi_to_map'] = [[float(value) for value in row] for row in matrix]
+        bounds = result.get('coverage_bounds')
+        if bounds is not None:
+            left, top, right, bottom = bounds
+            markers = [item for item in markers if left <= item['position'][0] < right
+                       and top <= item['position'][1] < bottom]
+            snapshot['coverage_bounds'] = bounds
         positions = project_centers([item['position'] for item in markers], matrix)
         snapshot['enemies'] = [dict(item, position=position) for item, position in zip(markers, positions)
                                if 0 <= position[0] < width and 0 <= position[1] < height]

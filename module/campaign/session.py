@@ -200,13 +200,16 @@ class CampaignLocalizer:
             raise NoConnectedRoad('目标不在当前能走到的区域里。')
         return Localizer.route(self, np.asarray(start, float), np.asarray(target, float))
 
-    def locate(self, panel, tag, require_player=True, expected_position=None, locate_player=True):
+    def locate(self, panel, tag, require_player=True, expected_position=None, locate_player=True,
+               neighborhood_position=None):
         """把原始展开 ROI 配准到底图；视野观测可无小队，但低质量配准一律拒绝。
 
         tag 是这次定位的画面标识，由调用方在留存证据图时使用，不拼进失败文本：
         那句话要给人看，画面标识对用户没有意义（调用方的日志里已经写清是第几次尝试）。
         expected_position 只约束当前可见的实测小队圆环；小队离屏时仍按无锚点道路配准处理。
         locate_player=False 用于纯镜头侦察，完全跳过实时小队圆环检测与校验，只返回视口坐标。
+        neighborhood_position 是同一位置上的独立紧凑定位，仅在展开全图道路重合度不足时复核小队附近；
+        复核成帧仍会检测这张面板的圆环，并标明不能采用的面板外侧范围。
         """
         road, valid, player = expanded_minimap_masks(panel, require_player=require_player, locate_player=locate_player)
         has_player = player is not None
@@ -214,6 +217,17 @@ class CampaignLocalizer:
         if not has_player:
             player = np.array(panel.shape[1::-1], float) / 2
         report = self.matcher.match_panel(panel, road, valid, player, **options)
+        from module.campaign.vision.matching import ACCEPT_ROAD_IOU
+        if (neighborhood_position is not None and report['status'] == 'needs_review'
+                and report['road_iou'] < ACCEPT_ROAD_IOU):
+            from module.campaign.vision.perception import match_squad_neighborhood
+            local = match_squad_neighborhood(self.matcher, panel, neighborhood_position)
+            if local is not None:
+                report = local
+                if has_player:
+                    player = np.asarray(local['player_center'], float)
+                else:
+                    report['position'] = project(np.asarray(local['roi_to_map']), player).tolist()
         if self.record is not None:
             self.record('panel_registration', tag=tag, require_player=require_player,
                         expected_position=expected_position, report=report)
@@ -632,7 +646,10 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         self.check()
         watch = Stopwatch()
         field = self.await_field()
-        self.remember_scene(field)
+        snapshot = self.remember_scene(field)
+        nearby = self.stationary_squad()
+        if snapshot['localization'] == 'accepted' and (snapshot.get('minimap') or {}).get('mode') == 'compact':
+            nearby = snapshot['squad']
         cached = self.reusable_report()
         if cached is not None:
             source = '紧凑小地图' if cached.get('minimap_mode') == 'compact' else '展开地图'
@@ -648,7 +665,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
             panel = self.win.capture()
             self.index += 1
             try:
-                report = self.localizer.locate(panel, f'observe_{self.index:03}')
+                report = self.localizer.locate(panel, f'observe_{self.index:03}', neighborhood_position=nearby)
             except (RuntimeError, ValueError) as exc:
                 error = exc
                 self.record('localization_failed', field=self.trace.last_field, force=True,
@@ -663,6 +680,15 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
             from module.campaign.vision.perception import boss_enemy_markers
             report['enemy_markers_by_kind'] = {
                 'normal': report['enemy_markers'], 'boss': boss_enemy_markers(panel, matrix, mode='expanded')}
+            bounds = report.get('coverage_bounds')
+            if bounds is not None:
+                from module.campaign.navigation.camera_navigation import inside
+                inverse = np.linalg.inv(matrix)
+                for kind, markers in report['enemy_markers_by_kind'].items():
+                    report['enemy_markers_by_kind'][kind] = [item for item in markers
+                                                            if inside(project(inverse, item), bounds)]
+                report['enemy_markers'] = report['enemy_markers_by_kind']['normal']
+                logger.info('展开地图已用独立小队定位核验附近道路，仅采纳该区域的观测。')
             logger.info(f"展开地图定位成功：第 {attempt + 1} 次尝试，小队位置 {points_text(report['position'])}，"
                         f"道路重合度 {float(report['road_iou']):.3f}，"
                         f"面板上有 {len(report['enemy_markers'])} 个敌人标记，耗时 {watch}")
@@ -715,6 +741,82 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
             self.wait_stopped()
             return target
         raise ValueError(f'附近道路均无法生成短移落点：{failure}')
+
+    def center_for_scouted_step(self):
+        """短移前确认离屏图标点击后的镜头切换完成，避免用转场帧重新定位。
+
+        常规箭头回正已采样验证。离屏图标点击只代表已发送输入，等当前紧凑画面同时出现
+        居中箭头与小队圆环后才能展开地图。等待有上限，期间不补发点击。
+        """
+        from module.campaign.navigation.recovery import centered, centering_frame, recenter_squad
+
+        if not recenter_squad(self):
+            return
+        watch = Stopwatch()
+        while watch.seconds < 8.:
+            evidence = centering_frame(self)
+            if evidence['ring'] is not None and centered(evidence):
+                return
+            self.pause(.4)
+        raise ValueError('点击离屏小队图标后未确认镜头已居中，未发送短移。')
+
+    def move_scouted_step(self, goal):
+        """用展开地图的实测圆环和场景箭头执行已侦察的局部路段，再核验实测移动。
+
+        这一步只走一段连续、已复核的路面。展开面板提供当前小队锚点与投影，不使用未通过的紧凑
+        配准，也不外推到远处敌人。光幕或 EX 避让改变路线时交回原恢复流程。
+        """
+        from module.campaign.navigation.camera_navigation import (
+            FIELD_BOUNDS, SquadOffscreen, field_chart, inside, target_projection,
+        )
+        from module.campaign.navigation.movement_feedback import resolve_anchor
+        from module.campaign.route_planning import route_path
+        from module.campaign.scouting import scouted_step_clear
+
+        if self.ex_bypass.obstacles:
+            raise ValueError('已确认道路短移前仍有 EX 避让任务，需重新规划。')
+        self.center_for_scouted_step()
+        self.localized_report = None
+        observation = self.observe()
+        if observation.get('player_roi') is None:
+            raise ValueError('已确认道路短移前缺少本次展开地图的实测圆环。')
+        squad = np.asarray(observation['position'], float)
+        target = np.asarray(goal['position'], float)
+        span = float(np.linalg.norm(target - squad))
+        state, cut = self.owner.state, self.owner.cut
+        route = route_path(cut, squad, target)
+        if (not 40. <= span <= 125. or route is None or route[1][-1] > 130.
+                or not scouted_step_clear(state, cut, squad, goal, route)):
+            raise ValueError('实测位置已改变或短移道路仍需复核，未发送移动。')
+        goto.map_close(self.win)
+        field = self.win.client()
+        self.identity(field)
+        self.check_collectible(field)
+        anchor = resolve_anchor(self, field, observation, allow_scene=False)
+        chart = field_chart(self.localizer, observation, anchor)
+        roi, click = target_projection(chart, observation, target)
+        bounds = observation.get('coverage_bounds')
+        if (not inside(roi, (14, 14, 472, 448)) or not inside(click, FIELD_BOUNDS)
+                or (bounds is not None and not inside(roi, bounds))):
+            raise ValueError('已确认道路短移的投影落点超出当前有效画面。')
+        self.prepare_move_progress(observation, target, click)
+        logger.info(f'按展开地图实测定位执行短移：小队 {points_text(squad)}，'
+                    f'道路目标 {points_text(target)}，客户区落点 {points_text(click)}。')
+        self.record('scouted_step_click', field=field, goal=goal, squad=squad.tolist(), click=click.tolist())
+        self.move(click)
+        try:
+            self.wait_stopped()
+        except SquadOffscreen:
+            self.center_for_scouted_step()
+        updated = self.observe()
+        self.review_move_progress(updated)
+        position = np.asarray(updated['position'], float)
+        remaining = float(np.linalg.norm(position - target))
+        if remaining > goto.SQUAD_REACH_WIDE or span - remaining < 24.:
+            raise ValueError('已确认道路的短移未到达预期区域，需重新规划。')
+        self.finish_view()
+        return dict(state='arrived', message='沿已确认道路短移后重定位成功。',
+                    position=position.tolist(), movement_clicks=1, distance=remaining)
 
     def confirm_barriers(self, snapshot):
         """只平移镜头确认当前可见光幕，返回已有小队坐标与新视口配准，不发送地面点击。"""
@@ -911,18 +1013,23 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         """
         matrix = np.asarray(report['roi_to_map'], float)
         height, width = panel.shape[:2]
-        enemies = self.panel_enemies(panel, matrix)
+        bounds = report.get('coverage_bounds')
+        enemies = self.panel_enemies(panel, matrix, bounds)
         changes = self.owner.state.update(dict(
             localization='accepted', roi_to_map=matrix.tolist(), coverage_size=[width, height],
-            minimap={'mode': 'expanded', 'size': [width, height]}, enemies=enemies), advance=False)
+            minimap={'mode': 'expanded', 'size': [width, height]}, enemies=enemies,
+            coverage_bounds=bounds), advance=False)
         detail = describe_changes({key: value for key, value in changes.items()
                                    if key.startswith('enemies_')})
         if detail:
             logger.info(f'展开地图敌人状态更新：{detail}')
 
-    def panel_enemies(self, panel, matrix):
+    def panel_enemies(self, panel, matrix, bounds=None):
         """把面板上的敌人标记按本帧配准投到底图，返回可直接并进状态的记录（含类型与置信度）。"""
         _, markers = self.owner.observer.minimap_markers(panel, 'expanded')
+        if bounds is not None:
+            from module.campaign.navigation.camera_navigation import inside
+            markers = [item for item in markers if inside(item['position'], bounds)]
         positions = project_centers([item['position'] for item in markers], np.asarray(matrix, float))
         size = self.owner.state.size
         return [dict(item, position=position) for item, position in zip(markers, positions)
@@ -1334,7 +1441,9 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
             panel = self.win.capture()
             blue = float(np.mean(terrain(panel)))
             try:
-                report = self.localizer.locate(panel, tag, require_player=False, locate_player=False)
+                nearby = self.stationary_squad()
+                report = self.localizer.locate(panel, tag, require_player=False, locate_player=False,
+                                               neighborhood_position=nearby)
             except (RuntimeError, ValueError) as exc:
                 reason = str(exc)
             else:
@@ -1434,6 +1543,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         """开局扫描小队周围：中心一屏加四向各 SCAN_ARM_STOPS 站，返回成功配准的屏数。
 
         向外拖动用固定面板向量（面板尺寸的 SCAN_ARM_STEP 倍），每臂逐站配准吸收，失败就不再深入。
+        首屏配准失败时换取邻近视野，取得至少一屏通过相同配准门限的道路才开始扫描。
         拖回以未移动的小队底图坐标为目标，每帧按实测配准计算相对偏移，最多拖 SCOUT_DRAGS 次；
         地图边缘造成斜向位移时因此仍能回到小队附近。向外配准失败使用最后可信视野拖回，
         拖回失败或超过次数只跳过当前方向，其余方向仍按序尝试。最后一个方向结束后不再拖回，
@@ -1444,7 +1554,14 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
             raise ValueError('十字扫描缺少可信的小队位置，不能按相对位置拖回。')
         located = self.scout_locate('scan_00')
         if located is None:
-            return 0
+            for attempt, offset in enumerate(((0., 145.), (180., -245.), (-180., -145.), (-180., 145.)), 1):
+                logger.info(f'十字扫描起始视野重试（{attempt}/4）：面板拖动 {points_text(offset)}。')
+                self.drag_expanded_offset(offset)
+                located = self.scout_locate(f'scan_origin_{attempt:02}')
+                if located is not None:
+                    break
+            else:
+                return 0
         panel = located[0]
         step = np.array([panel.shape[1], panel.shape[0]], float) * SCAN_ARM_STEP
         scanned = 0
@@ -1492,10 +1609,12 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         """
         matrix = np.asarray(report['roi_to_map'], float)
         height, width = panel.shape[:2]
-        enemies = self.panel_enemies(panel, matrix)
+        bounds = report.get('coverage_bounds')
+        enemies = self.panel_enemies(panel, matrix, bounds)
         changes = self.owner.state.update(dict(
             localization='accepted', roi_to_map=matrix.tolist(), coverage_size=[width, height],
-            minimap={'mode': 'expanded', 'size': [width, height]}, enemies=enemies), advance=False)
+            minimap={'mode': 'expanded', 'size': [width, height]}, enemies=enemies,
+            coverage_bounds=bounds), advance=False)
         detail = describe_changes(changes) or '无新增敌人或观测区域'
         logger.info(f"侦察帧配准位置 {points_text(report['position'])}：检测敌人 {len(enemies)} 个，{detail}")
         self.preview(self.win.client())

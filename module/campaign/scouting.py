@@ -10,11 +10,55 @@ from scipy.sparse.csgraph import dijkstra
 
 from module.campaign.goals import nearest_enemy
 from module.campaign.map.map_state import GRID
-from module.campaign.route_planning import route_enemy, route_enemy_candidates, route_path
+from module.campaign.navigation.ex_bypass import segment_clear
+from module.campaign.route_planning import ADVANCE_DISTANCE, route_enemy, route_enemy_candidates, route_path
 from module.campaign.run_state import OBSERVED_CELL
 
 # 一个已观测粗格每边包含的 8 像素路网格数。
 CELLS = OBSERVED_CELL // GRID
+
+
+def scouted_step_clear(state, cut, squad, step, route):
+    """核对短移的直线落点与沿途敌人，暂不可侦察的格仍需要实际覆盖。
+
+    所有坐标为底图像素。短移使用直接投影落点，直线段的覆盖不能由相邻的 A* 网格替代。
+    路径上的既有敌人和历史线索仍由原侦察规则检查。
+    """
+    point = step['position']
+    if not segment_clear(cut.road, squad, point):
+        return False
+    span = float(np.linalg.norm(np.subtract(point, squad)))
+    samples = np.linspace(squad, point, max(2, int(np.ceil(span)) + 1))
+    if not all(state.is_enemy_observed(sample) for sample in samples):
+        return False
+    return (route_scout_focus(state, cut, squad, step, include_unavailable=True) is None
+            and route_enemy(state, cut, squad, point, *route) is None)
+
+
+def confirmed_route_step(state, cut, squad, goal, pending):
+    """远处侦察有待复核时，只选当前路线上已确认的一小段路。
+
+    落点必须在同一分区内且能从小队位置沿直线路面到达。已有敌人、历史线索或缺少安全
+    视野的道路仍要求按原路径复核；远处的侦察失败记录不清除。
+    """
+    if (goal is None or goal.get('position') is None or goal['kind'] not in ('enemy', 'explore', 'story', 'advance')
+            or pending is None or pending['distance'] <= ADVANCE_DISTANCE):
+        return None
+    route = route_path(cut, squad, goal['position'])
+    if route is None:
+        return None
+    path, distances = route
+    candidates = np.flatnonzero((distances >= 60.) & (distances <= 105.))
+    for index in candidates[::-1]:
+        point = path[index]
+        identifier = f'advance-{goal["id"]}-{int(point[0])}-{int(point[1])}'
+        step = dict(kind='advance', id=identifier, position=point.tolist(),
+                    distance=round(float(distances[index]), 1), reason='advance_on_route',
+                    for_target=goal.get('for_target', goal['id']), scouted_step=True)
+        if not state.is_unavailable(identifier) and scouted_step_clear(
+                state, cut, squad, step, (path[:index + 1], distances[:index + 1])):
+            return step
+    return None
 
 
 def walking_field(cut, squad):
