@@ -1509,6 +1509,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         """
         self.check()
         self.scout_origin = None
+        self.scout_drifted = False
         inputs = self.inputs
         goto.map_open(self.win, reset=False)
         if not (self.inputs == inputs and self.scout_reference is not None
@@ -1537,6 +1538,9 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         截图、窗口、取消和输入异常不捕获；不在异常后补发地图收起动作。
         """
         self.scout_failure = None
+        if getattr(self, 'scout_drifted', False) and not scan_origin:
+            goto.map_open(self.win, reset=True)
+            self.scout_drifted = False
         origin, self.scout_origin = self.scout_origin, None
         retries = ((PAN_PIXELS, 0.), (-PAN_PIXELS, PAN_PIXELS)) if scan_origin else ((EXPANDED_RETRY_PIXELS, 0.),)
         for attempt in range(len(retries) + 1):
@@ -1544,6 +1548,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
                 offset = np.asarray(retries[attempt - 1], float)
                 length = np.linalg.norm(offset)
                 self.pan_expanded(offset / length, distance=length)
+                self.scout_drifted = True
             panel = self.win.capture()
             road = terrain(panel)
             reason = '道路画面尚未稳定'
@@ -1562,6 +1567,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
                     break
                 if np.mean(road != terrain(self.win.capture())) <= .03:
                     self.scout_failure = None
+                    self.scout_drifted = False
                     if attempt == 0 and origin is not None:
                         self.scout_reference = dict(compact=origin, center=project(
                             report['roi_to_map'], goto.EXPANDED_CENTER).tolist())
@@ -1650,6 +1656,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
                 break
             located = self.scout_locate(f'{tag}_{attempt + 1}')
             if located is None:
+                self.scout_drifted = True
                 return recorded
         return recorded
 
@@ -1721,6 +1728,7 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
             if not returned:
                 logger.info('十字扫描未取得可信返回视野，复位展开面板。')
                 goto.map_open(self.win, reset=True)
+                self.scout_drifted = False
                 located = self.scout_locate(f'scan_{index:02}_reset', scan_origin=True)
                 if located is None:
                     break

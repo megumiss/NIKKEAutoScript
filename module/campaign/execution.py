@@ -4,13 +4,13 @@ import time
 
 import numpy as np
 
-from module.campaign.run_state import MAX_FAILURES, RunState, located, panel_quad
+from module.campaign.run_state import MAX_FAILURES, OBSERVED_CELL, RunState, located, panel_quad
 from module.campaign.goals import describe, frontier_point, nearest_enemy, unobserved_component_cells
 from module.campaign.report import (BATTLE_OUTCOMES, BATTLE_STATES, EVIDENCE_KINDS, GOAL_KINDS, GOAL_REASONS,
                                     RESULT_STATES, label, points_text)
 from module.campaign.route_planning import planning_routes, route_path, same_screen_mechanism
 from module.campaign.scouting import scout_focus
-from module.campaign.session import DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, SETTLE_TAP_INTERVAL
+from module.campaign.session import DEFEAT_BACK_POINT, DEFEAT_RETRY_POINT, FRONTIER_BLUE_MAX, SETTLE_TAP_INTERVAL
 from module.campaign.navigation.controls import GAZE
 from module.campaign.navigation.progress import NavigationStalled
 from module.campaign.timing import Stopwatch
@@ -532,9 +532,11 @@ class CampaignExecutor:
                         f"{'敌人检查' if check_enemies else '道路覆盖'}"
                         f"{'已确认' if covered else '未确认'}，耗时 {watch}")
             failure = self.session.scout_failure
-            if not recorded and failure is not None and focus.get('enemy_id') is None:
+            if not covered and failure is not None and focus.get('enemy_id') is None:
                 # 当前距离上配准不出可信视野时，暂不可扫标记不占失败次数，也不阻塞出发；小队走近后复核。
                 state.mark_unscoutable(focus['id'], squad)
+                if failure.get('blue_ratio', 0.) >= FRONTIER_BLUE_MAX:
+                    self._mark_unscoutable_patch(state, squad, goal, focus['position'])
                 logger.info(f"侦察目标 {focus['id']} 暂不可扫（{failure['reason']}），"
                             f'标记后跳过；小队走近后自动恢复。')
             elif not recorded or not covered:
@@ -552,6 +554,27 @@ class CampaignExecutor:
         self.session.scout_end()
         logger.info(f'侦察结束：检查 {views} 屏，展开与拖动总耗时 {total}')
         return True
+
+    def _mark_unscoutable_patch(self, state, squad, goal, center, radius=96.):
+        """道路占比充足但配准未达标时，将同一局部路段邻近格一并标为暂不可扫，走近后统一重查。"""
+        if not goal or goal.get('position') is None:
+            return
+        route = route_path(self.owner.cut, squad, goal['position'])
+        if route is None:
+            return
+        path, _ = route
+        home = self.owner.cut.component(squad)
+        anchor = np.asarray(center, float)
+        for point in path:
+            if np.linalg.norm(point - anchor) > radius:
+                continue
+            for offset in ((0, 0), (OBSERVED_CELL, 0), (-OBSERVED_CELL, 0),
+                           (0, OBSERVED_CELL), (0, -OBSERVED_CELL)):
+                candidate = point + offset
+                if self.owner.cut.component(candidate) != home or state.is_enemy_observed(candidate):
+                    continue
+                column, row = (candidate // OBSERVED_CELL).astype(int)
+                state.mark_unscoutable(f'scout-{column}-{row}', squad)
 
     def scout_until_ready(self, goal, snapshot, camera_options=None, expanded_for_scout=False):
         """在同一决策拍的八屏总额度内复核改选目标的前置道路，返回最新目标与观测。
