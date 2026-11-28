@@ -34,6 +34,7 @@ DISABLED_BATTLE_MAX_VALUE = 180
 DISABLED_BATTLE_NEUTRAL_RATIO = .9
 CHAPTER_OCR_THRESHOLD = .7
 CHAPTER_TAB_ROI = (640, 850, 1140, 900)
+STORY_TAB_FILL_ROI = (660, 857, 775, 895)
 CHAPTER_CARD_ROI = (630, 130, 1140, 830)
 CHAPTER_NEXT_OFFSET = 35
 CHAPTER_ENTRY_POINT = (1635, 940)
@@ -132,10 +133,10 @@ def chapter_next(field, reader, templates=None):
 
 
 def chapter_list_difficulty(field, templates):
-    """用已标定标题的正反色区分普通／困难列表，不读取被弹窗遮罩的野外难度角标。
+    """用标题正反色及选中标签区分普通、困难与剧情列表。
 
     普通列表为浅底黑字，困难列表为深底白字；两者都必须达到原章节标题模板阈值。
-    标题缺失或同一搜索区域同时命中两种极性时返回 None，切换加载帧不得作为确认依据。
+    剧情与普通共用浅底标题，选中剧情时左侧页签为大面积绿色；标题未确认时不读页签。
     """
     (x1, y1, x2, y2), threshold = TEMPLATES['chapter_list']
     region, template = field[y1:y2, x1:x2], templates['chapter_list']
@@ -145,20 +146,28 @@ def chapter_list_difficulty(field, templates):
     normal, hard = high >= threshold, -low >= threshold
     if normal == hard:
         return None
+    if normal:
+        left, top, right, bottom = STORY_TAB_FILL_ROI
+        tab = cv2.cvtColor(field[top:bottom, left:right], cv2.COLOR_BGR2HSV)
+        green = cv2.inRange(tab, (40, 120, 150), (85, 255, 255))
+        if np.count_nonzero(green) >= .6 * green.size:
+            return 'story'
     return 'normal' if normal else 'hard'
 
 
-def chapter_list_text_point(field, reader, area, pattern):
+def chapter_list_text_point(field, reader, area, pattern, details=None):
     """在已确认的章节列表内精确 OCR 匹配唯一按钮或章节名，返回客户区中心。
 
     area 为客户区裁剪范围，pattern 是完整匹配表达式；忽略 OCR 插入的空白，拒绝重复候选。
     四值矩形及四顶点框均支持；空框、非数值、非有限值、退化框或越界框均不产生点击。
     调用方必须先验证列表标题及目标难度，不能用于在未知页面搜索文字后盲点。
+    details 可复用同一帧、同一区域的 OCR 结果。
     """
     x1, y1, x2, y2 = area
-    result = reader.ocr(field[y1:y2, x1:x2], direct_ocr=True, threshold=CHAPTER_OCR_THRESHOLD)
+    if details is None:
+        details = reader.ocr(field[y1:y2, x1:x2], direct_ocr=True, threshold=CHAPTER_OCR_THRESHOLD)['details']
     points = []
-    for item in result['details']:
+    for item in details:
         if re.fullmatch(pattern, ''.join(item['text'].split())) is None:
             continue
         try:
@@ -173,6 +182,35 @@ def chapter_list_text_point(field, reader, area, pattern):
             return None
         points.append((box.mean(axis=0) + [x1, y1]).tolist())
     return points[0] if len(points) == 1 else None
+
+
+def chapter_main_quest(field, reader, expected_chapter=None):
+    """在已确认难度的章节列表中定位唯一的主线任务卡片。
+
+    「新章节」标记可能在教学或重启后消失。用卡片上方的主线提示、左侧章号和章名三者相对位置
+    确认同一卡片；有换章预期时只接受指定章节。
+    """
+    x1, y1, x2, y2 = CHAPTER_CARD_ROI
+    details = reader.ocr(field[y1:y2, x1:x2], direct_ocr=True, threshold=CHAPTER_OCR_THRESHOLD)['details']
+    point = chapter_list_text_point(field, reader, CHAPTER_CARD_ROI, r'(?i:MAINQUEST)|正在执行作战', details)
+    if point is None:
+        return None
+    names = json.loads(CHAPTER_NAMES_FILE.read_text(encoding='utf-8'))
+    numbers = {int(item['text'].strip()) for item in details if re.fullmatch(r'[1-9][0-9]?', item['text'].strip())}
+    if expected_chapter is not None:
+        numbers.intersection_update({expected_chapter})
+    candidates = []
+    for number in sorted(numbers):
+        name = names.get(str(number))
+        if name is None:
+            continue
+        card = chapter_list_text_point(field, reader, CHAPTER_CARD_ROI, re.escape(''.join(name.split())), details)
+        index = chapter_list_text_point(field, reader, CHAPTER_CARD_ROI, str(number), details)
+        if (card is not None and index is not None
+                and abs(card[0] - point[0]) <= 65 and 14 <= card[1] - point[1] <= 56
+                and 45 <= card[0] - index[0] <= 120 and abs(card[1] - index[1]) <= 20):
+            candidates.append((number, card))
+    return candidates[0] if len(candidates) == 1 else None
 
 
 def chapter_progress(field, reader):
@@ -340,9 +378,14 @@ class CampaignSceneController:
         全程沿用场景五分钟时限，未确认的字段不触发固定位置点击。
         """
         difficulty = chapter_list_difficulty(field, self.templates)
+        if self.preferred_difficulty is None:
+            if difficulty != 'story':
+                return None
+            self.preferred_difficulty = 'normal'
         if difficulty != self.preferred_difficulty:
             if difficulty is not None:
-                self.require_difficulty(field)
+                if self.chapter is not None or self.transition_expected is not None:
+                    self.require_difficulty(field)
                 label = '困难' if self.preferred_difficulty == 'hard' else '普通'
                 point = chapter_list_text_point(field, self.session.owner.chapter_ocr, CHAPTER_TAB_ROI, label)
                 if point is not None:
@@ -704,15 +747,24 @@ class CampaignSceneController:
             if self.returning_home:
                 self.tap(CHAPTER_CLOSE_POINT, '异常恢复关闭章节列表')
                 return self.wait('chapter_list_close', scores, field)
-            if self.preferred_difficulty is not None:
-                result = self.restore_difficulty(field, scores)
-                if result is not None:
-                    return result
+            result = self.restore_difficulty(field, scores)
+            if result is not None:
+                return result
             point = chapter_next(field, self.session.owner.chapter_ocr, self.templates)
             if point is not None:
                 if self.tap(point, '新章节'):
                     self.entry_route_sent = True
                 return self.wait('chapter_next', scores, field)
+            difficulty = chapter_list_difficulty(field, self.templates)
+            expected = self.transition_expected
+            if difficulty in ('normal', 'hard') and (expected is None or expected[1] == difficulty):
+                target = chapter_main_quest(field, self.session.owner.chapter_ocr, expected[0] if expected else None)
+                if target is not None:
+                    chapter, point = target
+                    if self.tap(point, f'章节列表主线任务第 {chapter} 章'):
+                        self.transition_expected = (chapter, difficulty)
+                        self.entry_route_sent = True
+                    return self.wait('chapter_main_quest', scores, field)
             return self.wait('chapter_list', scores, field)
 
         state = battle.battle_state(field)
@@ -731,7 +783,13 @@ class CampaignSceneController:
                     self.session.battle_step()
             return self.wait(kind, scores, field)
         if not self.returning_home and (battle.field_visible(field) or self.session.owner.minimap_expanded(field)):
-            identity = chapter_identity(field, self.session.owner.chapter_ocr)
+            identity = chapter_identity(field, self.session.owner.chapter_ocr, include_story=True)
+            if identity is not None and identity[1] == 'story':
+                self.preferred_difficulty = self.preferred_difficulty or 'normal'
+                if self.chapter is not None or self.transition_expected is not None:
+                    self.require_difficulty(field)
+                self.tap(CHAPTER_ENTRY_POINT, '剧情难度打开章节列表恢复任务难度')
+                return self.wait('difficulty_story', scores, field)
             if identity is not None and self.preferred_difficulty is not None:
                 if identity[1] != self.preferred_difficulty:
                     self.require_difficulty(field)
