@@ -349,6 +349,7 @@ class MapMatcher:
             return None
         components.sort(key=lambda item: (item[0], item[1]))
         min_island = max(600, int(total * .25))
+        saved_warm = (self.warm_parameters, self.warm_margin)
         for _, _, area, mask in components:
             if area < min_island:
                 continue
@@ -367,10 +368,14 @@ class MapMatcher:
             except (ValueError, cv2.error):
                 continue
             if candidate['status'] == 'accepted' and self._island_seam_supported(other, candidate['roi_to_map']):
-                ys, xs = np.nonzero(mask)
+                contours, _ = cv2.findContours((comp_valid > 0).astype(np.uint8), cv2.RETR_EXTERNAL,
+                                               cv2.CHAIN_APPROX_SIMPLE)
+                polygons = [cv2.approxPolyDP(contour, 2., True).reshape(-1, 2).tolist() for contour in contours]
                 candidate['island_fallback'] = True
-                candidate['coverage_box'] = [int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1]
+                candidate['coverage_polygons'] = [poly for poly in polygons if len(poly) >= 3]
                 return candidate
+        self.warm_parameters, self.warm_margin = saved_warm
+        self.warm_center, self.local_steps = None, 0
         return None
 
     def _remember_center(self, panel, result):
@@ -599,3 +604,11 @@ def register(first, second, valid, prediction=(0, 0)):
         if best is None or score > best['iou']:
             best = {'delta': delta.tolist(), 'iou': score, 'area': area}
     return best if best and best['iou'] >= 0.86 else None
+
+
+def point_in_coverage(point, polygons):
+    """判断面板坐标点是否落在分岛覆盖多边形集合内。"""
+    if polygons is None:
+        return True
+    xy = (float(point[0]), float(point[1]))
+    return any(cv2.pointPolygonTest(np.asarray(poly, np.float32), xy, False) >= 0 for poly in polygons)

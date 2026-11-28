@@ -145,32 +145,40 @@ def route_road_section(cut, point, path):
     road_point = points[nearest].astype(float)
     if len(path) == 1:
         route_point = path[0]
+        along = 0.
     else:
         segments = np.diff(path, axis=0)
         squared = np.sum(segments * segments, axis=1)
         ratios = np.divide(np.sum((road_point - path[:-1]) * segments, axis=1), squared,
                            out=np.zeros(len(segments)), where=squared > 0)
-        projected = path[:-1] + np.clip(ratios, 0, 1)[:, None] * segments
-        route_point = projected[int(np.argmin(np.linalg.norm(projected - road_point, axis=1)))]
+        clipped = np.clip(ratios, 0, 1)
+        projected = path[:-1] + clipped[:, None] * segments
+        best = int(np.argmin(np.linalg.norm(projected - road_point, axis=1)))
+        route_point = projected[best]
+        cumulative = np.r_[0., np.cumsum(np.sqrt(squared))]
+        along = float(cumulative[best] + clipped[best] * np.sqrt(squared[best]))
     if not segment_clear(road, road_point, route_point):
         return None
     return dict(road_point=road_point.tolist(), route_point=route_point.tolist(),
-                length=round(float(np.linalg.norm(route_point - road_point)), 1))
+                length=round(float(np.linalg.norm(route_point - road_point)), 1),
+                along=along)
 
 
 def route_enemy_candidates(cut, squad, target, path, distances, enemies):
     """按道路距离排列实际路径上的敌人记录，不赋予历史记录可战斗状态。
 
     仅接受敌人所在道路截面与 A* 路径相交、到敌人与目的地都有可行道路，且绕行增程
-    不超过 ROUTE_DETOUR_LIMIT 的记录，既保留终点前方微侧偏的拦路敌，也排除起点
-    后方或越过目标的远距绕行敌人。执行目标和历史线索复核共用此几何条件。
+    不超过 ROUTE_DETOUR_LIMIT 的记录；超出目的地总路程时仅保留投影落在终点前方的
+    微侧偏拦路敌，排除起点后方或越过目标的远距绕行敌人。执行目标和历史线索复核共用此几何条件。
     """
     candidates = []
     home = cut.component(squad)
     direct = float(distances[-1])
+    path_total = float(np.sum(np.linalg.norm(np.diff(path, axis=0), axis=1))) if len(path) > 1 else 0.
     for enemy in enemies:
         point = np.asarray(enemy['position'], float)
-        if route_road_section(cut, point, path) is None:
+        section = route_road_section(cut, point, path)
+        if section is None:
             continue
         if home and cut.component(point) != home:
             continue
@@ -179,6 +187,8 @@ def route_enemy_candidates(cut, squad, target, path, distances, enemies):
         if not np.isfinite(first + last):
             continue
         if (first + last) - direct > ROUTE_DETOUR_LIMIT:
+            continue
+        if first > direct and section['along'] >= path_total - 1.:
             continue
         candidates.append((first, enemy))
     return sorted(candidates, key=lambda pair: pair[0])

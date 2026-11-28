@@ -9,7 +9,7 @@ import numpy as np
 from module.campaign.vision.minimap import map_visible, minimap_control_visible
 from module.campaign.vision.frame import EXPANDED_ROI as EXPANDED_ROI, frame_inputs, observation_frame
 from module.campaign.vision.matching import (ACCEPT_COARSE_MARGIN, ACCEPT_PARAMETER_SPREAD_PX,
-                                             ACCEPT_ROAD_IOU, MapMatcher)
+                                             ACCEPT_ROAD_IOU, MapMatcher, point_in_coverage)
 from module.campaign.vision.barriers import affine_project, project_barriers, scene_anchor
 from module.campaign.map.map_state import StaticMap
 from module.campaign.map.catalog import chapter_map
@@ -279,12 +279,10 @@ class CampaignObserver:
         registration = dict(roi_to_map=matrix, a=result['a'], panel_size=list(panel.shape[1::-1]),
                             player_center=player)
         snapshot['coverage_size'] = list(panel.shape[1::-1])
-        coverage_box = result.get('coverage_box')
-        if coverage_box is not None:
-            snapshot['coverage_box'] = list(coverage_box)
-            x1, y1, x2, y2 = coverage_box
-            markers = [item for item in markers
-                       if x1 <= item['position'][0] < x2 and y1 <= item['position'][1] < y2]
+        polygons = result.get('coverage_polygons')
+        if polygons is not None:
+            snapshot['coverage_polygons'] = polygons
+            markers = [item for item in markers if point_in_coverage(item['position'], polygons)]
         snapshot['roi_to_map'] = [[float(value) for value in row] for row in matrix]
         positions = project_centers([item['position'] for item in markers], matrix)
         snapshot['enemies'] = [dict(item, position=position) for item, position in zip(markers, positions)

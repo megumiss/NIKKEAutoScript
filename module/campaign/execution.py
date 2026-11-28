@@ -145,6 +145,7 @@ class CampaignExecutor:
         下一轮重新定位实际触发 EX，再按实际编号决定改型或绕行；不在此处比较位置或直接改型。
         原目标实际操作统计与路线无进展历史继续累计，不能借 EX 中断清空失败记录。
         """
+        self.scan_fresh = False
         self.ex_evidence = dict(evidence or {})
         self.interrupted_goal = next((dict(candidate) for candidate in
                                       (goal, self.interrupted_goal, self.terminal_destination, self.last_executed)
@@ -853,6 +854,7 @@ class CampaignExecutor:
         命中时交由换章状态机接管，不在角标被遮挡时复核旧身份；未命中仍严格复核章节与难度，
         不以胜利本身放行换章。
         """
+        self.scan_fresh = False
         self.session.begin_target('battle')
         self.session.battle_mode = True
         settled, close_entry, retries, polls = None, False, 0, 0

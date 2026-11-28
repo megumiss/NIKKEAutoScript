@@ -57,14 +57,8 @@ def panel_quad(snapshot, margin=0):
     width, height = snapshot.get('coverage_size', minimap['size'])
     if margin < 0 or min(width, height) <= 2 * margin:
         return None
-    left, top, right, bottom = margin, margin, width - margin, height - margin
-    box = snapshot.get('coverage_box')
-    if box is not None:
-        left, top = max(left, int(box[0])), max(top, int(box[1]))
-        right, bottom = min(right, int(box[2])), min(bottom, int(box[3]))
-        if left >= right or top >= bottom:
-            return None
-    corners = np.array([[left, top], [right, top], [right, bottom], [left, bottom]], float)
+    corners = np.array([[margin, margin], [width - margin, margin],
+                        [width - margin, height - margin], [margin, height - margin]], float)
     matrix = np.asarray(matrix, float)
     points = np.column_stack((corners, np.ones(len(corners)))) @ matrix.T
     divisor = points[:, 2]
@@ -166,9 +160,14 @@ class RunState:
             # 视野四边形来自记下坐标的那一帧，而且沿用帧与它常常是两个坐标系，
             # 拿它判断「这块看没看到」会误判封锁与已观测区域。
             return {'reused': 'localization'}
-        quad = panel_quad(snapshot)
-        changes = {'observed_cells': self._absorb_observed(quad)}
-        enemy_quad = panel_quad(snapshot, margin=ENEMY_VIEW_MARGIN)
+        if snapshot.get('coverage_polygons') is not None:
+            quad = self._coverage_mask(snapshot)
+            changes = {'observed_cells': self._absorb_observed(quad)}
+            enemy_quad = self._coverage_mask(snapshot, margin=ENEMY_VIEW_MARGIN)
+        else:
+            quad = panel_quad(snapshot)
+            changes = {'observed_cells': self._absorb_observed(quad)}
+            enemy_quad = panel_quad(snapshot, margin=ENEMY_VIEW_MARGIN)
         self._absorb_observed(enemy_quad, self.enemy_observed)
         changes.update(self._absorb_enemies(snapshot.get('enemies') or [], enemy_quad))
         minimap = snapshot.get('minimap') or {}
@@ -182,10 +181,33 @@ class RunState:
                 self.pending_reviews.pop(identifier, None)
         return {key: value for key, value in changes.items() if value}
 
-    def _absorb_observed(self, quad, observed=None):
-        """仅把完整落在本帧面板四边形内的粗网格标成已观测，返回新增格数。
+    def _coverage_mask(self, snapshot, margin=0):
+        """将分岛回退产生的多边形覆盖域投到底图分辨率掩码，供凹形岛精确裁剪。"""
+        matrix = snapshot.get('roi_to_map')
+        minimap = snapshot.get('minimap')
+        polygons = snapshot.get('coverage_polygons')
+        if matrix is None or minimap is None or not polygons:
+            return None
+        width, height = snapshot.get('coverage_size', minimap['size'])
+        if margin < 0 or min(width, height) <= 2 * margin:
+            return None
+        panel_mask = np.zeros((height, width), dtype=np.uint8)
+        for poly in polygons:
+            pts = np.asarray(poly, np.int32).reshape(-1, 1, 2)
+            if len(pts) >= 3:
+                cv2.fillPoly(panel_mask, [pts], 255)
+        if margin:
+            panel_mask[:margin] = panel_mask[-margin:] = 0
+            panel_mask[:, :margin] = panel_mask[:, -margin:] = 0
+        if not np.any(panel_mask):
+            return None
+        return cv2.warpPerspective(panel_mask, np.asarray(matrix, float), tuple(self.size),
+                                   flags=cv2.INTER_NEAREST)
 
-        四角均位于凸四边形内才能确认整格；直接取整填多边形会把仅露出边缘的整格记为已看，
+    def _absorb_observed(self, quad, observed=None):
+        """仅把完整落在本帧面板覆盖域内的粗网格标成已观测，返回新增格数。
+
+        四角均位于有效域内才能确认整格；直接取整填多边形会把仅露出边缘的整格记为已看，
         从而漏掉格内尚在视野外的敌人。底图最右、最下的不满格只检查实际地图范围。
         observed 默认是道路覆盖；传入敌人覆盖网格时，quad 必须已排除面板边缘和控件。
         """
@@ -197,6 +219,13 @@ class RunState:
         left, top = columns * OBSERVED_CELL, rows * OBSERVED_CELL
         right = np.minimum(left + OBSERVED_CELL, self.size[0])
         bottom = np.minimum(top + OBSERVED_CELL, self.size[1])
+        if isinstance(quad, np.ndarray) and quad.ndim == 2 and quad.shape == (self.size[1], self.size[0]):
+            xr = np.maximum(left, right - 1)
+            yb = np.maximum(top, bottom - 1)
+            inside = ((quad[top, left] > 0) & (quad[top, xr] > 0)
+                      & (quad[yb, xr] > 0) & (quad[yb, left] > 0))
+            observed[inside] = 1
+            return int(observed.sum()) - before
         edges = np.roll(quad, -1, axis=0) - quad
         area = float(np.sum(quad[:, 0] * np.roll(quad[:, 1], -1)
                             - quad[:, 1] * np.roll(quad[:, 0], -1)))
@@ -258,10 +287,17 @@ class RunState:
                     item = dict(item, kind='boss')
             observations.append((item, position))
         added, merged, assigned = [], 0, set()
-        contour = np.asarray(quad, np.float32).reshape(-1, 1, 2) if quad is not None else None
+        is_mask = isinstance(quad, np.ndarray) and quad.ndim == 2 and quad.shape == (self.size[1], self.size[0])
+        contour = None if is_mask or quad is None else np.asarray(quad, np.float32).reshape(-1, 1, 2)
+        has_coverage = is_mask or contour is not None
         for record in self.enemies.values():
             record['visible'] = False
-            covered = contour is not None and cv2.pointPolygonTest(contour, tuple(record['position']), False) >= 0
+            if is_mask:
+                rx = int(np.clip(round(record['position'][0]), 0, self.size[0] - 1))
+                ry = int(np.clip(round(record['position'][1]), 0, self.size[1] - 1))
+                covered = bool(quad[ry, rx] > 0)
+            else:
+                covered = contour is not None and cv2.pointPolygonTest(contour, tuple(record['position']), False) >= 0
             nearby = any(record['kind'] == item.get('kind')
                          and np.linalg.norm(position - record['position']) <= ENEMY_HINT_RADIUS
                          for item, position in observations)
@@ -271,7 +307,7 @@ class RunState:
                 ambiguous_ex |= any(item.get('kind') == 'ex'
                                     and np.linalg.norm(position - record['position']) <= ENEMY_MERGE_RADIUS
                                     for item, position in observations)
-            if covered or nearby or contour is None:
+            if covered or nearby or not has_coverage:
                 record['confirmed_at'] = None
             if covered and not ambiguous_ex:
                 record['reviewed_at'] = self.tick

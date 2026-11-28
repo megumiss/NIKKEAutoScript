@@ -109,8 +109,7 @@ def route_scout_focus(state, cut, squad, target, include_unavailable=False):
         return None
     path, distances = route
     enemy = route_enemy(state, cut, squad, target['position'], path, distances)
-    if (enemy is not None and enemy['kind'] == 'enemy' and enemy['id'] != target['id']
-            and enemy['distance'] < distances[-1]):
+    if enemy is not None and enemy['kind'] == 'enemy' and enemy['id'] != target['id']:
         target = enemy
         route = route_path(cut, squad, target['position'])
         if route is None:
@@ -122,8 +121,7 @@ def route_scout_focus(state, cut, squad, target, include_unavailable=False):
     hint_focus = None
     for distance, record in route_enemy_candidates(cut, squad, target['position'], path, distances, hints):
         identifier = f"scout-{record['id']}"
-        if ((distance >= distances[-1] and record['id'] != target.get('for_enemy'))
-                or (not include_unavailable and state.is_unavailable(identifier))):
+        if not include_unavailable and state.is_unavailable(identifier):
             continue
         hint_focus = dict(id=identifier, enemy_id=record['id'], position=list(record['position']),
                           distance=round(distance, 1), known=round(float(distances[-1]), 1),

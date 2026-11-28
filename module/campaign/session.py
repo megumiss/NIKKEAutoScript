@@ -802,10 +802,19 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
             if np.mean(terrain(panel) != terrain(self.win.capture())) > .03:
                 raise RuntimeError('定位期间道路还在变，不能用这次位置。')
             matrix = np.asarray(report['roi_to_map'])
-            report['enemy_markers'] = goto.normal_enemy_markers(panel, matrix, mode='expanded')
+            polygons = report.get('coverage_polygons')
+            normal = goto.normal_enemy_markers(panel, matrix, mode='expanded')
             from module.campaign.vision.perception import boss_enemy_markers
-            report['enemy_markers_by_kind'] = {
-                'normal': report['enemy_markers'], 'boss': boss_enemy_markers(panel, matrix, mode='expanded')}
+            boss = boss_enemy_markers(panel, matrix, mode='expanded')
+            if polygons is not None:
+                from module.campaign.vision.matching import point_in_coverage
+                inverse = np.linalg.inv(matrix)
+                normal = [pt for pt, panel_pt in zip(normal, project_centers(normal, inverse))
+                          if point_in_coverage(panel_pt, polygons)]
+                boss = [pt for pt, panel_pt in zip(boss, project_centers(boss, inverse))
+                        if point_in_coverage(panel_pt, polygons)]
+            report['enemy_markers'] = normal
+            report['enemy_markers_by_kind'] = {'normal': normal, 'boss': boss}
             logger.info(f"展开地图定位成功：第 {attempt + 1} 次尝试，小队位置 {points_text(report['position'])}，"
                         f"道路重合度 {float(report['road_iou']):.3f}，"
                         f"面板上有 {len(report['enemy_markers'])} 个敌人标记，耗时 {watch}")
@@ -1054,26 +1063,25 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         """
         matrix = np.asarray(report['roi_to_map'], float)
         height, width = panel.shape[:2]
-        coverage_box = report.get('coverage_box')
-        enemies = self.panel_enemies(panel, matrix, coverage_box=coverage_box)
+        polygons = report.get('coverage_polygons')
+        enemies = self.panel_enemies(panel, matrix, coverage_polygons=polygons)
         payload = dict(
             localization='accepted', roi_to_map=matrix.tolist(), coverage_size=[width, height],
             minimap={'mode': 'expanded', 'size': [width, height]}, enemies=enemies)
-        if coverage_box is not None:
-            payload['coverage_box'] = list(coverage_box)
+        if polygons is not None:
+            payload['coverage_polygons'] = polygons
         changes = self.owner.state.update(payload, advance=False)
         detail = describe_changes({key: value for key, value in changes.items()
                                    if key.startswith('enemies_')})
         if detail:
             logger.info(f'展开地图敌人状态更新：{detail}')
 
-    def panel_enemies(self, panel, matrix, coverage_box=None):
+    def panel_enemies(self, panel, matrix, coverage_polygons=None):
         """把面板上的敌人标记按本帧配准投到底图，返回可直接并进状态的记录（含类型与置信度）。"""
         _, markers = self.owner.observer.minimap_markers(panel, 'expanded')
-        if coverage_box is not None:
-            x1, y1, x2, y2 = coverage_box
-            markers = [item for item in markers
-                       if x1 <= item['position'][0] < x2 and y1 <= item['position'][1] < y2]
+        if coverage_polygons is not None:
+            from module.campaign.vision.matching import point_in_coverage
+            markers = [item for item in markers if point_in_coverage(item['position'], coverage_polygons)]
         positions = project_centers([item['position'] for item in markers], np.asarray(matrix, float))
         size = self.owner.state.size
         return [dict(item, position=position) for item, position in zip(markers, positions)
@@ -1727,13 +1735,13 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         """
         matrix = np.asarray(report['roi_to_map'], float)
         height, width = panel.shape[:2]
-        coverage_box = report.get('coverage_box')
-        enemies = self.panel_enemies(panel, matrix, coverage_box=coverage_box)
+        polygons = report.get('coverage_polygons')
+        enemies = self.panel_enemies(panel, matrix, coverage_polygons=polygons)
         payload = dict(
             localization='accepted', roi_to_map=matrix.tolist(), coverage_size=[width, height],
             minimap={'mode': 'expanded', 'size': [width, height]}, enemies=enemies)
-        if coverage_box is not None:
-            payload['coverage_box'] = list(coverage_box)
+        if polygons is not None:
+            payload['coverage_polygons'] = polygons
         changes = self.owner.state.update(payload, advance=False)
         detail = describe_changes(changes) or '无新增敌人或观测区域'
         logger.info(f"侦察帧配准位置 {points_text(report['position'])}：检测敌人 {len(enemies)} 个，{detail}")
