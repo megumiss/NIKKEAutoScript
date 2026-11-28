@@ -66,6 +66,8 @@ PAN_PIXELS = 140.
 PAN_SETTLE_SECONDS = 1.0
 # 展开定位首次失败后仅补一次小幅地图平移，避免在相同视野上反复更换侦察目标。
 EXPANDED_RETRY_PIXELS = 60.
+# 横向仍看见相同道路时，逐步纵移寻找有足够道路特征的新视野。
+VIEWPORT_VERTICAL_RETRIES = (128., 145.)
 # 战斗接管的固定点击落点（客户区像素）：准备弹窗的两个按钮、弹窗右上角关闭和 AUTO 开关；
 # 结算继续落点由当前帧 END_FIGHTING 提示定位，不使用画面中心代替。
 # 战败的两个点（重新挑战／返回）由执行层按重试次数选用，常量放这里是为了所有落点在一处。
@@ -1021,8 +1023,9 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         展开时只用无新增手势的已确认小队坐标约束本帧圆环；失败后小幅拖动再识别一次，
         仍失败则停止，不能只复用小队坐标而把尚未定位的敌人当成不存在。
         known_squad 只供尚未发送移动的找敌人阶段使用：跳过实时小队定位和圆环重试，
-        使用已有小队底图坐标规划路线；镜头变化后紧凑视野配准失败时，不回正地展开复核当前
-        视野，最多再小幅平移一次。展开仍失败则停止；成功后按统一收图流程刷新场景，不能沿用旧矩阵。
+        使用已有小队底图坐标规划路线；镜头变化后紧凑视野配准失败时，不回正地展开复核。
+        横向小拖仍失败时，最多试两次纵向换视野。展开仍失败则停止；成功后按统一收图流程
+        刷新场景，不能沿用旧矩阵。
         定位后只有镜头拖动时自动使用已知小队坐标，即使小队已离屏也不重新寻找圆环；
         点击、其他可能移动小队的输入或战斗会使这条自动复用路径失效。
         retry_localization=False 只返回本帧结果，不展开重试或复用旧定位；供主循环先尝试
@@ -1047,16 +1050,23 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         self.identity(field)
         snapshot = self.observe_frame(field, **options)
         if retry_localization and expanded and snapshot.get('localization') != 'accepted':
-            logger.info(f'展开地图定位未通过：小幅平移 {EXPANDED_RETRY_PIXELS:.0f} 客户区像素后重试（1/1）。')
-            self.win.capture()
-            self.pan_expanded((1., 0.), distance=EXPANDED_RETRY_PIXELS)
-            field = self.win.client()
-            self.identity(field)
-            snapshot = self.observe_frame(field, **options)
-            if snapshot.get('localization') != 'accepted':
+            offsets = [(EXPANDED_RETRY_PIXELS, 0.)]
+            if known_squad is not None:
+                first, second = VIEWPORT_VERTICAL_RETRIES
+                offsets.extend(((-EXPANDED_RETRY_PIXELS, first), (0., second)))
+            for attempt, offset in enumerate(offsets, 1):
+                logger.info(f'展开地图定位未通过：面板拖动 {points_text(offset)} 后重试（{attempt}/{len(offsets)}）。')
+                self.win.capture()
+                self.drag_expanded_offset(offset)
+                field = self.win.client()
+                self.identity(field)
+                snapshot = self.observe_frame(field, **options)
+                if snapshot.get('localization') == 'accepted':
+                    break
+            else:
                 self.owner.last_snapshot = snapshot
                 self.preview(field)
-                raise RuntimeError('展开地图小幅平移重试后仍未定位成功；停止目标选择并请求人工复核。')
+                raise RuntimeError('展开地图换视野重试后仍未定位成功；停止目标选择并请求人工复核。')
         elif retry_localization and known_squad is not None and not located(snapshot):
             if (self.stationary_squad() is not None
                     and self.last_registration['gestures'] == self.gestures):
