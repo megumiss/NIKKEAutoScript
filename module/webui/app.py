@@ -271,23 +271,25 @@ def clearup():
     """
     logger.info("Start clearup")
     from module.webui.serial_orchestrator import serial_orchestrator
-    serial_orchestrator.stop()
-    RemoteAccess.kill_ssh_process()
-    # close_discord_rpc()
-    # stop_ocr_server_process()
+    from module.device.adb.virtual_display_session import close_sessions
     errors = []
-    for nkas in list(ProcessManager._processes.values()):
+
+    def _run_cleanup(step):
         try:
-            nkas.stop()
+            step()
         except Exception as exc:
             errors.append(str(exc))
             logger.exception(exc)
-    from module.device.adb.virtual_display_session import close_sessions
-    try:
-        close_sessions()
-    finally:
-        State.clearup()
-        task_handler.stop()
+
+    _run_cleanup(serial_orchestrator.stop)
+    _run_cleanup(RemoteAccess.kill_ssh_process)
+    # close_discord_rpc()
+    # stop_ocr_server_process()
+    for nkas in list(ProcessManager._processes.values()):
+        _run_cleanup(nkas.stop)
+    _run_cleanup(close_sessions)
+    _run_cleanup(State.clearup)
+    _run_cleanup(task_handler.stop)
     if errors:
         raise RuntimeError('; '.join(errors))
     logger.info("NKAS closed.")

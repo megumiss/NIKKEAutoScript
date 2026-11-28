@@ -29,7 +29,7 @@ def retry(func):
                 return func(self, *args, **kwargs)
             # Can't handle
             except RequestHumanTakeover:
-                break
+                raise
             # When adb server was killed
             except ConnectionResetError as e:
                 logger.error(e)
@@ -161,35 +161,63 @@ class Adb(Connection):
             return ret
         raise OSError("Couldn't get focused app")
 
+    def _virtual_display_wait(self, seconds: float):
+        """等待虚拟屏启动或交互生效；桥接子类可覆写为支持取消的等待。"""
+        time.sleep(seconds)
+
+    def focus_virtual_display(self, point=(5, 420)) -> bool:
+        """向虚拟屏发送安全坐标轻触，恢复单焦点系统的窗口输入焦点。
+
+        Android 13 及以下不支持虚拟屏独立焦点，主屏解锁或切回桌面会夺走顶层焦点。
+        该方法仅在虚拟屏上下文生效，不会向物理主屏 display 0 注入输入。
+        """
+        display_id = self.require_virtual_display()
+        if display_id is None:
+            return False
+        try:
+            self._adb_input('tap', point[0], point[1])
+            return True
+        except RequestHumanTakeover:
+            raise
+        except Exception as e:
+            logger.debug(f'Focus virtual display {display_id} failed: {e}')
+            return False
+
+    def _app_start_on_virtual_display(self, package_name, display_id):
+        """在指定虚拟屏上拉起目标应用，桥接命令不可用时回退 am start。"""
+        try:
+            response = self._virtual_display_command(
+                f'START {package_name}\n'.encode('utf-8'), timeout=5
+            )
+            if isinstance(response, bytes) and response.startswith(b'OK'):
+                return
+            logger.debug(f'Virtual display START fallback: {response!r}')
+        except RequestHumanTakeover:
+            raise
+        except Exception as e:
+            logger.debug(f'Virtual display START command unavailable: {e}')
+        resolved = self.adb_shell([
+            'cmd', 'package', 'resolve-activity', '--brief',
+            '-a', 'android.intent.action.MAIN',
+            '-c', 'android.intent.category.LAUNCHER', package_name,
+        ])
+        component = next((line.strip() for line in reversed(resolved.splitlines()) if '/' in line), '')
+        if not component:
+            raise PackageNotInstalled(package_name)
+        result = self.adb_shell(['am', 'start', '--display', display_id, '-n', component])
+        if 'Error:' in result or 'Exception' in result:
+            raise OSError(result)
+
     @retry
     def app_start_adb(self, package_name=None):
-        """
-        通过 monkey 启动应用，无需知道 activity 名。
-        """
+        """在虚拟屏模式下通过桥接或 am start 拉起应用并补焦，其余模式通过 monkey 启动。"""
         if not package_name:
             package_name = self.package
         display_id = Connection.require_virtual_display(self)
         if display_id is not None:
-            try:
-                response = self._virtual_display_command(
-                    f'START {package_name}\n'.encode('utf-8'), timeout=5
-                )
-                if isinstance(response, bytes) and response.startswith(b'OK'):
-                    return
-                logger.debug(f'Virtual display START fallback: {response!r}')
-            except Exception as e:
-                logger.debug(f'Virtual display START command unavailable: {e}')
-            resolved = self.adb_shell([
-                'cmd', 'package', 'resolve-activity', '--brief',
-                '-a', 'android.intent.action.MAIN',
-                '-c', 'android.intent.category.LAUNCHER', package_name,
-            ])
-            component = next((line.strip() for line in reversed(resolved.splitlines()) if '/' in line), '')
-            if not component:
-                raise PackageNotInstalled(package_name)
-            result = self.adb_shell(['am', 'start', '--display', display_id, '-n', component])
-            if 'Error:' in result or 'Exception' in result:
-                raise OSError(result)
+            self._app_start_on_virtual_display(package_name, display_id)
+            self._virtual_display_wait(0.5)
+            self.focus_virtual_display()
             return
         result = self.adb_shell([
             'monkey', '-p', package_name, '-c',

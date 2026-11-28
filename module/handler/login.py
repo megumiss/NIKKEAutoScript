@@ -1,3 +1,5 @@
+import numpy as np
+
 from module.base.timer import Timer
 from module.exception import GameStart, GameStuckError, GameTooManyClickError, RequestHumanTakeover
 from module.handler.assets import *
@@ -7,6 +9,35 @@ from module.ui.ui import UI
 
 
 class LoginHandler(UI):
+    def _handle_login_interactions(self, click_timer: Timer) -> bool:
+        """按固定优先级尝试处理一次登录期弹窗或交互，命中并消费点击冷却时返回 True。"""
+        if not click_timer.reached():
+            return False
+
+        handlers = (
+            self.handle_announcement,
+            lambda: self.handle_reward(interval=2),
+            self.handle_server,
+            self.handle_download,
+            self.handle_downloading,
+            self.handle_system_error,
+            self.handle_system_maintenance,
+            self.handle_login_lipass,
+            self.handle_paid_gift,
+            self.handle_anis_supplies,
+            self.handle_shifty_supplies,
+            self.handle_rupee_eggs,
+            self.handle_volt_dice_just_reward,
+            lambda: self.handle_login_reward(in_login=True),
+            self.handle_event_popup,
+            self.handle_unknown_popup,
+        )
+        for handler in handlers:
+            if handler():
+                click_timer.reset()
+                return True
+        return False
+
     def _handle_app_login(self):
         """
         Pages:
@@ -19,6 +50,9 @@ class LoginHandler(UI):
         click_timer = Timer(0.3)
         orientation_timer = Timer(10)
         login_success = False
+        vd_enabled = self._is_virtual_display_active()
+        vd_focus_timer = Timer(15, count=10).start()
+        vd_prev_sample = None
 
         while 1:
             # 检查设备方向
@@ -31,8 +65,11 @@ class LoginHandler(UI):
             except GameStart:
                 continue
 
+            interacted = False
+
             # 当 MAIN_CHECK 累计出现6次，并且保持在5秒以上
             if self.appear(MAIN_CHECK, offset=(30, 30)) and self.appear(MAIN_CHECK, threshold=20):
+                interacted = True
                 if confirm_timer.reached():
                     logger.info('Login to main confirm')
                     break
@@ -41,90 +78,48 @@ class LoginHandler(UI):
 
             # TOUCH TO CONTINUE
             if self.appear(LOGIN_CHECK, offset=(30, 30)) or self.appear(LOGIN_CHECK_B, offset=(30, 30)):
+                interacted = True
                 self.device.click(LOGIN_CHECK)
                 if not login_success:
                     logger.info('Login success')
                     login_success = True
 
-            # 关闭公告
-            if click_timer.reached() and self.handle_announcement():
-                click_timer.reset()
+            if self._handle_login_interactions(click_timer):
+                vd_focus_timer.reset()
+                vd_prev_sample = None
                 continue
 
-            # REWARD
-            if click_timer.reached() and self.handle_reward(interval=2):
-                click_timer.reset()
+            if interacted:
+                vd_focus_timer.reset()
+                vd_prev_sample = None
                 continue
 
-            # 服务器确认
-            if click_timer.reached() and self.handle_server():
-                click_timer.reset()
-                continue
-
-            # 下载更新
-            if click_timer.reached() and self.handle_download():
-                click_timer.reset()
-                continue
-
-            # 下载中
-            if click_timer.reached() and self.handle_downloading():
-                click_timer.reset()
-                continue
-
-            # 系统错误
-            if click_timer.reached() and self.handle_system_error():
-                click_timer.reset()
-                continue
-
-            # 维护中
-            if click_timer.reached() and self.handle_system_maintenance():
-                click_timer.reset()
-                continue
-
-            # 重新登录
-            if click_timer.reached() and self.handle_login_lipass():
-                click_timer.reset()
-                continue
-
-            # 礼包弹窗
-            if click_timer.reached() and self.handle_paid_gift():
-                click_timer.reset()
-                continue
-
-            # 阿尼斯5x5补给品
-            if click_timer.reached() and self.handle_anis_supplies():
-                click_timer.reset()
-                continue
-
-            # 屑芙蒂5x5补给品
-            if click_timer.reached() and self.handle_shifty_supplies():
-                click_timer.reset()
-                continue
-
-            # 露菲每日扭蛋
-            if click_timer.reached() and self.handle_rupee_eggs():
-                click_timer.reset()
-                continue
-
-            # 伏特骰子
-            if click_timer.reached() and self.handle_volt_dice_just_reward():
-                click_timer.reset()
-                continue
-
-            # 登录奖励
-            if click_timer.reached() and self.handle_login_reward(in_login=True):
-                click_timer.reset()
-                continue
-
-            # 活动剧情
-            if click_timer.reached() and self.handle_event_popup():
-                click_timer.reset()
-                continue
-
-            # 商品资讯读取失败等通用通知弹窗
-            if click_timer.reached() and self.handle_unknown_popup():
-                click_timer.reset()
-                continue
+            # 仅虚拟屏模式：周期检测纯黑或像素完全冻结，防止 Android <=13 失焦冻死等到 8 分钟超时。
+            if vd_enabled:
+                image = getattr(self.device, 'image', None)
+                if vd_focus_timer.reached():
+                    if self._is_black_frame():
+                        self.device.recover_virtual_display_focus(reason='black frame', repin=True)
+                        vd_prev_sample = None
+                    elif image is not None and image.size > 0:
+                        sample = image[::16, ::16]
+                        if (
+                            vd_prev_sample is not None
+                            and sample.shape == vd_prev_sample.shape
+                            and np.array_equal(sample, vd_prev_sample)
+                        ):
+                            self.device.recover_virtual_display_focus(reason='frozen frame', repin=True)
+                            vd_prev_sample = None
+                        else:
+                            vd_prev_sample = sample.copy()
+                    vd_focus_timer.reset()
+                elif (
+                    vd_prev_sample is None
+                    and image is not None
+                    and image.size > 0
+                    and not self._is_black_frame()
+                ):
+                    vd_prev_sample = image[::16, ::16].copy()
 
     def handle_app_login(self) -> bool:
         """

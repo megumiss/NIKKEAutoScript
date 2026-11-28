@@ -62,7 +62,7 @@ class VirtualDisplayBridge(Screenshot):
 
     def adb_forward(self, remote):
         self.check_cancelled()
-        port = int(self.command(['forward', 'tcp:0', remote]))
+        port = int(self._clean_adb_output(self.command(['forward', 'tcp:0', remote])))
         self.record['port'] = port
         self.persist(self.record)
         return port
@@ -70,12 +70,87 @@ class VirtualDisplayBridge(Screenshot):
     def adb_forward_remove(self, local):
         return self.command(['forward', '--remove', local])
 
-    def device_identity(self):
-        uid = self.command(['shell', 'getprop ro.serialno'])
-        boot = self.command(['shell', 'cat /proc/sys/kernel/random/boot_id'])
-        if not uid or not re.fullmatch(r'[a-f0-9-]{36}', boot):
+    _TRANSIENT_ADB_ERRORS = (
+        'device still authorizing',
+        'device offline',
+        'daemon not running',
+        'cannot connect to daemon',
+        'failed to start daemon',
+        'connection reset',
+        'protocol fault',
+    )
+
+    @staticmethod
+    def _clean_adb_output(output: str) -> str:
+        """过滤 adb 冷启动提示行，返回最后一行有效输出。"""
+        lines = [
+            line.strip()
+            for line in str(output or '').splitlines()
+            if line.strip() and not line.strip().startswith('* daemon ')
+        ]
+        return lines[-1] if lines else ''
+
+    @classmethod
+    def _is_transient_adb_error(cls, message: str) -> bool:
+        """判断异常文本是否属于可重试的 ADB 瞬态故障。"""
+        lowered = str(message or '').lower()
+        return any(token in lowered for token in cls._TRANSIENT_ADB_ERRORS)
+
+    def _sleep_with_cancel(self, seconds: float):
+        """分段休眠以响应后台取消标记。"""
+        deadline = time.monotonic() + seconds
+        while True:
+            self.check_cancelled()
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return
+            time.sleep(min(0.2, remaining))
+
+    def _virtual_display_wait(self, seconds: float):
+        """虚拟屏桥接内统一走可取消休眠。"""
+        self._sleep_with_cancel(seconds)
+
+    def require_virtual_display(self):
+        """桥接上下文始终绑定虚拟屏，显示 ID 无效时拒绝回退主屏控制。"""
+        self.check_cancelled()
+        display_id = self._virtual_display_id
+        if not isinstance(display_id, int) or display_id <= 0:
+            raise RequestHumanTakeover('Virtual display is not ready; refusing primary-display control')
+        return display_id
+
+    def app_start_adb(self, package_name=None):
+        """在虚拟屏桥接上下文直接启动应用，不走依赖完整 Device 配置的 @retry。"""
+        display_id = self.require_virtual_display()
+        self._app_start_on_virtual_display(package_name or self.package, display_id)
+        self._virtual_display_wait(0.5)
+        self.focus_virtual_display()
+
+    def device_identity(self, retries=3, retry_delay=1.5):
+        """查询物理设备的只读序列号与内核 boot_id。
+
+        ADB 守护进程刚启动时可能混入提示行或短暂返回 device still authorizing，
+        按 retries 对瞬态异常做有限次重试并响应取消信号。
+        """
+        for attempt in range(max(1, int(retries))):
+            self.check_cancelled()
+            try:
+                uid = self._clean_adb_output(self.command(['shell', 'getprop ro.serialno']))
+                boot = self._clean_adb_output(
+                    self.command(['shell', 'cat /proc/sys/kernel/random/boot_id'])
+                )
+            except OSError as exc:
+                if attempt + 1 < retries and self._is_transient_adb_error(str(exc)):
+                    logger.warning(f'ADB device identity retry ({attempt + 1}/{retries}): {exc}')
+                    self._sleep_with_cancel(retry_delay)
+                    continue
+                raise
+            if uid and re.fullmatch(r'[a-f0-9-]{36}', boot):
+                return uid, boot
+            if attempt + 1 < retries:
+                logger.warning(f'Invalid ADB identity output, retrying ({attempt + 1}/{retries})')
+                self._sleep_with_cancel(retry_delay)
+                continue
             raise RuntimeError('Cannot verify physical device identity')
-        return uid, boot
 
     def remove_forward(self):
         port = self.record.get('port')

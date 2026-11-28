@@ -4,6 +4,8 @@ import re
 import time
 from collections import deque
 
+import numpy as np
+
 from module.base.button import Button
 from module.base.timer import Timer
 from module.base.utils import publish_preview_frame
@@ -124,6 +126,33 @@ class Device(Screenshot, Control, AppControl, ScreenUnlock):
             'package': self.package,
         }
         self._apply_virtual_display(acquire_display(self._virtual_display_target))
+        self.focus_virtual_display()
+
+    def recover_virtual_display_focus(self, reason='unknown', repin=True) -> bool:
+        """恢复被主屏解锁或桌面操作夺走的虚拟屏焦点。
+
+        仅在虚拟屏就绪后调用；若主屏已锁屏先解锁，再按需通过桥接 REPIN 任务并发送边缘轻触。
+        调用链路绕过 click_record 与 stuck_record_clear，保留超时上限兜底。
+        """
+        if getattr(self, '_virtual_display_id', None) is None:
+            return False
+        logger.warning(f'Virtual display {self._virtual_display_id} focus recovery: {reason}')
+        if (
+            self.config.PhysicalDevice_Enable
+            and self.config.PhysicalDevice_AutoUnlock
+            and self._screen_is_locked()
+        ):
+            self.screen_unlock()
+        if repin:
+            try:
+                self._virtual_display_command(
+                    f'REPIN {self.package}\n'.encode('utf-8'), timeout=3
+                )
+            except RequestHumanTakeover:
+                raise
+            except Exception as e:
+                logger.debug(f'Virtual display repin failed: {e}')
+        return self.focus_virtual_display()
 
     def _apply_virtual_display(self, target):
         self._virtual_display_id = target['display_id']
@@ -341,6 +370,31 @@ class Device(Screenshot, Control, AppControl, ScreenUnlock):
         """
         self.click_record.clear()
 
+    def _is_virtual_display_frame_unhealthy(self) -> str:
+        """检查虚拟屏当前截图是否处于黑帧或长时间完全冻结状态。
+
+        仅在每分钟卡死检查点调用；直接读取实例 ``__dict__`` 中已缓存的 ``screenshot_deque``
+        以避免未初始化时触发 ``cached_property``。黑帧阈值为 ``max <= 20``，冻帧通过当前帧
+        与历史最早帧按 ``[::16, ::16]`` 降采样精确比对判定。
+
+        Returns:
+            str: 异常原因（``'black frame'`` 或 ``'frozen frame'``），正常或信息不足时返回空字符串。
+        """
+        image = getattr(self, 'image', None)
+        if image is None or getattr(image, 'size', 0) == 0:
+            return ''
+        if int(image.max()) <= 20:
+            return 'black frame'
+        history = self.__dict__.get('screenshot_deque')
+        if history and len(history) >= 2 and isinstance(history[0], dict):
+            oldest = history[0].get('image')
+            if oldest is not None and getattr(oldest, 'size', 0) > 0:
+                cur_sample = image[::16, ::16]
+                old_sample = oldest[::16, ::16]
+                if cur_sample.shape == old_sample.shape and np.array_equal(cur_sample, old_sample):
+                    return 'frozen frame'
+        return ''
+
     def stuck_record_check(self):
         """
             当操作计时器: stuck_timer，stuck_timer_long 到达限制时间时 raise exception
@@ -359,8 +413,22 @@ class Device(Screenshot, Control, AppControl, ScreenUnlock):
 
         from module.handler.info_handle import InfoHandler
 
+        prev_minute = self.stuck_check_minute
         if InfoHandler.handle_stuck(self):
             return True
+
+        if self._virtual_display_id is not None and self.stuck_check_minute > prev_minute:
+            unhealthy = self._is_virtual_display_frame_unhealthy()
+            if unhealthy:
+                self.stuck_recovery_active = True
+                try:
+                    if self.recover_virtual_display_focus(
+                        reason=f'{unhealthy} at stuck minute {self.stuck_check_minute}',
+                        repin=True,
+                    ):
+                        return True
+                finally:
+                    self.stuck_recovery_active = False
 
         reached = self.stuck_timer.reached()
         reached_long = self.stuck_timer_long.reached()

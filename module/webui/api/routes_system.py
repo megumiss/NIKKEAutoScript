@@ -216,8 +216,13 @@ async def restart(_: Request):
         return _json_error('Restart functionality is not enabled in the current server configuration.', 503)
     def perform_restart():
         from module.webui.app import clearup
-        clearup()
-        State.restart_event.set()
+        try:
+            clearup()
+        except Exception as exc:
+            logger.exception(exc)
+            logger.warning('Clearup finished with errors; continuing restart')
+        finally:
+            State.restart_event.set()
     threading.Thread(target=perform_restart, daemon=True).start()
     return JSONResponse({'status': 'success', 'message': 'Restart command received.'})
 
