@@ -4,17 +4,16 @@ import re
 
 import cv2
 
-
 CLIENT_SIZE = (1776, 999)
 CHAPTER_AREA = (1608, 917, 1663, 953)
 DIFFICULTY_AREA = (1613, 898, 1670, 912)
 
 
-def chapter_identity(image, reader):
+def chapter_identity(image, reader, *, include_story=False):
     """读取固定角标中的章节与难度；章节置信度至少 0.95，难度至少 0.7。
 
     难度左侧的装饰图标可能被 OCR 合并为一个非英数前缀，仅允许忽略该单字符及分隔空白。
-    剩余内容必须完整匹配 NORMAL 或 HARD，不用子串匹配放过拼写错误、数字或多个难度名称。
+    默认只接受 NORMAL 或 HARD；场景入口可显式识别 STORY 以切回目标难度，不将剧情地图交给导航。
     任一字段不可靠时返回 None，不能把未知身份当成已确认的章节。
     """
     if image is None or image.shape != (CLIENT_SIZE[1], CLIENT_SIZE[0], 3):
@@ -27,8 +26,8 @@ def chapter_identity(image, reader):
     number, difficulty = values
     if not re.fullmatch(r'[0-9]{1,2}', number) or int(number) < 1:
         return None
-    matched = re.fullmatch(r'[^A-Z\d]?\s*(NORMAL|HARD)', difficulty.upper())
-    if matched is None:
+    matched = re.fullmatch(r'[^A-Z\d]?\s*(NORMAL|HARD|STORY)', difficulty.upper())
+    if matched is None or (matched.group(1) == 'STORY' and not include_story):
         return None
     return int(number), matched.group(1).lower()
 
