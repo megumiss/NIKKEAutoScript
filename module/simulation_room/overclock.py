@@ -1,14 +1,14 @@
 from functools import cached_property
 
 from module.base.timer import Timer
-from module.base.utils import _area_offset, crop, point2str
+from module.base.utils import point2str
 from module.exception import GamePageUnknownError, GameStuckError, OperationFailed
 from module.handler.assets import CONFIRM_B
 from module.logger import logger
 from module.ocr.ocr import Digit
 from module.simulation_room.assets import *
 from module.tribe_tower.assets import BACK
-from module.ui.assets import ARK_GOTO_SIMULATION_ROOM, GOTO_BACK, SIMULATION_ROOM_CHECK
+from module.ui.assets import ARK_GOTO_SIMULATION_ROOM, FIGHT_CLOSE, GOTO_BACK, SIMULATION_ROOM_CHECK
 from module.ui.page import page_ark
 from module.ui.ui import UI
 
@@ -90,30 +90,42 @@ class Overclock(UI):
             logger.error(f"Button asset '{button_name}' not found for option '{option}'")
             raise
 
+    def _fight_enemy(self, button):
+        """执行超频敌人事件，限制同一准备面板内反复尝试开战。"""
+        from module.simulation_room.event import EnemyEvent
+
+        EnemyEvent(button=button, config=self.config, device=self.device).run(max_start_attempts=3)
+
+    def _resume_battle(self):
+        """接续重登后已打开的超频战斗准备弹窗，避免把它当作事件选择界面。"""
+        if not self.appear(OVERCLOCK_RESET_TIME_IN, offset=(30, 30), threshold=0.85):
+            return False
+        if not self.appear(FIGHT, offset=(30, 30), threshold=0.85):
+            return False
+
+        logger.info('Resume prepared overclock battle')
+        self._fight_enemy(button=None)
+        return True
+
     def get_next_event(self):
+        from module.simulation_room.event import find_enemy_positions
+
         self.device.screenshot()
+        if self._resume_battle():
+            return
 
-        for i in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=5, threshold=0.85, static=False)[:3]:
-            area = _area_offset(i.get('area'), (-45, -100, -14, -90))
-            img = crop(self.device.image, area)
-            if NORMAL_CHECK.match(img, threshold=0.75, static=False):
-                NORMAL_CHECK._button_offset = area
-            elif HARD_CHECK.match(img, threshold=0.75, static=False):
-                HARD_CHECK._button_offset = area
-            elif SPECIAL_CHECK.match(img, threshold=0.75, static=False):
-                SPECIAL_CHECK._button_offset = area
+        enemy_positions = find_enemy_positions(
+            self.device.image, (NORMAL_CHECK, HARD_CHECK, SPECIAL_CHECK), threshold=0.85
+        )
 
-        if NORMAL_CHECK._button_offset:
-            from module.simulation_room.event import EnemyEvent
-
-            EnemyEvent(button=NORMAL_CHECK.location, config=self.config, device=self.device).run()
-            NORMAL_CHECK._button_offset = None
+        if NORMAL_CHECK in enemy_positions:
+            self._fight_enemy(button=enemy_positions[NORMAL_CHECK])
             return
 
         if self.appear(HEALING_EVENT_CHECK, offset=(30, 30), static=False):
             from module.simulation_room.event import HealingEvent
 
-            HealingEvent(button=NORMAL_CHECK.location, config=self.config, device=self.device).run()
+            HealingEvent(button=HEALING_EVENT_CHECK.location, config=self.config, device=self.device).run()
             return
 
         if self.appear(IMPROVEMENT_EVENT_CHECK, offset=(30, 30), static=False):
@@ -129,24 +141,16 @@ class Overclock(UI):
             return
 
         if self.appear(BOSS_EVENT_CHECK, offset=(30, 30), static=False):
-            from module.simulation_room.event import EnemyEvent
-
             logger.hr('Start the boss event', 2)
-            EnemyEvent(button=BOSS_EVENT_CHECK.location, config=self.config, device=self.device).run()
+            self._fight_enemy(button=BOSS_EVENT_CHECK.location)
             return
 
-        if HARD_CHECK._button_offset:
-            from module.simulation_room.event import EnemyEvent
-
-            EnemyEvent(button=HARD_CHECK.location, config=self.config, device=self.device).run()
-            HARD_CHECK._button_offset = None
+        if HARD_CHECK in enemy_positions:
+            self._fight_enemy(button=enemy_positions[HARD_CHECK])
             return
 
-        if SPECIAL_CHECK._button_offset:
-            from module.simulation_room.event import EnemyEvent
-
-            EnemyEvent(button=SPECIAL_CHECK.location, config=self.config, device=self.device).run()
-            SPECIAL_CHECK._button_offset = None
+        if SPECIAL_CHECK in enemy_positions:
+            self._fight_enemy(button=enemy_positions[SPECIAL_CHECK])
             return
 
     def get_effect(self):
@@ -299,10 +303,20 @@ class Overclock(UI):
                 click_timer.reset()
                 continue
 
+            if (
+                click_timer.reached()
+                and self.appear(OVERCLOCK_RESET_TIME_IN, offset=(30, 30), threshold=0.85)
+                and self.appear_then_click(FIGHT_CLOSE, offset=(12, 12), interval=2, threshold=0.85)
+            ):
+                click_timer.reset()
+                continue
+
             if timeout.reached():
                 raise GameStuckError
 
-            if self.appear(GOTO_BACK, offset=(30, 30)):
+            if self.appear(GOTO_BACK, offset=(30, 30)) or self.appear(
+                OVERCLOCK_SIMULATION_CHECK, offset=10, threshold=0.86
+            ):
                 return
 
             elif self.appear(RESET_TIME_IN, offset=(30, 30), interval=2):
@@ -528,8 +542,6 @@ class Overclock(UI):
                 break
 
     def _run(self):
-        self.bios_setting()
-
         while 1:
             self.get_next_event()
             if self.appear(SELECT_REWARD_EFFECT_CHECK, offset=(5, 5), interval=5, static=False):
@@ -540,9 +552,12 @@ class Overclock(UI):
 
     def run(self):
         try:
-            if not self.appear(SIMULATION_ROOM_CHECK, offset=(30, 30)):
-                self.ui_ensure(page_ark)
-            self.ensure_into_overclock()
+            self.device.screenshot()
+            if not self._resume_battle():
+                if not self.appear(SIMULATION_ROOM_CHECK, offset=(30, 30)):
+                    self.ui_ensure(page_ark)
+                self.ensure_into_overclock()
+                self.bios_setting()
             self._run()
         except GamePageUnknownError:
             logger.error('The simulation has already been started')

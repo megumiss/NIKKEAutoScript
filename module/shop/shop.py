@@ -4,6 +4,7 @@ from module.shop.base import (
     NotEnoughMoneyError,
     Product,
     ProductQueueIsEmpty,
+    PurchaseResultTimeout,
     PurchaseTimeTooLong,
     Refresh,
     ShiftyShopReplaced,
@@ -29,13 +30,18 @@ __all__ = [
 class Shop(GeneralShop, ArenaShop, BodyLabelShop):
     def run(self):
         self.ui_ensure(page_shop)
-        if self.config.GeneralShop_enable:
-            self.run_general_shop()
-        if self.config.BodyLabelShop_enable:
-            self.run_body_label_shop()
-        if self.config.ArenaShop_enable:
-            self.run_arena_shop()
+        try:
+            if self.config.GeneralShop_enable:
+                self.run_general_shop()
+            if self.config.BodyLabelShop_enable:
+                self.run_body_label_shop()
+            if self.config.ArenaShop_enable:
+                self.run_arena_shop()
+        except PurchaseResultTimeout as error:
+            self._recover_purchase_timeout(error)
+            return
+        finally:
+            del_cached_property(self, 'general_shop_priority')
+            del_cached_property(self, 'arena_shop_priority')
 
-        del_cached_property(self, 'general_shop_priority')
-        del_cached_property(self, 'arena_shop_priority')
         self.config.task_delay(schedule=True)

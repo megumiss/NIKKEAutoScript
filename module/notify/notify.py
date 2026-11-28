@@ -78,8 +78,7 @@ def handle_notify_linux(_config: str, **kwargs) -> bool:
         if isinstance(notifier, Custom):
             if 'method' not in config or config['method'] == 'post':
                 config['datatype'] = 'json'
-            if not ('data' in config or isinstance(config['data'], dict)):
-                config['data'] = {}
+            config.setdefault('data', {})
             if 'title' in kwargs:
                 config['data']['title'] = kwargs['title']
             if 'content' in kwargs:

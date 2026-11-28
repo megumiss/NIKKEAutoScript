@@ -1,10 +1,12 @@
+import re
 from functools import cached_property
 
 from module.base.timer import Timer
-from module.base.utils import _area_offset, crop, point2str
+from module.base.utils import point2str
 from module.exception import GamePageUnknownError, GameStuckError, OperationFailed
 from module.handler.assets import CONFIRM_B
 from module.logger import logger
+from module.ocr.ocr import Ocr
 from module.simulation_room.assets import *
 from module.tribe_tower.assets import BACK
 from module.ui.assets import ARK_GOTO_SIMULATION_ROOM, GOTO_BACK, SIMULATION_ROOM_CHECK
@@ -62,27 +64,20 @@ class SimulationRoom(UI):
         return self.config.Area_EndingArea.upper()
 
     def get_next_event(self):
+        from module.simulation_room.event import EnemyEvent, find_enemy_positions
+
         self.device.screenshot()
 
-        for i in ENEMY_EVENT_CHECK.match_several(self.device.image, offset=5, threshold=0.95, static=False)[:3]:
-            area = _area_offset(i.get('area'), (-45, -100, -14, -90))
-            img = crop(self.device.image, area)
-            if NORMAL_CHECK.match(img, threshold=0.75, static=False):
-                NORMAL_CHECK._button_offset = area
-            elif HARD_CHECK.match(img, threshold=0.75, static=False):
-                HARD_CHECK._button_offset = area
-
-        if NORMAL_CHECK._button_offset:
-            from module.simulation_room.event import EnemyEvent
-
-            EnemyEvent(button=NORMAL_CHECK.location, config=self.config, device=self.device).run()
-            NORMAL_CHECK._button_offset = None
+        # 数值区域受背景影响，继续用卡片左上角的难度标签二次确认。
+        enemy_positions = find_enemy_positions(self.device.image, (NORMAL_CHECK, HARD_CHECK), threshold=0.90)
+        if NORMAL_CHECK in enemy_positions:
+            EnemyEvent(button=enemy_positions[NORMAL_CHECK], config=self.config, device=self.device).run()
             return
 
         if self.appear(HEALING_EVENT_CHECK, offset=(30, 30), static=False):
             from module.simulation_room.event import HealingEvent
 
-            HealingEvent(button=NORMAL_CHECK.location, config=self.config, device=self.device).run()
+            HealingEvent(button=HEALING_EVENT_CHECK.location, config=self.config, device=self.device).run()
             return
 
         if self.appear(IMPROVEMENT_EVENT_CHECK, offset=(30, 30), static=False):
@@ -106,17 +101,13 @@ class SimulationRoom(UI):
             return
 
         if self.appear(BOSS_EVENT_CHECK, offset=(30, 30)):
-            from module.simulation_room.event import EnemyEvent
 
             logger.hr('Start the boss event', 2)
             EnemyEvent(button=BOSS_EVENT_CHECK.location, config=self.config, device=self.device).run()
             return
 
-        if HARD_CHECK._button_offset:
-            from module.simulation_room.event import EnemyEvent
-
-            EnemyEvent(button=HARD_CHECK.location, config=self.config, device=self.device).run()
-            HARD_CHECK._button_offset = None
+        if HARD_CHECK in enemy_positions:
+            EnemyEvent(button=enemy_positions[HARD_CHECK], config=self.config, device=self.device).run()
             return
 
         if self.appear(END_SIMULATION, offset=(30, 30), static=False):
@@ -275,9 +266,11 @@ class SimulationRoom(UI):
 
     def run(self):
         try:
-            if not self.appear(SIMULATION_ROOM_CHECK, offset=(30, 30)):
-                self.ui_ensure(page_ark)
-            self.ensure_into_simulation()
+            self.device.screenshot()
+            if not self._resume_simulation():
+                if not self.appear_any([SIMULATION_ROOM_CHECK, DIFFICULTY_AREA_CHECK], offset=(30, 30)):
+                    self.ui_ensure(page_ark)
+                self.ensure_into_simulation()
             self._run()
         except GamePageUnknownError:
             logger.error('The simulation has already been started')
@@ -287,6 +280,22 @@ class SimulationRoom(UI):
             logger.warning('failed to overcome the current battle, will skip simulation task')
             self.handle_failed()
         self.config.task_delay(schedule=True)
+
+    def _resume_simulation(self):
+        """通过在途页面及关卡编号判断能否接续，避免将不同难度的进度当成本次任务。"""
+        if not self.appear(SIMULATION_CHECK, offset=(30, 30), threshold=0.86):
+            return False
+        ocr = Ocr((437, 480, 526, 532), name='SIMULATION_REGION', model_type=self.config.Optimization_OcrModelType)
+        text = ocr.ocr(self.device.image, threshold=0.8)['text']
+        stage = re.fullmatch(r'([1-5])\s*[-‐–－]\s*([ABC])', text.strip().upper())
+        if not stage or self.difficulty != f'Level_{stage[1]}':
+            raise GamePageUnknownError
+        region = self.region[stage[2]]
+        if not self.region[self.onset_area] <= region <= self.region[self.ending_area]:
+            raise GamePageUnknownError
+        self.current_region = region
+        logger.info(f'接续模拟室区域 {stage[2]}')
+        return True
 
     def handle_failed(self, skip_first_screenshot=True):
         timeout = Timer(10).start()
@@ -322,6 +331,9 @@ class SimulationRoom(UI):
                 skip_first_screenshot = False
             else:
                 self.device.screenshot()
+
+            if self.appear(DIFFICULTY_AREA_CHECK, offset=(30, 30)):
+                break
 
             if click_timer.reached() and self.appear_then_click(ARK_GOTO_SIMULATION_ROOM, offset=(30, 30), interval=2):
                 click_timer.reset()
@@ -407,19 +419,8 @@ class SimulationRoom(UI):
                 click_timer.reset()
                 continue
 
-            if self.config.SimulationRoom_QuickSimulation:
-                if (
-                    click_timer.reached()
-                    and not self.appear(END_SIMULATION, offset=(30, 30), static=False)
-                    and self.appear_then_click(QUICK_SIMULATION, offset=(5, 5), static=False)
-                ):
-                    confirm_timer.reset()
-                    click_timer.reset()
-                    continue
-            else:
-                if click_timer.reached() and self.appear_then_click(
-                    START_SIMULATION_CONFIRM, offset=(5, 5), static=False
-                ):
+            if selected and click_timer.reached() and self.appear(DIFFICULTY_AREA_CHECK, offset=(30, 30)):
+                if self._confirm_simulation_start():
                     confirm_timer.reset()
                     click_timer.reset()
                     continue
@@ -433,6 +434,16 @@ class SimulationRoom(UI):
             if self.appear(SIMULATION_CHECK, offset=(30, 30), threshold=0.86) and confirm_timer.reached():
                 logger.hr(f'Area {self.region_label.get(self.current_region)}', 2)
                 break
+
+    def _confirm_simulation_start(self):
+        """在难度弹窗内优先走快速模拟，未解锁时使用可识别的普通开始按钮。"""
+        if self.config.SimulationRoom_QuickSimulation and self.appear(QUICK_SIMULATION, offset=(5, 20), static=False):
+            return self.appear_then_click(QUICK_SIMULATION, offset=(5, 20), interval=1, static=False)
+        if not self.appear_then_click(START_SIMULATION_CONFIRM, offset=(5, 20), interval=1, static=False):
+            return False
+        if self.config.SimulationRoom_QuickSimulation:
+            logger.info('快速模拟按钮不可用，开始普通模拟')
+        return True
 
     def ensure_into_next_region(self, skip_first_screenshot=True):
         self.current_region += 1

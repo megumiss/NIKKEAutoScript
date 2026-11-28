@@ -1,11 +1,31 @@
 from module.base.timer import Timer
-from module.base.utils import point2str
+from module.base.utils import _area_offset, crop, find_center, point2str
 from module.exception import OperationFailed
 from module.handler.assets import CONFIRM_B
 from module.logger import logger
 from module.simulation_room.assets import *
 from module.tribe_tower.assets import OPERATION_FAILED
 from module.ui.ui import UI
+
+
+def find_enemy_positions(image, labels, threshold):
+    """从当前画面获取各难度的事件坐标，并清除标签模板存下的裁剪图偏移。
+
+    标签坐标只用于本次选敌，成功或异常后都由下一次截图重新识别。
+    """
+    positions = {}
+    try:
+        for match in ENEMY_EVENT_CHECK.match_several(image, offset=5, threshold=threshold, static=False)[:3]:
+            area = _area_offset(match['area'], (-45, -100, -14, -90))
+            label_image = crop(image, area)
+            for label in labels:
+                if label.match(label_image, threshold=0.75, static=False):
+                    positions[label] = find_center(area)
+                    break
+    finally:
+        for label in labels:
+            label._button_offset = None
+    return positions
 
 
 class EventBase(UI):
@@ -33,11 +53,13 @@ class EventBase(UI):
 
 
 class EnemyEvent(EventBase):
-    def run(self, skip_first_screenshot=True):
+    def run(self, skip_first_screenshot=True, max_start_attempts=None):
+        """执行战斗。超频可限制准备页重复点击，未能开战时交由任务处理退场。"""
         logger.hr('Start a hostile event', 3)
         click_timer = Timer(0.3)
 
         skip = False
+        start_attempts = 0
 
         while 1:
             if skip_first_screenshot:
@@ -45,7 +67,7 @@ class EnemyEvent(EventBase):
             else:
                 self.device.screenshot()
 
-            if click_timer.reached():
+            if self.button is not None and click_timer.reached():
                 if not self.appear(TARGET_HP_CHECK, offset=(30, 30)) and (
                     self.appear(ENEMY_CHECK, offset=(30, 30), static=False)
                     or self.appear(BOSS_EVENT_CHECK, offset=(30, 30), static=False)
@@ -68,7 +90,12 @@ class EnemyEvent(EventBase):
                 click_timer.reset()
                 continue
 
-            elif not skip and click_timer.reached() and self.appear_then_click(FIGHT, offset=(30, 30), interval=5):
+            elif not skip and click_timer.reached() and self.appear(FIGHT, offset=(30, 30), interval=5):
+                if max_start_attempts is not None and start_attempts >= max_start_attempts:
+                    logger.warning('Battle did not start after %s attempts', start_attempts)
+                    raise OperationFailed
+                self.device.click(FIGHT)
+                start_attempts += 1
                 click_timer.reset()
                 continue
 
@@ -107,10 +134,13 @@ class EnemyEvent(EventBase):
                 break
 
             if click_timer.reached() and self.appear(PAUSE, offset=(30, 30)):
+                start_attempts = 0
                 click_timer.reset()
                 self.device.sleep(5)
                 continue
 
+        # 只在确认战斗已结算后重置卡死检测，避免多场正常战斗累计超时。
+        self.device.stuck_record_clear()
         logger.info('The hostile event ended')
 
 

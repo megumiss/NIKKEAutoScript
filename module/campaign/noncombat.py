@@ -11,6 +11,7 @@ import numpy as np
 from module.campaign.map.paths import CHAPTER_NAMES_FILE
 from module.campaign.vision import battle
 from module.campaign.vision.chapter import chapter_identity
+from module.handler.assets import LOGIN_PAGE_CHECK
 from module.logger import logger
 from module.ui.assets import (CAMPAIGN_SELECT_CHECK, CAMPAIGN_SELECT_GOTO_SURFACE, GOTO_MAIN,
                               MAIN_GOTO_CAMPAIGN_SELECT)
@@ -38,6 +39,8 @@ CHAPTER_CARD_ROI = (630, 130, 1140, 830)
 CHAPTER_NEXT_OFFSET = 35
 CHAPTER_ENTRY_POINT = (1635, 940)
 CHAPTER_CLOSE_POINT = (1098, 120)
+LOGIN_FOOTER_ROI = (700, 925, 1075, 999)
+LOGIN_PROMPT_ROI = (760, 798, 1016, 853)
 
 TEMPLATES = {
     'chapter_clear': ((680, 340, 1090, 440), .9),
@@ -500,10 +503,10 @@ class CampaignSceneController:
             logger.info(f'当前章节敌人进度：{progress[0]}/{progress[1]}（Boss 尚未击败）。')
         return progress
 
-    def ui_point(self, field, button, bounds=(630, 250, 1145, 850)):
+    def ui_point(self, field, button, bounds=(630, 250, 1145, 850), threshold=.9):
         """只在按钮所在的客户区范围匹配现有 UI 资源，不搜索全屏或遍历无关菜单。
 
-        横屏按钮尝试已有的 0.78 缩放及原尺寸，接受门限保持 0.9；调用方必须给出当前页面
+        横屏按钮尝试已有的 0.78 缩放及原尺寸，默认接受门限为 0.9；调用方必须给出当前页面
         按钮所在范围，默认只用于中央作战选择面板。多个相隔八像素的候选时拒绝点击。
         返回本帧实际模板中心；未匹配时返回 None，交主循环重新截图，不识别加载动画。
         """
@@ -522,13 +525,25 @@ class CampaignSceneController:
                 continue
             response = cv2.matchTemplate(region, template, cv2.TM_CCOEFF_NORMED)
             local = cv2.dilate(response, np.ones((3, 3), np.uint8))
-            ys, xs = np.nonzero((response >= .9) & (response >= local))
+            ys, xs = np.nonzero((response >= threshold) & (response >= local))
             if len(xs) and (int(xs.max() - xs.min()) > 8 or int(ys.max() - ys.min()) > 8):
                 return None
             points.extend(([x1 + x + width / 2, y1 + y + height / 2]) for x, y in zip(xs, ys))
         if not points or any(np.linalg.norm(np.asarray(point) - points[0]) > 8 for point in points[1:]):
             return None
         return points[0]
+
+    def continue_login(self, field):
+        """在横屏登录页确认页脚和继续提示后点击，加载阶段不发送输入。"""
+        if self.ui_point(field, LOGIN_PAGE_CHECK, LOGIN_FOOTER_ROI, threshold=.75) is None:
+            return False
+        x1, y1, x2, y2 = LOGIN_PROMPT_ROI
+        prompt = cv2.resize(field[y1:y2, x1:x2], None, fx=2, fy=2)
+        text = self.session.owner.chapter_ocr.ocr(prompt, direct_ocr=True, threshold=.8)['text']
+        if ''.join(text.upper().split()) != 'TOUCHTOCONTINUE':
+            return False
+        self.tap(((x1 + x2) / 2, (y1 + y2) / 2), '登录页点击继续')
+        return True
 
     def step(self):
         """识别当前客户区并推进一步；返回未接管、页面等待或待连续确认的野外身份。
@@ -753,6 +768,8 @@ class CampaignSceneController:
             if home is not None:
                 self.tap(home, '当前页面返回主页')
                 return self.wait('home', scores, field)
+        if self.continue_login(field):
+            return self.wait('login_continue', scores, field)
         return self.wait('transition', scores, field)
 
     def wait(self, state, scores, field):
