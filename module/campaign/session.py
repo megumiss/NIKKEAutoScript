@@ -761,16 +761,25 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
         """按机关切镜后的距离排序与 YOLO 双柱方向匹配解锁光幕，不依赖小队定位。
 
         先保留镜头展开地图，通过既有两帧道路配准取得视野中心。距离不设置接受半径；
-        仅一个或与其他光幕独立的标注直接匹配，邻近两候选才校验双柱方向。YOLO 前收起展开面板，
+        最近标注必须落在本次视野内。仅一个或与其他光幕独立的标注直接匹配，邻近候选再校验双柱方向。
+        YOLO 前收起展开面板，
         避免遮住中央立柱，但不回正镜头、不降低模型门限、不追加确认帧或移动点击。
         无标注、缺双柱或距离／方向冲突均抛 ValueError，调用方不得修改机关及封锁状态。
         """
+        from module.campaign.navigation.camera_navigation import inside
         from module.campaign.vision.barriers import match_mechanism_barrier, mechanism_barrier_candidates
         from module.campaign.vision.objects import detect_objects
 
         report = self.mechanism_viewport()
         annotations = self.owner.cut.chart.barrier_annotations
         candidates, competing = mechanism_barrier_candidates(annotations, report['position'])
+        inverse = np.linalg.inv(np.asarray(report['roi_to_map'], float))
+        point = project(inverse, candidates[0][1]['position'])
+        left, top, right, bottom = EXPANDED_ROI
+        if not inside(point, (0, 0, right - left, bottom - top)):
+            self.record('mechanism_barrier_outside_view', force=True, goal=goal, viewport=report['position'],
+                        candidate=candidates[0][1]['id'], panel_point=point.tolist())
+            raise ValueError('最近的光幕标注在机关切镜视野外，保留原封锁状态。')
         objects, field = [], None
         if competing:
             goto.map_close(self.win)
@@ -787,31 +796,38 @@ class CampaignSession(CampaignBattleActions, NavigationSession):
                     f"依据 {'最近标注与 YOLO 双柱方向' if competing else '独立最近标注'}。")
         return annotation
 
-    def trigger_visible_mechanism(self, goal):
+    def trigger_visible_mechanism(self, goal, *, after_arrival=False):
         """直接点击当前画面中唯一关联到目标的未开启机关，确认成功后返回 True。
 
         只接受紧凑帧里已经关联到 goal 编号的 off 检测，点击框中心且必须位于地面安全区；
-        点击并等待停稳后，以同编号 on 或小队进入到达半径确认成功。未识别、关联歧义、
-        落点越界或点击后未确认均返回 False，由调用方继续原有地图标注导航，不把发送点击当成触发。
+        点击并等待停稳后，仍看到同编号 off 时禁止把进入到达半径当成触发。after_arrival 用于
+        地图导航已到达后的补点，使用紧凑单帧定位。该入口若确认机关仍为 off，则交给原恢复限额处理。
+        未找到唯一 off 时返回 False，调用方仍需通过机关切镜复核才能解除封锁。
         """
         from module.campaign.navigation.camera_navigation import FIELD_BOUNDS, inside
         from module.campaign.navigation.controls import SQUAD_REACH
 
-        snapshot = self.snapshot()
+        snapshot = self.snapshot(retry_localization=not after_arrival)
         matches = [item for item in snapshot.get('mechanisms', [])
                    if item.get('id') == goal['id'] and item.get('state') == 'off' and item.get('click') is not None]
         if len(matches) != 1:
             return False
         click = np.asarray(matches[0]['click'], float)
         if click.shape != (2,) or not np.isfinite(click).all() or not inside(click, FIELD_BOUNDS):
+            if after_arrival:
+                raise ValueError('到达机关附近后检测到关闭标记，但落点不在安全点击区。')
             logger.info(f'地面机关 {goal["id"]} 的可见落点不在安全点击区，沿用地图标注导航。')
             return False
         self.record('mechanism_direct_click', goal=goal, click=click.tolist(), snapshot=snapshot)
         logger.info(f'地面机关 {goal["id"]} 已在画面中唯一关联，直接点击检测框中心 {points_text(click)}。')
         self.move(click)
         self.wait_stopped()
-        after = self.snapshot()
+        after = self.snapshot(retry_localization=not after_arrival)
         current = next((item for item in after.get('mechanisms', []) if item.get('id') == goal['id']), None)
+        if current is not None and current.get('state') == 'off':
+            if after_arrival:
+                raise ValueError('到达机关附近并点击后仍识别为关闭，保留原封锁状态。')
+            return False
         if current is not None and current.get('state') == 'on':
             logger.info(f'地面机关 {goal["id"]} 直点后已识别为开启。')
             return True
