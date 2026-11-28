@@ -227,8 +227,8 @@
       "help": ""
     },
     "AutoMainStory": {
-      "name": "Auto Main Story",
-      "help": "Fully automatic main story progression."
+      "name": "Auto Campaign",
+      "help": "Automatically progresses through the campaign on Normal or Hard difficulty."
     },
     "AutoMainCollectible": {
       "name": "Auto Main Story Collectibles",

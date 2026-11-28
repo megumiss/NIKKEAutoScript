@@ -227,8 +227,8 @@
       "help": ""
     },
     "AutoMainStory": {
-      "name": "自动主线剧情",
-      "help": "自动推主线，全自动。"
+      "name": "自动主线",
+      "help": "自动推进主线，支持普通/困难，全自动。"
     },
     "AutoMainCollectible": {
       "name": "自动主线收集品",
