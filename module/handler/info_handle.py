@@ -448,6 +448,7 @@ class InfoHandler(ModuleBase):
                 logger.info('Input LiPass password')
                 self.device.sleep(0.3)
                 self.device.adb_shell_input_text(password)
+                next_clicked_at = None
 
                 while 1:
                     self.device.screenshot()
@@ -457,16 +458,29 @@ class InfoHandler(ModuleBase):
                         logger.critical('LiPass captcha detected, request human takeover')
                         raise CaptchaRequired()
 
-                    if self.appear(LIPASS_CHECK, offset=(30, 30)):
+                    if self.appear_any(
+                        [LIPASS_CHECK, LOGIN_CHECK, LOGIN_CHECK_B, LOGO_PAGE_CHECK],
+                        offset=(30, 30),
+                    ):
                         break
-                    if self.appear(LIPASS_PASSWORD_CHECK, offset=(30, 30)) and self.appear_then_click(
-                        LIPASS_NEXT, threshold=20, interval=3
+                    next_wait_ready = (
+                        next_clicked_at is None or time.monotonic() - next_clicked_at >= 5
+                    )
+                    if (
+                        next_wait_ready
+                        and self.appear(LIPASS_PASSWORD_CHECK, offset=(30, 30))
+                        and self.appear_then_click(LIPASS_NEXT, threshold=20, interval=3)
                     ):
+                        next_clicked_at = time.monotonic()
                         continue
-                    if not self.appear(LIPASS_PASSWORD_INPUT, offset=(30, 30)) and self.appear_then_click(
-                        LIPASS_PASSWORD_CHECK, offset=(30, 30), interval=1
+                    # 仅在 LIPASS_NEXT 尚未就绪且非刚提交后的 5s 等待期时收起软键盘，避免交替连点。
+                    if (
+                        next_wait_ready
+                        and not self.appear(LIPASS_PASSWORD_INPUT, offset=(30, 30))
+                        and not self.appear(LIPASS_NEXT, threshold=20)
+                        and self.appear_then_click(LIPASS_PASSWORD_CHECK, offset=(30, 30), interval=3)
                     ):
-                        logger.info('Input LiPass password done')
+                        logger.info('Confirm LiPass password input')
                         continue
             return True
 
