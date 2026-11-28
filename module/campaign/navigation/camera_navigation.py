@@ -481,51 +481,61 @@ def confirm_ring_click(session, matcher, reference, field, viewport, scale_a, ta
     reference 必须是运动或方向匹配成功的观测，期间不发新手势；最新帧只跟踪已确认脚圈，
     不重复拖动前参考帧的身份推断，中心偏移不超过 TRACK_DISTANCE 且双向关联无歧义。
     direction_assist 要求最新帧再次满足原目标的粗方向对应，不能在复核时改选其他敌人。
-    本方法不拖动或开合地图。复核失败抛 ClickUnconfirmed，禁止自动展开重定位；
+    本方法不拖动或开合地图。相机定位可靠但新帧脚圈偶发漏检或歧义时，最多再取两帧，
+    每帧仍与首次确认的镜头和目标比较；全部失败抛 ClickUnconfirmed，禁止自动展开重定位。
     前后帧仅在正式任务调试模式或未提供调试开关的实验会话中保存，关闭留证不改变停止条件。
     截图、窗口、弹窗和取消异常直接传播，不在安全异常后追加操作。
     """
     from module.campaign.navigation.movement_feedback import ClickUnconfirmed
     from module.campaign.vision.enemy_ring import observe_rings, track_confirmed_ring
 
-    fresh = goto.capture_client(session.win)
-    session.identity(fresh)
-    session.check_collectible(fresh)
-    try:
-        panel, road, valid = perception.compact_road_masks(fresh)
-        current = compact_viewport(session, matcher, panel, road, valid)
-        shift = float(np.linalg.norm(np.asarray(current['viewport']) - viewport))
-        scale_change = abs(current['a'] / scale_a - 1.)
-        if current['status'] != 'accepted':
-            raise ValueError(f"最新帧道路定位未通过（重合度 {current['iou']:.3f}）")
-        if shift > 12 or scale_change > .12:
-            raise ValueError(f'最新帧镜头位置或比例变化超限（镜头偏移 {shift:.1f} 地图像素，'
-                             f'比例变化 {scale_change:.1%}）')
-        rings = observe_rings(fresh, panel, current['matrix'], current['viewport'], track_scene=False)
-        result = track_confirmed_ring(reference, rings, target, squad_position, click, enemy_kind=enemy_kind)
-        if result.get('click') is None:
-            session.emit(message=f'脚圈目标跟踪未通过：{result["reason"]}', enemy_ring_recheck=result)
-            raise ValueError(result['reason'].rstrip('。'))
-        if direction_assist:
-            from module.campaign.vision.enemy_direction import match_target_direction
+    for attempt in range(3):
+        if attempt:
+            session.pause(.35)
+        fresh = goto.capture_client(session.win)
+        session.identity(fresh)
+        session.check_collectible(fresh)
+        try:
+            panel, road, valid = perception.compact_road_masks(fresh)
+            current = compact_viewport(session, matcher, panel, road, valid)
+            shift = float(np.linalg.norm(np.asarray(current['viewport']) - viewport))
+            scale_change = abs(current['a'] / scale_a - 1.)
+            if current['status'] != 'accepted':
+                raise ValueError(f"最新帧道路定位未通过（重合度 {current['iou']:.3f}）")
+            if shift > 12 or scale_change > .12:
+                raise ValueError(f'最新帧镜头位置或比例变化超限（镜头偏移 {shift:.1f} 地图像素，'
+                                 f'比例变化 {scale_change:.1%}）')
+            rings = observe_rings(fresh, panel, current['matrix'], current['viewport'], track_scene=False)
+            result = track_confirmed_ring(reference, rings, target, squad_position, click, enemy_kind=enemy_kind)
+            unconfirmed = None
+            if result.get('click') is None:
+                session.emit(message=f'脚圈目标跟踪未通过：{result["reason"]}', enemy_ring_recheck=result)
+                unconfirmed = result['reason'].rstrip('。')
+            elif direction_assist:
+                from module.campaign.vision.enemy_direction import match_target_direction
 
-            direction = match_target_direction(fresh, rings, current['matrix'], target, squad_position,
-                                               enemy_kind=enemy_kind)
-            if direction.get('click') is None or not np.allclose(direction['click'], result['click']):
-                raise ValueError(f'原目标方向复核未通过：{direction["reason"]}')
-        latest_click = np.asarray(result['click'], float)
-        center_shift = float(np.linalg.norm(latest_click - click))
-    except (OSError, ValueError, RuntimeError, cv2.error, np.linalg.LinAlgError) as error:
-        if getattr(session, 'debug_mode', True):
-            runtime.write_image(session.folder / 'enemy_ring_before.png', field)
-            runtime.write_image(session.folder / 'enemy_ring_latest.png', fresh)
+                direction = match_target_direction(fresh, rings, current['matrix'], target, squad_position,
+                                                   enemy_kind=enemy_kind)
+                if direction.get('click') is None or not np.allclose(direction['click'], result['click']):
+                    unconfirmed = f'原目标方向复核未通过：{direction["reason"]}'
+            if unconfirmed is not None:
+                if attempt < 2:
+                    session.emit(message=f'脚圈复核第 {attempt + 1}/3 帧未通过，保持镜头复采：{unconfirmed}')
+                    continue
+                raise ValueError(unconfirmed)
+            latest_click = np.asarray(result['click'], float)
+            center_shift = float(np.linalg.norm(latest_click - click))
+        except (OSError, ValueError, RuntimeError, cv2.error, np.linalg.LinAlgError) as error:
+            if getattr(session, 'debug_mode', True):
+                runtime.write_image(session.folder / 'enemy_ring_before.png', field)
+                runtime.write_image(session.folder / 'enemy_ring_latest.png', fresh)
+            session.preview(fresh)
+            raise ClickUnconfirmed(f'脚圈点击复核未通过：{str(error).rstrip("。")}；停止执行，未发送移动点击。') from error
         session.preview(fresh)
-        raise ClickUnconfirmed(f'脚圈点击复核未通过：{str(error).rstrip("。")}；停止执行，未发送移动点击。') from error
-    session.preview(fresh)
-    session.emit(message=f"脚圈点击复核通过：道路重合度 {current['iou']:.3f}，"
-                         f'镜头偏移 {shift:.1f} 地图像素，脚圈中心偏移 {center_shift:.1f} 客户区像素',
-                 enemy_ring_recheck=result)
-    return latest_click
+        session.emit(message=f"脚圈点击复核通过：道路重合度 {current['iou']:.3f}，"
+                             f'镜头偏移 {shift:.1f} 地图像素，脚圈中心偏移 {center_shift:.1f} 客户区像素',
+                     enemy_ring_recheck=result)
+        return latest_click
 
 
 def plan_world_move_compact(session, observation, target, max_pans=12, batch_limit=3, enemy_assist=False,
